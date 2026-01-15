@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import {
     EMAIL_USER, EMAIL_PASS, EMAIL_HOST, EMAIL_PORT,
-    RESEND_API_KEY
+    RESEND_API_KEY, GMAIL_REFRESH_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 } from './constants.js';
 
 const host = EMAIL_HOST;
@@ -10,17 +10,32 @@ const secure = port === 465;
 
 // SMTP Transporter
 // Uses robust configuration with fallback for service 'gmail'
-const transporterConfig = process.env.EMAIL_SERVICE
-    ? { service: process.env.EMAIL_SERVICE }
-    : {
-        host: host || 'smtp.gmail.com',
-        port: port || 587,
-        secure: port === 465,
+// SMTP Transporter
+// Uses robust configuration with fallback for service 'gmail'
+const transporterConfig = {};
+
+if (GMAIL_REFRESH_TOKEN && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+    console.log('[MAIL] Configuring Gmail API (OAuth2)');
+    transporterConfig.service = 'gmail';
+    transporterConfig.auth = {
+        type: 'OAuth2',
+        user: EMAIL_USER,
+        clientId: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
+        refreshToken: GMAIL_REFRESH_TOKEN
     };
+} else if (process.env.EMAIL_SERVICE) {
+    transporterConfig.service = process.env.EMAIL_SERVICE;
+    transporterConfig.auth = { user: EMAIL_USER, pass: EMAIL_PASS };
+} else {
+    transporterConfig.host = host || 'smtp.gmail.com';
+    transporterConfig.port = port || 587;
+    transporterConfig.secure = port === 465;
+    transporterConfig.auth = { user: EMAIL_USER, pass: EMAIL_PASS };
+}
 
 const transporter = nodemailer.createTransport({
     ...transporterConfig,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     tls: { rejectUnauthorized: false }
 });
 
