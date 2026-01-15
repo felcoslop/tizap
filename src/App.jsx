@@ -142,7 +142,9 @@ function AppContent() {
     const fetchUserData = useCallback(async () => {
         if (!user?.id) return;
         try {
-            const res = await fetch(`/api/user/${user.id}`);
+            const res = await fetch(`/api/user/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.config) {
@@ -159,7 +161,8 @@ function AppContent() {
     const fetchDispatches = useCallback(async () => {
         if (!user?.id) return;
         try {
-            const res = await fetch(`/api/dispatch/${user.id}`);
+            const authHeader = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`/api/dispatch/${user.id}`, { headers: authHeader });
             if (res.ok) {
                 const data = await res.json();
                 setDispatches(data);
@@ -167,7 +170,7 @@ function AppContent() {
                 // Check for running dispatch
                 const running = data.find(d => d.status === 'running' || d.status === 'paused');
                 if (running) {
-                    const detailRes = await fetch(`/api/dispatch/${user.id}/${running.id}`);
+                    const detailRes = await fetch(`/api/dispatch/${user.id}/${running.id}`, { headers: authHeader });
                     if (detailRes.ok) {
                         const detail = await detailRes.json();
                         setActiveDispatch(detail);
@@ -183,7 +186,9 @@ function AppContent() {
         if (!config.phoneId || !config.token) return;
         setIsRefreshing(true);
         try {
-            const res = await fetch(`/api/messages?phoneId=${config.phoneId}&token=${encodeURIComponent(config.token)}`);
+            const res = await fetch(`/api/messages/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setReceivedMessages(data);
@@ -445,7 +450,8 @@ function AppContent() {
         templateVariables,
         setTemplateVariables,
         isLoadingTemplate,
-        setIsLoadingTemplate
+        setIsLoadingTemplate,
+        fetchUserData
     };
 
     return (

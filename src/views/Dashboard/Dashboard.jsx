@@ -63,7 +63,8 @@ export function Dashboard({
     templateVariables,
     setTemplateVariables,
     isLoadingTemplate,
-    setIsLoadingTemplate
+    setIsLoadingTemplate,
+    fetchUserData
 }) {
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -103,12 +104,14 @@ export function Dashboard({
 
     useEffect(() => {
         if (dispatchMode === 'flow' && user?.id) {
-            fetch(`/api/flows/${user.id}`)
+            fetch(`/api/flows/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            })
                 .then(res => res.json())
                 .then(data => setAvailableFlows(data || []))
                 .catch(err => console.error('Error fetching flows:', err));
         }
-    }, [dispatchMode, user?.id]);
+    }, [dispatchMode, user?.id, user?.token]);
 
     useEffect(() => {
         if (dispatchMode === 'flow' && selectedFlowId) {
@@ -129,7 +132,9 @@ export function Dashboard({
                             const tName = node.data.templateName;
                             if (!tName) return;
 
-                            const res = await fetch(`/api/meta/templates/${user.id}?templateName=${tName}`);
+                            const res = await fetch(`/api/meta/templates/${user.id}?templateName=${tName}`, {
+                                headers: { 'Authorization': `Bearer ${user.token}` }
+                            });
                             const data = await res.json();
                             if (res.ok) {
                                 const templates = data.data || data.templates;
@@ -200,12 +205,19 @@ export function Dashboard({
             for (const item of stagedMedia) {
                 const formData = new FormData();
                 formData.append('file', item.file);
-                const uploadRes = await fetch('/api/upload-media', { method: 'POST', body: formData });
+                const uploadRes = await fetch('/api/upload-media', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${user.token}` },
+                    body: formData
+                });
                 if (uploadRes.ok) {
                     const data = await uploadRes.json();
                     await fetch('/api/send-message', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
                         body: JSON.stringify({
                             userId: user.id,
                             phone: activeContact,
@@ -235,7 +247,9 @@ export function Dashboard({
         setTemplatePreview(false);
 
         try {
-            const res = await fetch(`/api/meta/templates/${user.id}?templateName=${templateName}`);
+            const res = await fetch(`/api/meta/templates/${user.id}?templateName=${templateName}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             const data = await res.json();
             if (res.ok) {
                 const templates = data.data || data.templates;
@@ -396,7 +410,9 @@ export function Dashboard({
         if (!config.token || !config.phoneId) return addToast('Configure as credenciais primeiro.', 'error');
 
         try {
-            const checkRes = await fetch(`/api/flow-sessions/active-check/${user.id}`);
+            const checkRes = await fetch(`/api/flow-sessions/active-check/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (checkRes.ok) {
                 const data = await checkRes.json();
                 if (data.isBusy) {
@@ -432,7 +448,10 @@ export function Dashboard({
         try {
             const res = await fetch(`/api/dispatch/${user.id}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
                 body: JSON.stringify({
                     dispatchSource,
                     dispatchType: dispatchSource === 'ambev' ? 'template' : dispatchMode,
@@ -459,7 +478,10 @@ export function Dashboard({
         try {
             const res = await fetch(`/api/dispatch/${id}/control`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
                 body: JSON.stringify({ action })
             });
             if (res.ok) {
@@ -474,7 +496,10 @@ export function Dashboard({
 
     const retryFailed = async (dispatchId) => {
         try {
-            const res = await fetch(`/api/dispatch/${dispatchId}/retry`, { method: 'POST' });
+            const res = await fetch(`/api/dispatch/${dispatchId}/retry`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             const data = await res.json();
             if (res.ok && data.success) {
                 addToast(data.message, 'success');
@@ -488,17 +513,28 @@ export function Dashboard({
 
     const saveConfig = async () => {
         try {
-            const res = await fetch(`/api/config/${user.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+            const res = await fetch(`/api/user-config/${user.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
                 body: JSON.stringify({ ...tempConfig, templateName, mapping })
             });
             if (res.ok) {
-                setConfig(tempConfig);
+                setConfig({ ...tempConfig, templateName, mapping });
+                setLastSyncConfig({ ...tempConfig, templateName, mapping });
                 setIsEditing(false);
                 addToast('Configurações salvas!', 'success');
-            } else { addToast('Erro ao salvar.', 'error'); }
-        } catch (err) { addToast('Erro ao salvar.', 'error'); }
+                // Refresh user data to ensure everything is in sync
+                await fetchUserData();
+            } else {
+                const errorData = await res.json();
+                addToast(errorData.error || 'Erro ao salvar.', 'error');
+            }
+        } catch (err) {
+            addToast('Erro de conexão ao salvar.', 'error');
+        }
     };
 
     return (
@@ -684,7 +720,14 @@ export function Dashboard({
                                 };
                                 const uniquePhones = [...new Set(receivedMessages.filter(m => selectedContacts.includes(normalize(m.contactPhone))).map(m => m.contactPhone))];
                                 try {
-                                    await fetch('/api/messages/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phones: uniquePhones, phoneId: config.phoneId, token: config.token }) });
+                                    await fetch('/api/messages/delete', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${user.token}`
+                                        },
+                                        body: JSON.stringify({ phones: uniquePhones, phoneId: config.phoneId, token: config.token })
+                                    });
                                     addToast('Conversas excluídas.', 'success');
                                     if (activeContact && uniquePhones.some(p => normalize(p) === normalize(activeContact))) setActiveContact(null);
                                     setIsDeleting(false); setSelectedContacts([]); setShowDeleteConfirm(false);

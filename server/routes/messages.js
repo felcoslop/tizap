@@ -5,13 +5,26 @@ import { authenticateToken } from '../middleware/index.js';
 const router = express.Router();
 
 // Get Received Messages (History)
-router.get('/messages', authenticateToken, async (req, res) => {
+router.get('/messages/:userId', authenticateToken, async (req, res) => {
     try {
+        const userId = parseInt(req.params.userId);
+
+        // Find user config to get phoneId
+        const config = await prisma.userConfig.findUnique({
+            where: { userId }
+        });
+
+        if (!config || !config.phoneId) {
+            return res.json([]); // No config, no messages
+        }
+
         const messages = await prisma.receivedMessage.findMany({
+            where: { whatsappPhoneId: String(config.phoneId) },
             orderBy: { createdAt: 'desc' }
         });
         res.json(messages);
     } catch (err) {
+        console.error('[MESSAGES ERROR]', err);
         res.status(500).json({ error: 'Erro ao buscar mensagens' });
     }
 });
