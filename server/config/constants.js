@@ -8,5 +8,6 @@ export const EMAIL_USER = (process.env.EMAIL_USER || '').trim();
 export const EMAIL_PASS = (process.env.EMAIL_PASS || '').trim();
 export const EMAIL_HOST = process.env.EMAIL_SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
 export const EMAIL_PORT = process.env.EMAIL_SMTP_PORT || process.env.EMAIL_PORT || '587';
+export const RESEND_API_KEY = process.env.RESEND_API_KEY;
 export const GOOGLE_CLIENT_ID = process.env.CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.CLIENT_SECRET;

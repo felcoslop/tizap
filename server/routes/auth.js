@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../db.js';
-import transporter from '../config/email.js';
+import { sendMail } from '../config/email.js';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { JWT_SECRET, FRONTEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '../config/constants.js';
@@ -67,8 +67,7 @@ const router = express.Router();
 const sendVerificationEmail = async (email, token) => {
     const verificationUrl = `${FRONTEND_URL}/verify?token=${token}`;
     try {
-        await transporter.sendMail({
-            from: `"tiZAP!" <${EMAIL_USER}>`,
+        await sendMail({
             to: email,
             subject: 'Confirme seu cadastro no tiZAP!',
             html: `
@@ -98,8 +97,7 @@ const sendVerificationEmail = async (email, token) => {
 const sendResetEmail = async (email, token) => {
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
     try {
-        await transporter.sendMail({
-            from: `"tiZAP!" <${EMAIL_USER}>`,
+        await sendMail({
             to: email,
             subject: 'Redefinição de Senha - tiZAP!',
             html: `
@@ -343,17 +341,16 @@ router.get('/auth/google/callback', (req, res, next) => {
 // Test Email Route
 router.get('/auth/test-email', (req, res) => {
     console.log('[MAIL TEST] Attempting to send test email to:', EMAIL_USER);
-    transporter.sendMail({
-        from: `"tiZAP! Test" <${EMAIL_USER}>`,
+    sendMail({
         to: EMAIL_USER,
         subject: 'Teste de Conexão tiZAP!',
-        text: 'Se você recebeu este e-mail, as configurações de SMTP estão corretas.'
+        text: 'Se você recebeu este e-mail, as configurações (SMTP ou API) estão corretas.'
     }).then(info => {
-        console.log('[MAIL TEST] Success:', info.response);
-        res.json({ success: true, info: info.response });
+        console.log('[MAIL TEST] Success:', info);
+        res.json({ success: true, info });
     }).catch(err => {
         console.error('[MAIL TEST] Failed:', err);
-        res.status(500).json({ success: false, error: err.message, stack: err.stack });
+        res.status(500).json({ success: false, error: err.message });
     });
 });
 
