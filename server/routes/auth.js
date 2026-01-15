@@ -206,10 +206,17 @@ router.post('/login', async (req, res) => {
         });
 
         if (!user) {
+            console.warn('[LOGIN FAILED] User not found:', normalizedEmail);
             return res.status(401).json({ error: 'E-mail ou senha incorretos' });
         }
 
         console.log('[LOGIN DEBUG] Comparing password for:', normalizedEmail, 'Length:', password?.length);
+
+        if (!user.password) {
+            console.warn('[LOGIN FAILED] User has no password set (OAuth user?):', normalizedEmail);
+            return res.status(401).json({ error: 'Este e-mail foi cadastrado via Google. Use o botão "Entrar com Google".' });
+        }
+
         console.log('[LOGIN DEBUG] Hash starts with:', user.password.substring(0, 10));
 
         const isMatch = user.password.startsWith('$2')
