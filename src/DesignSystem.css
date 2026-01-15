@@ -336,24 +336,29 @@ button:focus {
 
 .auth-splash-shape {
   position: absolute;
-  width: 200px;
-  height: 200px;
+  width: 250px;
+  height: 250px;
   background: var(--ambev-blue);
-  opacity: 0.1;
+  opacity: 0.12;
   border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
-  transition: transform 1.5s ease-in-out, opacity 0.5s ease-in;
+  /* Organic blob shape */
+  transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Liquid Fill timing */
   z-index: 0;
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .auth-splash-shape.expanding {
-  transform: scale(30);
-  /* Ensures it COVERS everything */
+  transform: scale(80);
+  /* Morph expansion to cover screen */
   opacity: 1;
-  /* Solid fill */
-  z-index: 999;
-  /* Top level */
+  /* Solid liquid fill */
+  z-index: 9999;
+  /* Ensure it covers even buttons */
   animation: none;
+  border-radius: 50%;
+  /* Smoother expansion transition */
 }
 
 .btn-primary {
