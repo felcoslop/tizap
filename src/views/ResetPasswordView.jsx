@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -10,6 +10,43 @@ export function ResetPasswordView() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
+    const splashRef = useRef(null);
+
+    const handleMouseMove = (e) => {
+        if (isExiting) return;
+
+        // CHECK IF MOUSE IS OVER SPLASH
+        if (splashRef.current) {
+            const splashRect = splashRef.current.getBoundingClientRect();
+            if (
+                e.clientX >= splashRect.left &&
+                e.clientX <= splashRect.right &&
+                e.clientY >= splashRect.top &&
+                e.clientY <= splashRect.bottom
+            ) {
+                // Mouse is over splash, do not update position
+                return;
+            }
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Increased multiplier for "closer to mouse" feel
+        const targetX = centerX + (mouseX - centerX) * 0.85;
+        const targetY = centerY + (mouseY - centerY) * 0.85;
+
+        e.currentTarget.style.setProperty('--mouse-x', `${targetX}px`);
+        e.currentTarget.style.setProperty('--mouse-y', `${targetY}px`);
+    };
+
+    const handleMouseLeave = (e) => {
+        e.currentTarget.style.removeProperty('--mouse-x');
+        e.currentTarget.style.removeProperty('--mouse-y');
+    };
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -72,10 +109,15 @@ export function ResetPasswordView() {
 
     return (
         <div className="auth-container">
-            <div className="auth-card ambev-flag" style={{ position: 'relative', overflow: 'hidden' }}>
+            <div
+                className="auth-card ambev-flag"
+                style={{ position: 'relative', overflow: 'hidden' }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+            >
                 <div
+                    ref={splashRef}
                     className={`auth-splash-shape ${isExiting ? 'expanding' : ''}`}
-                    style={{ top: '-50px', right: '-50px' }}
                 ></div>
 
                 <div onClick={() => handleNavigation('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>

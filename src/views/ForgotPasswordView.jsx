@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export function ForgotPasswordView({ onSwitch }) {
@@ -8,6 +8,43 @@ export function ForgotPasswordView({ onSwitch }) {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
+    const splashRef = useRef(null);
+
+    const handleMouseMove = (e) => {
+        if (isExiting) return;
+
+        // CHECK IF MOUSE IS OVER SPLASH
+        if (splashRef.current) {
+            const splashRect = splashRef.current.getBoundingClientRect();
+            if (
+                e.clientX >= splashRect.left &&
+                e.clientX <= splashRect.right &&
+                e.clientY >= splashRect.top &&
+                e.clientY <= splashRect.bottom
+            ) {
+                // Mouse is over splash, do not update position
+                return;
+            }
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Increased multiplier for "closer to mouse" feel
+        const targetX = centerX + (mouseX - centerX) * 0.85;
+        const targetY = centerY + (mouseY - centerY) * 0.85;
+
+        e.currentTarget.style.setProperty('--mouse-x', `${targetX}px`);
+        e.currentTarget.style.setProperty('--mouse-y', `${targetY}px`);
+    };
+
+    const handleMouseLeave = (e) => {
+        e.currentTarget.style.removeProperty('--mouse-x');
+        e.currentTarget.style.removeProperty('--mouse-y');
+    };
 
     const handleNavigation = (path) => {
         setIsExiting(true);
@@ -32,10 +69,6 @@ export function ForgotPasswordView({ onSwitch }) {
             const data = await res.json();
             if (res.ok) {
                 setMessage(data.message);
-                // Trigger splash exit after showing message for a bit? No user said "when I click... go to login"
-                // But for Forgot Password, usually you stay and see "Link sent".
-                // I'll assume if success, we wait a bit then go back to login automatically? 
-                // "ai deve ir pra tela de login"
                 setTimeout(() => handleNavigation('login'), 2000);
             } else {
                 setError(data.error || 'Erro ao processar solicitação.');
@@ -49,10 +82,15 @@ export function ForgotPasswordView({ onSwitch }) {
 
     return (
         <div className="auth-container">
-            <div className="auth-card ambev-flag" style={{ position: 'relative', overflow: 'hidden' }}>
+            <div
+                className="auth-card ambev-flag"
+                style={{ position: 'relative', overflow: 'hidden' }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+            >
                 <div
+                    ref={splashRef}
                     className={`auth-splash-shape ${isExiting ? 'expanding' : ''}`}
-                    style={{ top: '-50px', right: '-50px' }}
                 ></div>
 
                 <div onClick={() => handleNavigation('login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
