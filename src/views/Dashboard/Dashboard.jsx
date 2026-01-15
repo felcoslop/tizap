@@ -636,6 +636,7 @@ export function Dashboard({
                                 generateWebhook={generateWebhook}
                                 saveConfig={saveConfig}
                                 addToast={addToast}
+                                onLogout={onLogout}
                             />
                         )}
                     </>

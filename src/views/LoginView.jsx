@@ -8,6 +8,16 @@ export function LoginView({ onLogin, onSwitch }) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isExiting, setIsExiting] = useState(false);
+
+    const handleNavigation = (path) => {
+        setIsExiting(true);
+        setTimeout(() => {
+            if (path === 'register') onSwitch();
+            else if (path === 'forgot') onSwitch('forgot');
+            else navigate(path);
+        }, 3500);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,12 +33,16 @@ export function LoginView({ onLogin, onSwitch }) {
     return (
         <div className="auth-container">
             <div className="auth-card ambev-flag" style={{ position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'var(--ambev-blue)', opacity: 0.05, borderRadius: '50%' }}></div>
-                <div onClick={() => navigate('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                    className={`auth-splash-shape ${isExiting ? 'expanding' : ''}`}
+                    style={{ top: '-50px', right: '-50px' }}
+                ></div>
+
+                <div onClick={() => handleNavigation('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                     <img src="/logo.png" alt="tizap!" className="rounded-logo" style={{ width: '80px', height: '80px', objectFit: 'cover', marginBottom: '1.5rem' }} />
                     <h1 className="logo-text" style={{ fontSize: '2.5rem', marginBottom: '0.2rem', color: 'var(--ambev-yellow)' }}>tizap!</h1>
                 </div>
-                <p className="subtitle" style={{ color: '#888', fontWeight: 600, opacity: 0.8 }}>Comunicação inteligente para o seu negócio</p>
+                <p className="subtitle" style={{ color: '#888', fontWeight: 600, opacity: 0.8, position: 'relative', zIndex: 1 }}>Comunicação inteligente para o seu negócio</p>
                 {window.location.search.includes('verified=true') && (
                     <div style={{ backgroundColor: 'rgba(0, 162, 118, 0.1)', color: 'var(--ambev-green)', padding: '10px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 'bold' }}>
                         E-mail confirmado! Faça login agora.
@@ -39,7 +53,7 @@ export function LoginView({ onLogin, onSwitch }) {
                         Token inválido ou expirado. Tente se cadastrar novamente.
                     </div>
                 )}
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
                     <div className="input-group">
                         <label>E-mail</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@ab-inbev.com.br" disabled={isLoading} />
@@ -53,22 +67,22 @@ export function LoginView({ onLogin, onSwitch }) {
                             </button>
                         </div>
                     </div>
-                    <button type="submit" className="btn-primary btn-block" disabled={isLoading}>
+                    <button type="submit" className="btn-3d-blue btn-block" disabled={isLoading}>
                         {isLoading ? 'Entrando...' : 'Entrar'}
                     </button>
                 </form>
 
-                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                    <button className="btn-link" onClick={() => onSwitch('forgot')} style={{ fontSize: '0.85rem', color: '#888' }}>Esqueci minha senha</button>
+                <div style={{ textAlign: 'center', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>
+                    <button className="btn-link" onClick={() => handleNavigation('forgot')} style={{ fontSize: '0.85rem', color: '#888' }}>Esqueci minha senha</button>
                 </div>
 
-                <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '10px', position: 'relative', zIndex: 1 }}>
                     <div style={{ flex: 1, height: '1px', background: '#eee' }}></div>
                     <span style={{ fontSize: '0.8rem', color: '#999' }}>OU</span>
                     <div style={{ flex: 1, height: '1px', background: '#eee' }}></div>
                 </div>
 
-                <a href="/auth/google" className="btn-secondary btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textDecoration: 'none', color: '#333' }}>
+                <a href="/auth/google" className="btn-google btn-block" style={{ position: 'relative', zIndex: 1 }}>
                     <svg width="18" height="18" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -78,8 +92,10 @@ export function LoginView({ onLogin, onSwitch }) {
                     Entrar com Google
                 </a>
 
-                <button className="btn-link" onClick={onSwitch}>Criar nova conta</button>
-                <div className="legal-footer-login" style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', fontSize: '12px' }}>
+                <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#666', position: 'relative', zIndex: 1 }}>
+                    Não tem uma conta? <button className="btn-link" onClick={() => handleNavigation('register')} style={{ display: 'inline', padding: 0, fontWeight: 'bold', color: 'var(--ambev-blue)', textDecoration: 'none' }}>Cadastre-se</button>
+                </div>
+                <div className="legal-footer-login" style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', fontSize: '12px', position: 'relative', zIndex: 1 }}>
                     <a href="/politics/privacidade.html" target="_blank" style={{ color: '#666' }}>Privacidade</a>
                     <a href="/politics/termos.html" target="_blank" style={{ color: '#666' }}>Termos de Uso</a>
                 </div>

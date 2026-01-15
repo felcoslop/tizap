@@ -9,11 +9,19 @@ export function ResetPasswordView() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [isExiting, setIsExiting] = useState(false);
 
     const location = useLocation();
     const navigate = useNavigate();
     const query = new URLSearchParams(location.search);
     const token = query.get('token');
+
+    const handleNavigation = (path) => {
+        setIsExiting(true);
+        setTimeout(() => {
+            navigate(path);
+        }, 1500);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -38,13 +46,15 @@ export function ResetPasswordView() {
             const data = await res.json();
             if (res.ok) {
                 setSuccess(true);
-                setTimeout(() => navigate('/login'), 3000);
+                // Trigger splash exit after a short delay to read success message, or immediately? 
+                // Let's give 1.5s to read, then 1.5s splash
+                setTimeout(() => handleNavigation('/login'), 1500);
             } else {
                 setError(data.error || 'Erro ao redefinir senha.');
+                setIsLoading(false);
             }
         } catch (err) {
             setError('Erro de conexão.');
-        } finally {
             setIsLoading(false);
         }
     };
@@ -54,7 +64,7 @@ export function ResetPasswordView() {
             <div className="auth-container">
                 <div className="auth-card">
                     <p>Token inválido ou ausente.</p>
-                    <button className="btn-primary" onClick={() => navigate('/login')}>Voltar</button>
+                    <button className="btn-primary" onClick={() => handleNavigation('/login')}>Voltar</button>
                 </div>
             </div>
         );
@@ -63,21 +73,25 @@ export function ResetPasswordView() {
     return (
         <div className="auth-container">
             <div className="auth-card ambev-flag" style={{ position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'var(--ambev-blue)', opacity: 0.05, borderRadius: '50%' }}></div>
-                <div onClick={() => navigate('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                    className={`auth-splash-shape ${isExiting ? 'expanding' : ''}`}
+                    style={{ top: '-50px', right: '-50px' }}
+                ></div>
+
+                <div onClick={() => handleNavigation('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                     <img src="/logo.png" alt="tizap!" className="rounded-logo" style={{ width: '80px', height: '80px', objectFit: 'cover', marginBottom: '1.5rem' }} />
                     <h1 className="logo-text" style={{ fontSize: '2.5rem', marginBottom: '0.2rem', color: 'var(--ambev-yellow)' }}>tizap!</h1>
                 </div>
-                <h2 style={{ color: '#888', marginBottom: '1rem' }}>Nova Senha</h2>
+                <h2 style={{ color: '#888', marginBottom: '1rem', position: 'relative', zIndex: 1 }}>Nova Senha</h2>
 
                 {success ? (
-                    <div style={{ backgroundColor: 'rgba(0, 162, 118, 0.1)', color: 'var(--ambev-green)', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ backgroundColor: 'rgba(0, 162, 118, 0.1)', color: 'var(--ambev-green)', padding: '15px', borderRadius: '8px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
                         <p style={{ fontWeight: 'bold', margin: 0 }}>Senha alterada com sucesso!</p>
                         <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>Redirecionando para o login...</p>
-                        <button className="btn-link" onClick={() => navigate('/login')} style={{ marginTop: '10px' }}>Ir para Login agora</button>
+                        <button className="btn-link" onClick={() => handleNavigation('/login')} style={{ marginTop: '10px' }}>Ir para Login agora</button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
                         {error && (
                             <div style={{ backgroundColor: 'rgba(255, 85, 85, 0.1)', color: 'var(--color-error)', padding: '10px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>
                                 {error}
@@ -113,7 +127,7 @@ export function ResetPasswordView() {
                                 </button>
                             </div>
                         </div>
-                        <button type="submit" className="btn-primary btn-block" disabled={isLoading}>
+                        <button type="submit" className="btn-3d-blue btn-block" disabled={isLoading}>
                             {isLoading ? 'Alterando...' : 'Alterar Senha'}
                         </button>
                     </form>

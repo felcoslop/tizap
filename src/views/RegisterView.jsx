@@ -8,6 +8,15 @@ export function RegisterView({ onRegister, onSwitch }) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isExiting, setIsExiting] = useState(false);
+
+    const handleNavigation = (path) => {
+        setIsExiting(true);
+        setTimeout(() => {
+            if (path === 'login') onSwitch();
+            else navigate(path);
+        }, 1500);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -15,21 +24,28 @@ export function RegisterView({ onRegister, onSwitch }) {
         setIsLoading(true);
         try {
             await onRegister(email, password);
-        } finally {
+            handleNavigation('/login');
+        } catch (error) {
+            console.error("Registration failed", error);
             setIsLoading(false);
         }
+        // Note: setIsLoading(false) is not in finally because if successful, we want to keep loading state/visuals during transition
     };
 
     return (
         <div className="auth-container">
             <div className="auth-card ambev-flag" style={{ position: 'relative', overflow: 'hidden', borderTopColor: 'var(--ambev-blue)' }}>
-                <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '150px', height: '150px', background: 'var(--ambev-blue)', opacity: 0.1, borderRadius: '50%' }}></div>
-                <div onClick={() => navigate('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                    className={`auth-splash-shape ${isExiting ? 'expanding' : ''}`}
+                    style={{ bottom: '-50px', left: '-50px' }}
+                ></div>
+
+                <div onClick={() => handleNavigation('/login')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                     <img src="/logo.png" alt="tizap!" className="rounded-logo" style={{ width: '80px', height: '80px', objectFit: 'cover', marginBottom: '1.5rem' }} />
                     <h1 className="logo-text" style={{ color: 'var(--ambev-yellow)', fontSize: '2.5rem', marginBottom: '0.2rem' }}>tizap!</h1>
                 </div>
-                <h2 style={{ color: '#888' }}>Cadastro</h2>
-                <form onSubmit={handleSubmit}>
+                <h2 style={{ color: '#888', position: 'relative', zIndex: 1 }}>Cadastro</h2>
+                <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
                     <div className="input-group">
                         <label>E-mail</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
@@ -43,12 +59,14 @@ export function RegisterView({ onRegister, onSwitch }) {
                             </button>
                         </div>
                     </div>
-                    <button type="submit" className="btn-primary btn-block" disabled={isLoading} style={{ backgroundColor: 'var(--ambev-yellow) !important', color: 'var(--ambev-blue) !important', border: 'none !important', borderBottom: '3px solid rgba(0,0,0,0.1) !important', fontWeight: 'bold' }}>
+                    <button type="submit" className="btn-3d-yellow btn-block" disabled={isLoading}>
                         {isLoading ? 'Cadastrando...' : 'Cadastrar'}
                     </button>
                 </form>
-                <button className="btn-link" onClick={onSwitch}>Já tenho conta</button>
-                <div className="legal-footer-login" style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', fontSize: '12px' }}>
+                <div style={{ textAlign: 'center', marginTop: '1rem', position: 'relative', zIndex: 1 }}>
+                    <button className="btn-link" onClick={() => handleNavigation('login')} style={{ fontSize: '0.85rem', color: '#888' }}>Já tenho conta</button>
+                </div>
+                <div className="legal-footer-login" style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', fontSize: '12px', position: 'relative', zIndex: 1 }}>
                     <a href="/politics/privacidade.html" target="_blank" style={{ color: '#666' }}>Privacidade</a>
                     <a href="/politics/termos.html" target="_blank" style={{ color: '#666' }}>Termos de Uso</a>
                 </div>

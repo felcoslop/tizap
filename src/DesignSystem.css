@@ -240,7 +240,120 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--ambev-blue);
-  box-shadow: 0 0 0 3px rgba(40, 0, 145, 0.1);
+  box-shadow: none !important;
+}
+
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  /* Forces visible borders to not change color, or rely on specific BorderBottom */
+}
+
+/* Specific fix for Register Button if needed */
+.btn-primary:focus {
+  border-color: rgba(0, 0, 0, 0.2) !important;
+  /* Keep original border bottom color */
+}
+
+/* 3D Button Styles */
+/* 3D Button Styles - Standardized to 38px height */
+.btn-3d-yellow {
+  background-color: var(--ambev-yellow) !important;
+  color: var(--ambev-blue) !important;
+  border: none !important;
+  border-radius: var(--border-radius-sm);
+  font-weight: 400 !important;
+  outline: none !important;
+  box-shadow: 0 4px 0 #e6af00 !important;
+  transition: all 0.2s ease;
+  transform: translateY(0);
+  margin-bottom: 4px;
+  -webkit-tap-highlight-color: transparent;
+  height: 38px;
+  width: 100% !important;
+  /* Force full width */
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.btn-3d-yellow:hover {
+  box-shadow: 0 4px 0 var(--ambev-blue) !important;
+  transform: translateY(-1px);
+}
+
+.btn-3d-yellow:active {
+  box-shadow: 0 2px 0 var(--ambev-blue) !important;
+  transform: translateY(2px);
+}
+
+.btn-3d-blue {
+  background-color: var(--ambev-blue) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--border-radius-sm) !important;
+  /* Standard radius */
+  height: 38px;
+  width: 100% !important;
+  /* Force full width */
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-weight: 400 !important;
+  outline: none !important;
+  box-shadow: 0 4px 0 #1e006e !important;
+  transition: all 0.2s ease;
+  transform: translateY(0);
+  margin-bottom: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-3d-blue:hover {
+  box-shadow: 0 4px 0 var(--ambev-yellow) !important;
+  /* Color change removed per request - keeps white text */
+  transform: translateY(-1px);
+}
+
+.btn-3d-blue:active {
+  box-shadow: 0 2px 0 var(--ambev-yellow) !important;
+  transform: translateY(2px);
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) translateX(0px);
+  }
+
+  50% {
+    transform: translateY(-20px) translateX(10px);
+  }
+
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+}
+
+.auth-splash-shape {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: var(--ambev-blue);
+  opacity: 0.1;
+  border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  transition: transform 1.5s ease-in-out, opacity 0.5s ease-in;
+  z-index: 0;
+  animation: float 6s ease-in-out infinite;
+}
+
+.auth-splash-shape.expanding {
+  transform: scale(30);
+  /* Ensures it COVERS everything */
+  opacity: 1;
+  /* Solid fill */
+  z-index: 999;
+  /* Top level */
+  animation: none;
 }
 
 .btn-primary {
@@ -264,6 +377,29 @@ textarea:focus {
 .btn-primary:active {
   transform: translateY(2px);
   border-bottom-width: 1px;
+}
+
+/* Custom Auth Buttons - Standardized */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #333;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius-sm);
+  /* Standard radius */
+  height: 38px;
+  /* Standard height */
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+  background-color: #f8f9fa;
+  border-color: #ccc;
 }
 
 @keyframes pulse {
@@ -619,7 +755,6 @@ textarea:focus {
 .btn-primary {
   background-color: var(--button-bg-primary);
   color: var(--button-text-primary);
-  border: 1px solid var(--button-bg-primary);
   padding: var(--spacing-3) var(--spacing-6);
   border-radius: var(--border-radius-md);
   font-weight: var(--font-weight-semibold);
@@ -1058,7 +1193,15 @@ textarea:focus {
    MOBILE IOS MATERIAL UI (OVERRIDE ONLY)
    -------------------------------------------------
 */
+.mobile-only-logout {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
+  .mobile-only-logout {
+    display: block !important;
+  }
+
   :root {
     --ios-bg: #F2F2F7;
     --ios-surface: #FFFFFF;
