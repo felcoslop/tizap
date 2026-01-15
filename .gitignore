@@ -5,3 +5,6 @@ dist/
 *.zip
 .DS_Store
 uploads/
+*.log
+debug_output.txt
+.env
