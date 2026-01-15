@@ -700,12 +700,14 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
     };
 
     const handleSave = async () => {
-        // Strip onChange, onDelete and token before saving
-        const nodesForSave = nodes.map(node => ({
-            ...node,
-            data: { ...node.data, onChange: undefined, onDelete: undefined, token: undefined }
-        }));
+        console.log('[DEBUG] Starting Save. Token:', token, 'UserId:', userId);
         try {
+            // Strip onChange, onDelete and token before saving
+            const nodesForSave = nodes.map(node => ({
+                ...node,
+                data: { ...(node.data || {}), onChange: undefined, onDelete: undefined, token: undefined }
+            }));
+
             const endpoint = `/api/flows`;
             const method = 'POST';
             const payload = {
@@ -715,6 +717,8 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
                 userId: parseInt(userId)
             };
             if (flow?.id) payload.id = parseInt(flow.id);
+
+            console.log('[DEBUG] Payload prepared:', JSON.stringify(payload).slice(0, 200) + '...');
 
             const res = await fetch(endpoint, {
                 method,
@@ -729,10 +733,13 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
                 addToast('Fluxo salvo com sucesso!', 'success');
                 onSave();
             } else {
-                addToast('Erro ao salvar fluxo.', 'error');
+                const errData = await res.json();
+                console.error('[SAVE ERROR SERVER]', errData);
+                addToast('Erro ao salvar fluxo: ' + (errData.error || 'Desconhecido'), 'error');
             }
         } catch (err) {
-            addToast('Erro de conexão.', 'error');
+            console.error('[SAVE ERROR CLIENT]', err);
+            addToast('Erro de conexão ao salvar: ' + err.message, 'error');
         }
     };
 
