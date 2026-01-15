@@ -29,6 +29,12 @@ export const sendMail = async ({ to, subject, html, text }) => {
     if (GMAIL_REFRESH_TOKEN && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         try {
             console.log('[MAIL] Using Gmail API for:', to);
+            // DEBUG LOGS (Masked for safety)
+            const mask = (str) => str ? `${str.substring(0, 5)}...${str.substring(str.length - 5)}` : 'EMPTY';
+            console.log('[GMAIL DEBUG] ID:', mask(GOOGLE_CLIENT_ID));
+            console.log('[GMAIL DEBUG] Secret:', mask(GOOGLE_CLIENT_SECRET));
+            console.log('[GMAIL DEBUG] Refresh Token:', mask(GMAIL_REFRESH_TOKEN));
+
             const oauth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
             oauth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
             const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
