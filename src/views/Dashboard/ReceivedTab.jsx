@@ -251,7 +251,7 @@ export function ReceivedTab({
                                         const res = await fetch('/api/send-message', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ userId: user.id, phone: activeContact, text })
+                                            body: JSON.stringify({ phone: activeContact, body: text, config })
                                         });
                                         if (res.ok) {
                                             e.target.reply.value = '';

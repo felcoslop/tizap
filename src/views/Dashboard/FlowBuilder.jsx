@@ -693,12 +693,20 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
     const handleSave = async () => {
         const nodesForSave = nodes.map(node => ({ ...node, data: { ...node.data, onChange: undefined } }));
         try {
-            const endpoint = flow?.id ? `/api/flows/${userId}/${flow.id}` : `/api/flows/${userId}`;
-            const method = flow?.id ? 'PUT' : 'POST';
+            const endpoint = `/api/flows`;
+            const method = 'POST';
+            const payload = {
+                name: flowName,
+                nodes: nodesForSave,
+                edges,
+                userId: parseInt(userId)
+            };
+            if (flow?.id) payload.id = parseInt(flow.id);
+
             const res = await fetch(endpoint, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: flowName, nodes: nodesForSave, edges })
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
