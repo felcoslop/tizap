@@ -15,7 +15,7 @@ export function RegisterView({ onRegister, onSwitch }) {
         setTimeout(() => {
             if (path === 'login') onSwitch();
             else navigate(path);
-        }, 1500);
+        }, 800);
     };
 
     const handleSubmit = async (e) => {

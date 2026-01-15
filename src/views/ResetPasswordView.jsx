@@ -20,7 +20,7 @@ export function ResetPasswordView() {
         setIsExiting(true);
         setTimeout(() => {
             navigate(path);
-        }, 1500);
+        }, 800);
     };
 
     const handleSubmit = async (e) => {

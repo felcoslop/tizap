@@ -14,7 +14,7 @@ export function ForgotPasswordView({ onSwitch }) {
         setTimeout(() => {
             if (path === 'login') onSwitch('login');
             else navigate(path);
-        }, 1500);
+        }, 800);
     };
 
     const handleSubmit = async (e) => {

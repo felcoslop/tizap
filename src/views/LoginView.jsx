@@ -28,7 +28,7 @@ export function LoginView({ onLogin, onSwitch }) {
             if (path === 'register') onSwitch();
             else if (path === 'forgot') onSwitch('forgot');
             else navigate(path);
-        }, 1500);
+        }, 800);
     };
 
     const handleSubmit = async (e) => {

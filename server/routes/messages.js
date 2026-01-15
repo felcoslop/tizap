@@ -94,4 +94,39 @@ router.post('/send-message', authenticateToken, async (req, res) => {
     }
 });
 
+// Get Contact Photo (with Initials fallback)
+router.get('/contacts/:phone/photo', async (req, res) => {
+    try {
+        const { phone } = req.params;
+        const name = req.query.name || 'Cliente';
+
+        // 1. Try to find if we have a local photo (placeholder logic if needed)
+        // For now, always generate initials as per requested "era gerado"
+
+        const initials = name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+
+        const colors = ['#280091', '#00a276', '#ffc200', '#ff5555', '#4285F4'];
+        const colorIndex = phone.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+        const bgColor = colors[colorIndex];
+        const textColor = bgColor === '#ffc200' ? '#280091' : '#ffffff';
+
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                <rect width="100" height="100" fill="${bgColor}" />
+                <text x="50" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${textColor}" text-anchor="middle" dominant-baseline="central">${initials}</text>
+            </svg>
+        `.trim();
+
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.send(svg);
+    } catch (err) {
+        res.status(500).send('Error');
+    }
+});
+
 export default router;
