@@ -40,8 +40,8 @@ RUN mkdir -p /data && chmod 777 /data
 ENV NODE_ENV=production
 ENV DATABASE_URL=file:/data/database.sqlite
 
-# Declare volume for database persistence
-VOLUME ["/data"]
+
+# Expose port 3000
 
 EXPOSE 3000
 
