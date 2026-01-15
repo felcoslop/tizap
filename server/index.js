@@ -80,9 +80,13 @@ app.post('/api/stop-dispatch/:id', authenticateToken, (req, res) => {
     res.json({ success: true });
 });
 
-// SPA fallback
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+// SPA fallback - serve index.html for all non-API routes
+app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+        res.sendFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+        next();
+    }
 });
 
 // Initialize server
