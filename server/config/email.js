@@ -5,8 +5,8 @@ const transporterConfig = process.env.EMAIL_SERVICE
     ? { service: process.env.EMAIL_SERVICE }
     : {
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT || '587'),
-        secure: process.env.EMAIL_PORT === '465',
+        port: parseInt(process.env.EMAIL_PORT || '465'), // Default to SSL port for DO
+        secure: (process.env.EMAIL_PORT || '465') === '465', // Port 465 requires SSL
     };
 
 const transporter = nodemailer.createTransport({
