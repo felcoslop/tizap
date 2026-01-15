@@ -37,14 +37,25 @@ router.get('/flow-sessions/:userId', authenticateToken, async (req, res) => {
 router.post('/flows', authenticateToken, async (req, res) => {
     try {
         const { id, name, userId, nodes, edges } = req.body;
-        const flow = id ? await prisma.flow.update({
-            where: { id },
-            data: { name, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
-        }) : await prisma.flow.create({
-            data: { name, userId, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
-        });
+        console.log('[FLOW SAVE] Request received:', { id, name, userId, nodesCount: nodes?.length, edgesCount: edges?.length });
+
+        let flow;
+        if (id) {
+            console.log('[FLOW SAVE] Updating existing flow:', id);
+            flow = await prisma.flow.update({
+                where: { id },
+                data: { name, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
+            });
+        } else {
+            console.log('[FLOW SAVE] Creating new flow for user:', userId);
+            flow = await prisma.flow.create({
+                data: { name, userId, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
+            });
+        }
+        console.log('[FLOW SAVE] Success:', flow.id);
         res.json(flow);
     } catch (err) {
+        console.error('[FLOW SAVE ERROR]', err);
         res.status(500).json({ error: 'Erro ao salvar fluxo' });
     }
 });
