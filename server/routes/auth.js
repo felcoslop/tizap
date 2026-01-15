@@ -86,9 +86,10 @@ const sendVerificationEmail = async (email, token) => {
                 </div>
             `
         });
+        console.log('[EMAIL SUCCESS] Delivery successful to:', email);
         return { success: true };
     } catch (err) {
-        console.error('[EMAIL ERROR]', err);
+        console.error('[EMAIL ERROR] Delivery failed for:', email, err);
         return { success: false, error: err.message };
     }
 };

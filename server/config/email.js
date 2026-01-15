@@ -1,13 +1,22 @@
 import nodemailer from 'nodemailer';
 import { EMAIL_USER, EMAIL_PASS } from './constants.js';
 
+const isGmail = (process.env.EMAIL_HOST || 'smtp.gmail.com') === 'smtp.gmail.com';
+
 const transporterConfig = process.env.EMAIL_SERVICE
     ? { service: process.env.EMAIL_SERVICE }
-    : {
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT || '465'), // Default to SSL port for DO
-        secure: (process.env.EMAIL_PORT || '465') === '465', // Port 465 requires SSL
-    };
+    : isGmail
+        ? { service: 'gmail' }
+        : {
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT || '465'),
+            secure: (process.env.EMAIL_PORT || '465') === '465',
+        };
+
+console.log('[MAIL CONFIG] Host:', process.env.EMAIL_HOST || 'smtp.gmail.com');
+console.log('[MAIL CONFIG] Port:', process.env.EMAIL_PORT || '465');
+console.log('[MAIL CONFIG] User:', EMAIL_USER ? 'Configured' : 'MISSING');
+console.log('[MAIL CONFIG] Pass:', EMAIL_PASS ? 'Configured' : 'MISSING');
 
 const transporter = nodemailer.createTransport({
     ...transporterConfig,
@@ -18,8 +27,8 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false
     },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
 });
 
 export default transporter;
