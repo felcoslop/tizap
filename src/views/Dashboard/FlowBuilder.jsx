@@ -500,7 +500,11 @@ function ImageNode({ data, id, selected }) {
         const formData = new FormData();
         files.forEach(file => formData.append('images', file));
         try {
-            const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+            const res = await fetch('/api/upload-image', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${data.token}` },
+                body: formData
+            });
             const result = await res.json();
             if (res.ok && result.urls) {
                 const newUrls = [...imageUrls, ...result.urls];
@@ -607,7 +611,7 @@ const nodeTypes = {
 
 // --- Flow Editor Component ---
 
-function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
+function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
     const [flowName, setFlowName] = useState(flow?.name || 'Novo Fluxo');
@@ -619,7 +623,12 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
             try {
                 const loadedNodes = JSON.parse(flow.nodes || '[]');
                 const loadedEdges = JSON.parse(flow.edges || '[]');
-                setNodes(loadedNodes);
+                // Inject token into nodes
+                const nodesWithToken = loadedNodes.map(n => ({
+                    ...n,
+                    data: { ...n.data, token }
+                }));
+                setNodes(nodesWithToken);
                 setEdges(loadedEdges);
                 setFlowName(flow.name);
             } catch (e) {
@@ -669,7 +678,7 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
     const addNode = (type) => {
         const id = `node_${Date.now()}`;
         const position = reactFlowInstance ? reactFlowInstance.project({ x: 250, y: 150 }) : { x: 250, y: 150 };
-        const defaultData = { onChange: handleNodeDataChange, onDelete: handleDeleteNode };
+        const defaultData = { onChange: handleNodeDataChange, onDelete: handleDeleteNode, token };
 
         if (type === 'messageNode') {
             defaultData.label = 'Nova mensagem';
@@ -691,7 +700,11 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
     };
 
     const handleSave = async () => {
-        const nodesForSave = nodes.map(node => ({ ...node, data: { ...node.data, onChange: undefined } }));
+        // Strip onChange, onDelete and token before saving
+        const nodesForSave = nodes.map(node => ({
+            ...node,
+            data: { ...node.data, onChange: undefined, onDelete: undefined, token: undefined }
+        }));
         try {
             const endpoint = `/api/flows`;
             const method = 'POST';
@@ -786,7 +799,9 @@ export default function FlowBuilder({ user, addToast }) {
     const fetchFlows = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/flows/${user.id}`);
+            const res = await fetch(`/api/flows/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setFlows(data);
@@ -805,7 +820,10 @@ export default function FlowBuilder({ user, addToast }) {
     const deleteFlow = async (id) => {
         if (!window.confirm('Excluir este fluxo?')) return;
         try {
-            const res = await fetch(`/api/flows/${user.id}/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/flows/${user.id}/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 addToast('Fluxo excluído.', 'info');
                 fetchFlows();
@@ -825,6 +843,7 @@ export default function FlowBuilder({ user, addToast }) {
                         onSave={() => { setEditingFlow(null); fetchFlows(); }}
                         onBack={() => setEditingFlow(null)}
                         userId={user.id}
+                        token={user.token}
                         addToast={addToast}
                         style={{ background: '#f8fbfc' }}
                     />
