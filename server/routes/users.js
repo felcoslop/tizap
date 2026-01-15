@@ -51,11 +51,14 @@ router.get('/user/:id', authenticateToken, async (req, res) => {
             where: { id: parseInt(req.params.id) },
             include: { config: true }
         });
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
         if (user.config) {
             user.config.mapping = JSON.parse(user.config.mapping || '{}');
         }
         res.json(user);
     } catch (err) {
+        console.error('[GET USER ERROR]', err);
         res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
 });
