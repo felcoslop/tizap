@@ -68,12 +68,12 @@ export function LoginView({ onLogin, onSwitch }) {
                 <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
                     <div className="input-group">
                         <label>E-mail</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@ab-inbev.com.br" disabled={isLoading} />
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@dominio.com" disabled={isLoading} />
                     </div>
                     <div className="input-group">
                         <label>Senha</label>
                         <div className="input-with-btn">
-                            <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
+                            <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required placeholder="************" disabled={isLoading} />
                             <button type="button" className="btn-secondary" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
