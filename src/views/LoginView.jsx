@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
 export function LoginView({ onLogin, onSwitch }) {
     const navigate = useNavigate();
+    const location = useLocation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        if (token) {
+            // Google login success
+            onLogin(null, null, token);
+            // Clear token from URL
+            navigate('/login', { replace: true });
+        }
+    }, [location, onLogin, navigate]);
 
     const handleNavigation = (path) => {
         setIsExiting(true);
@@ -16,7 +28,7 @@ export function LoginView({ onLogin, onSwitch }) {
             if (path === 'register') onSwitch();
             else if (path === 'forgot') onSwitch('forgot');
             else navigate(path);
-        }, 3500);
+        }, 1500);
     };
 
     const handleSubmit = async (e) => {

@@ -1,4 +1,5 @@
 import express from 'express';
+import passport from 'passport';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,6 +22,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(passport.initialize());
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 
@@ -61,6 +63,7 @@ app.use(requestLogger);
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(path.join(__dirname, '../dist')));
+app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, '../logo.png')));
 
 // API Routes
 app.use('/api', authRoutes);

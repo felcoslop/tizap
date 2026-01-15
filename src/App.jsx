@@ -294,8 +294,29 @@ function AppContent() {
         localStorage.setItem('ambev_mapping_backup', JSON.stringify(mapping));
     }, [mapping]);
 
-    const handleLogin = async (email, password) => {
+    const handleLogin = async (email, password, directToken = null) => {
         try {
+            if (directToken) {
+                // Handle Google/Direct Token Login
+                const res = await fetch('/api/user/me', {
+                    headers: { 'Authorization': `Bearer ${directToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setUser({ ...data, token: directToken });
+                    if (data.config) {
+                        setConfig(data.config);
+                        setTemplateName(data.config.templateName || '');
+                        setMapping(data.config.mapping || {});
+                    }
+                    addToast(`Bem-vindo, ${data.name || data.email}!`, 'success');
+                    navigate('/home');
+                } else {
+                    addToast('Erro ao validar login.', 'error');
+                }
+                return;
+            }
+
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

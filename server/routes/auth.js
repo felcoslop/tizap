@@ -4,7 +4,45 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../db.js';
 import transporter from '../config/email.js';
-import { JWT_SECRET, FRONTEND_URL, EMAIL_USER } from '../config/constants.js';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { JWT_SECRET, FRONTEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '../config/constants.js';
+
+// Google Passport Strategy
+passport.use(new GoogleStrategy({
+    clientID: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL: `${FRONTEND_URL}/auth/google/callback`,
+    proxy: true
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const email = profile.emails[0].value;
+        let user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    email,
+                    name: profile.displayName,
+                    avatar: profile.photos[0]?.value,
+                    isVerified: true, // Google users are pre-verified
+                    googleId: profile.id
+                }
+            });
+            await prisma.userConfig.create({ data: { userId: user.id } });
+        } else if (!user.googleId) {
+            // Link existing account
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: { googleId: profile.id, avatar: profile.photos[0]?.value }
+            });
+        }
+
+        return done(null, user);
+    } catch (err) {
+        return done(err, null);
+    }
+}));
 
 const router = express.Router();
 
@@ -256,6 +294,14 @@ router.post('/auth/reset-password', async (req, res) => {
         console.error('[RESET ERROR]', err);
         res.status(500).json({ error: 'Erro ao redefinir senha' });
     }
+});
+
+// Google Auth Routes
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }), (req, res) => {
+    const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.redirect(`${FRONTEND_URL}/login?token=${token}`);
 });
 
 export default router;
