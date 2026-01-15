@@ -143,7 +143,7 @@ router.post('/register', async (req, res) => {
                 email: normalizedEmail,
                 name,
                 password: hashedPassword,
-                isVerified: false,
+                isVerified: true, // TEMPORARY BYPASS: Auto-verify
                 verificationToken: token,
                 verificationExpires: expiresAt
             }
@@ -230,9 +230,11 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'E-mail ou senha incorretos' });
         }
 
+        /* TEMPORARY BYPASS
         if (!user.isVerified) {
             return res.status(401).json({ error: 'Sua conta ainda não foi verificada. Verifique seu e-mail.' });
         }
+        */
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
