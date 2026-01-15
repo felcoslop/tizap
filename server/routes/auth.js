@@ -17,7 +17,10 @@ passport.use(new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails[0].value;
-        let user = await prisma.user.findUnique({ where: { email } });
+        let user = await prisma.user.findUnique({
+            where: { email },
+            include: { config: true }
+        });
 
         if (!user) {
             user = await prisma.user.create({
@@ -25,17 +28,25 @@ passport.use(new GoogleStrategy({
                     email,
                     name: profile.displayName,
                     avatar: profile.photos[0]?.value,
-                    isVerified: true, // Google users are pre-verified
+                    isVerified: true,
                     googleId: profile.id
                 }
             });
             await prisma.userConfig.create({ data: { userId: user.id } });
-        } else if (!user.googleId) {
-            // Link existing account
+        } else {
+            // Update/Link account
+            const updateData = { avatar: profile.photos[0]?.value };
+            if (!user.googleId) updateData.googleId = profile.id;
+
             user = await prisma.user.update({
                 where: { id: user.id },
-                data: { googleId: profile.id, avatar: profile.photos[0]?.value }
+                data: updateData
             });
+
+            // Ensure config exists
+            if (!user.config) {
+                await prisma.userConfig.create({ data: { userId: user.id } });
+            }
         }
 
         return done(null, user);

@@ -16,7 +16,10 @@ router.get('/user/me', authenticateToken, async (req, res) => {
             id: user.id,
             email: user.email,
             name: user.name,
-            config: user.config
+            config: user.config ? {
+                ...user.config,
+                mapping: JSON.parse(user.config.mapping || '{}')
+            } : null
         });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar dados' });
@@ -48,7 +51,9 @@ router.get('/user/:id', authenticateToken, async (req, res) => {
             where: { id: parseInt(req.params.id) },
             include: { config: true }
         });
-        if (!user) return res.status(404).json({ error: 'Não encontrado' });
+        if (user.config) {
+            user.config.mapping = JSON.parse(user.config.mapping || '{}');
+        }
         res.json(user);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar usuário' });
