@@ -219,9 +219,8 @@ export function Dashboard({
                             'Authorization': `Bearer ${user.token}`
                         },
                         body: JSON.stringify({
-                            userId: user.id,
                             phone: activeContact,
-                            text: item.caption || null,
+                            body: item.caption || null,
                             mediaUrl: data.url,
                             mediaType: data.type
                         })

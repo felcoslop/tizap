@@ -40,12 +40,18 @@ router.delete('/messages/:id', authenticateToken, async (req, res) => {
 });
 
 // Send Single Message (Manual)
+// Send Single Message (Manual/Flow)
 router.post('/send-message', authenticateToken, async (req, res) => {
     try {
-        const { phone, body, config, mediaUrl, mediaType } = req.body;
-        // This is a placeholder for manual individual sending if needed
-        // For now, it's used in the frontend to trigger messages.
-        // We'll use the same logic as flow engine but exposed here.
+        const { phone, body, mediaUrl, mediaType } = req.body;
+        const userId = req.userId; // From middleware
+
+        // Fetch config from DB to ensure security and validity
+        const config = await prisma.userConfig.findUnique({ where: { userId } });
+
+        if (!config || !config.phoneId || !config.token) {
+            return res.status(400).json({ error: 'Configuração do WhatsApp incompleta.' });
+        }
 
         let normalizedPhone = String(phone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
@@ -64,6 +70,8 @@ router.post('/send-message', authenticateToken, async (req, res) => {
             payload.type = 'text';
             payload.text = { body };
         }
+
+        console.log('[SEND MSG] Sending to:', normalizedPhone);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -87,9 +95,11 @@ router.post('/send-message', authenticateToken, async (req, res) => {
             res.json({ success: true });
         } else {
             const errData = await response.json();
+            console.error('[SEND MSG META ERROR]', errData);
             res.status(response.status).json(errData);
         }
     } catch (err) {
+        console.error('[SEND MSG ERROR]', err);
         res.status(500).json({ error: 'Erro ao enviar mensagem' });
     }
 });

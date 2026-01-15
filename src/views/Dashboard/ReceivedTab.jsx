@@ -257,7 +257,7 @@ export function ReceivedTab({
                                                 'Content-Type': 'application/json',
                                                 'Authorization': `Bearer ${user.token}`
                                             },
-                                            body: JSON.stringify({ phone: activeContact, body: text, config })
+                                            body: JSON.stringify({ phone: activeContact, body: text })
                                         });
                                         if (res.ok) {
                                             e.target.reply.value = '';

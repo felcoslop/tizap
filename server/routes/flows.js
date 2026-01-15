@@ -60,6 +60,24 @@ router.post('/flows', authenticateToken, async (req, res) => {
     }
 });
 
+// Alias for update with ID in URL (Standard REST fix)
+router.post('/flows/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, userId, nodes, edges } = req.body;
+        console.log('[FLOW SAVE] Updating flow via params:', id);
+
+        const flow = await prisma.flow.update({
+            where: { id: parseInt(id) },
+            data: { name, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
+        });
+        res.json(flow);
+    } catch (err) {
+        console.error('[FLOW UPDATE ERROR]', err);
+        res.status(500).json({ error: 'Erro ao atualizar fluxo' });
+    }
+});
+
 // Delete flow
 router.delete('/flows/:id', authenticateToken, async (req, res) => {
     try {
