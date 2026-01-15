@@ -133,6 +133,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'E-mail já cadastrado' });
         }
 
+        console.log('[REGISTER DEBUG] Received password for:', normalizedEmail, 'Length:', password?.length);
         const hashedPassword = await bcrypt.hash(password, 10);
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -208,11 +209,17 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'E-mail ou senha incorretos' });
         }
 
+        console.log('[LOGIN DEBUG] Comparing password for:', normalizedEmail, 'Length:', password?.length);
+        console.log('[LOGIN DEBUG] Hash starts with:', user.password.substring(0, 10));
+
         const isMatch = user.password.startsWith('$2')
             ? await bcrypt.compare(password, user.password)
             : user.password === password;
 
+        console.log('[LOGIN DEBUG] Match result:', isMatch);
+
         if (!isMatch) {
+            console.warn('[LOGIN FAILED] Password mismatch for:', normalizedEmail);
             return res.status(401).json({ error: 'E-mail ou senha incorretos' });
         }
 
