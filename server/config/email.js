@@ -1,34 +1,29 @@
 import nodemailer from 'nodemailer';
 import { EMAIL_USER, EMAIL_PASS } from './constants.js';
 
-const isGmail = (process.env.EMAIL_HOST || 'smtp.gmail.com') === 'smtp.gmail.com';
+const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
+const port = parseInt(process.env.EMAIL_PORT || '587'); // 587 is often more reliable on DO
+const secure = port === 465;
 
-const transporterConfig = process.env.EMAIL_SERVICE
-    ? { service: process.env.EMAIL_SERVICE }
-    : isGmail
-        ? { service: 'gmail' }
-        : {
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT || '465'),
-            secure: (process.env.EMAIL_PORT || '465') === '465',
-        };
-
-console.log('[MAIL CONFIG] Host:', process.env.EMAIL_HOST || 'smtp.gmail.com');
-console.log('[MAIL CONFIG] Port:', process.env.EMAIL_PORT || '465');
+console.log('[MAIL CONFIG] Attempting connection to:', host, 'on port:', port, '(Secure:', secure, ')');
 console.log('[MAIL CONFIG] User:', EMAIL_USER ? 'Configured' : 'MISSING');
-console.log('[MAIL CONFIG] Pass:', EMAIL_PASS ? 'Configured' : 'MISSING');
 
 const transporter = nodemailer.createTransport({
-    ...transporterConfig,
+    host,
+    port,
+    secure,
     auth: {
         user: EMAIL_USER,
         pass: EMAIL_PASS
     },
     tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
+    logger: true, // Log to console
+    debug: true,  // Include debug output
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
 });
 
 export default transporter;
