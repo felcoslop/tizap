@@ -40,17 +40,23 @@ passport.use(new GoogleStrategy({
 
             user = await prisma.user.update({
                 where: { id: user.id },
-                data: updateData
+                data: updateData,
+                include: { config: true }
             });
 
-            // Ensure config exists
+            // Ensure config exists (using upsert to be safe)
             if (!user.config) {
-                await prisma.userConfig.create({ data: { userId: user.id } });
+                await prisma.userConfig.upsert({
+                    where: { userId: user.id },
+                    update: {},
+                    create: { userId: user.id }
+                });
             }
         }
 
         return done(null, user);
     } catch (err) {
+        console.error('[OAUTH STRATEGY ERROR]', err);
         return done(err, null);
     }
 }));
