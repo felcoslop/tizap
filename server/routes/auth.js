@@ -134,10 +134,10 @@ router.post('/register', async (req, res) => {
 
         await prisma.userConfig.create({ data: { userId: user.id } });
 
-        const mailResult = await sendVerificationEmail(normalizedEmail, token);
-        if (!mailResult.success) {
-            console.error('[REGISTER] Failed to send email:', mailResult.error);
-        }
+        // Non-blocking email sending
+        sendVerificationEmail(normalizedEmail, token).catch(err => {
+            console.error('[REGISTER MAIL ERROR]', err);
+        });
 
         res.json({ success: true, message: 'Cadastro realizado! Verifique seu e-mail para ativar a conta.' });
     } catch (err) {
@@ -252,12 +252,12 @@ router.post('/auth/forgot-password', async (req, res) => {
             }
         });
 
-        const mailResult = await sendResetEmail(normalizedEmail, token);
-        if (!mailResult.success) {
-            return res.status(500).json({ error: 'Erro ao enviar e-mail de redefinição' });
-        }
+        // Non-blocking email sending
+        sendResetEmail(normalizedEmail, token).catch(err => {
+            console.error('[FORGOT MAIL ERROR]', err);
+        });
 
-        res.json({ success: true, message: 'E-mail de redefinição enviado!' });
+        res.json({ success: true, message: 'Se o e-mail existir no sistema, enviaremos um link de redefinição.' });
     } catch (err) {
         console.error('[FORGOT ERROR]', err);
         res.status(500).json({ error: 'Erro ao processar solicitação' });
@@ -297,11 +297,46 @@ router.post('/auth/reset-password', async (req, res) => {
 });
 
 // Google Auth Routes
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google', (req, res, next) => {
+    console.log('[OAUTH] Starting Google Auth, redirecting to Google...');
+    next();
+}, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-router.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }), (req, res) => {
+router.get('/auth/google/callback', (req, res, next) => {
+    console.log('[OAUTH] Google Callback status. Params:', JSON.stringify(req.query));
+    next();
+}, (req, res, next) => {
+    passport.authenticate('google', {
+        session: false,
+        failureRedirect: `/login?error=google`
+    })(req, res, next);
+}, (req, res) => {
+    console.log('[OAUTH] Google Auth Middleware finished. User:', req.user?.email);
+    if (!req.user) {
+        console.error('[OAUTH] Authentication succeeded but no user object was found in req');
+        return res.redirect('/login?error=auth_failed');
+    }
     const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.redirect(`${FRONTEND_URL}/login?token=${token}`);
+    const target = `/auth/success?token=${token}`;
+    console.log('[OAUTH] Success! Redirecting to:', target);
+    res.redirect(target);
+});
+
+// Test Email Route
+router.get('/auth/test-email', (req, res) => {
+    console.log('[MAIL TEST] Attempting to send test email to:', EMAIL_USER);
+    transporter.sendMail({
+        from: `"tiZAP! Test" <${EMAIL_USER}>`,
+        to: EMAIL_USER,
+        subject: 'Teste de Conexão tiZAP!',
+        text: 'Se você recebeu este e-mail, as configurações de SMTP estão corretas.'
+    }).then(info => {
+        console.log('[MAIL TEST] Success:', info.response);
+        res.json({ success: true, info: info.response });
+    }).catch(err => {
+        console.error('[MAIL TEST] Failed:', err);
+        res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    });
 });
 
 export default router;

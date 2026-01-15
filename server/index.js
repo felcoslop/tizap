@@ -63,9 +63,12 @@ app.use(requestLogger);
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(path.join(__dirname, '../dist')));
+
+// Specific route for logo if not in dist
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, '../logo.png')));
 
-// API Routes
+// Mount routes
+app.use('/', authRoutes); // To allow /auth/google top-level
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api', flowRoutes);
@@ -83,9 +86,17 @@ app.post('/api/stop-dispatch/:id', authenticateToken, (req, res) => {
     res.json({ success: true });
 });
 
-// SPA fallback - serve index.html for all non-API routes
+// SPA fallback - serve index.html for all non-API and non-static routes
 app.use((req, res, next) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    // Check if it's an API, uploads or has any file extension (contains a dot)
+    const hasExtension = req.path.includes('.');
+    const isApi = req.path.startsWith('/api');
+    const isUploads = req.path.startsWith('/uploads');
+
+    // Also ignore common auth paths that should hit the backend
+    const isAuth = req.path.startsWith('/auth/');
+
+    if (!isApi && !isUploads && !isAuth && !hasExtension) {
         res.sendFile(path.join(__dirname, '../dist/index.html'));
     } else {
         next();
