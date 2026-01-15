@@ -93,10 +93,9 @@ app.use((req, res, next) => {
     const isApi = req.path.startsWith('/api');
     const isUploads = req.path.startsWith('/uploads');
 
-    // Also ignore common auth paths that should hit the backend
-    const isAuth = req.path.startsWith('/auth/');
+    const isAuthBackend = req.path === '/auth/google' || req.path === '/auth/google/callback';
 
-    if (!isApi && !isUploads && !isAuth && !hasExtension) {
+    if (!isApi && !isUploads && !isAuthBackend && !hasExtension) {
         res.sendFile(path.join(__dirname, '../dist/index.html'));
     } else {
         next();

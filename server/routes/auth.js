@@ -304,22 +304,22 @@ router.get('/auth/google', (req, res, next) => {
 
 router.get('/auth/google/callback', (req, res, next) => {
     console.log('[OAUTH] Google Callback status. Params:', JSON.stringify(req.query));
-    next();
-}, (req, res, next) => {
-    passport.authenticate('google', {
-        session: false,
-        failureRedirect: `/login?error=google`
+    passport.authenticate('google', { session: false }, (err, user, info) => {
+        if (err) {
+            console.error('[OAUTH] Passport authentication error:', err);
+            return res.redirect(`/login?error=auth_error`);
+        }
+        if (!user) {
+            console.error('[OAUTH] No user found/created. Info:', info);
+            return res.redirect(`/login?error=google_failed`);
+        }
+
+        console.log('[OAUTH] Authentication success for:', user.email);
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+        const target = `/auth/success?token=${token}`;
+        console.log('[OAUTH] Redirecting to:', target);
+        res.redirect(target);
     })(req, res, next);
-}, (req, res) => {
-    console.log('[OAUTH] Google Auth Middleware finished. User:', req.user?.email);
-    if (!req.user) {
-        console.error('[OAUTH] Authentication succeeded but no user object was found in req');
-        return res.redirect('/login?error=auth_failed');
-    }
-    const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: '7d' });
-    const target = `/auth/success?token=${token}`;
-    console.log('[OAUTH] Success! Redirecting to:', target);
-    res.redirect(target);
 });
 
 // Test Email Route
