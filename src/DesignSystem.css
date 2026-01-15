@@ -1371,7 +1371,7 @@ button:focus {
   background-color: #25d366;
   border-radius: 50%;
   display: inline-block;
-  margin-left: 48px;
+  margin-left: 0;
   box-shadow: 0 0 5px rgba(37, 211, 102, 0.5);
   flex-shrink: 0;
 }

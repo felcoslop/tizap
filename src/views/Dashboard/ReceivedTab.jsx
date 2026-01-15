@@ -144,7 +144,7 @@ export function ReceivedTab({
                                                 })()}
                                             </span>
                                         </div>
-                                        {hasUnread && <span className="unread-dot"></span>}
+                                        {hasUnread && <span className="unread-dot" style={{ marginLeft: 'auto' }}></span>}
                                     </div>
                                 </div>
                             );

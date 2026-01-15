@@ -94,6 +94,28 @@ router.post('/send-message', authenticateToken, async (req, res) => {
     }
 });
 
+// Mark messages as read
+router.post('/messages/mark-read', async (req, res) => {
+    try {
+        const { phones, phoneId } = req.body;
+        if (!phones || !phones.length) return res.json({ success: true });
+
+        await prisma.receivedMessage.updateMany({
+            where: {
+                contactPhone: { in: phones },
+                whatsappPhoneId: String(phoneId),
+                isRead: false
+            },
+            data: { isRead: true }
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[MARK READ ERROR]', err);
+        res.status(500).json({ error: 'Erro ao marcar como lido' });
+    }
+});
+
 // Get Contact Photo (with Initials fallback)
 router.get('/contacts/:phone/photo', async (req, res) => {
     try {
