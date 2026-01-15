@@ -6,5 +6,7 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'tizap_secret_key_2026';
 export const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 export const EMAIL_USER = (process.env.EMAIL_USER || '').trim();
 export const EMAIL_PASS = (process.env.EMAIL_PASS || '').trim();
+export const EMAIL_HOST = process.env.EMAIL_SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
+export const EMAIL_PORT = process.env.EMAIL_SMTP_PORT || process.env.EMAIL_PORT || '587';
 export const GOOGLE_CLIENT_ID = process.env.CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.CLIENT_SECRET;

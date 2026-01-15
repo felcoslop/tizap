@@ -1,8 +1,8 @@
 import nodemailer from 'nodemailer';
-import { EMAIL_USER, EMAIL_PASS } from './constants.js';
+import { EMAIL_USER, EMAIL_PASS, EMAIL_HOST, EMAIL_PORT } from './constants.js';
 
-const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-const port = parseInt(process.env.EMAIL_PORT || '587'); // 587 is often more reliable on DO
+const host = EMAIL_HOST;
+const port = parseInt(EMAIL_PORT);
 const secure = port === 465;
 
 console.log('[MAIL CONFIG] Attempting connection to:', host, 'on port:', port, '(Secure:', secure, ')');
