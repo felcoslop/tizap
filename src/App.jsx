@@ -7,6 +7,8 @@ import { useWebSocket } from './hooks/useWebSocket';
 // Views
 import LoginView from './views/LoginView';
 import RegisterView from './views/RegisterView';
+import ForgotPasswordView from './views/ForgotPasswordView';
+import ResetPasswordView from './views/ResetPasswordView';
 import Dashboard from './views/Dashboard/Dashboard';
 
 // Components
@@ -25,6 +27,13 @@ function AppContent() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [toasts, setToasts] = useState([]);
+    const addToast = useCallback((message, type = 'info') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+    }, []);
+
     // Session: now stores full user object with id
     const [user, setUser] = useState(() => {
         const saved = localStorage.getItem('ambev_session');
@@ -33,11 +42,68 @@ function AppContent() {
 
     useEffect(() => {
         if (user) {
+            localStorage.setItem('tizap_token', user.token || '');
             localStorage.setItem('ambev_session', JSON.stringify(user));
         } else {
+            localStorage.removeItem('tizap_token');
             localStorage.removeItem('ambev_session');
         }
     }, [user]);
+
+    // Prevent double verification calls
+    const hasVerified = React.useRef(false);
+
+    // Handle Google Auth success or Email Verification
+    useEffect(() => {
+        const query = new URLSearchParams(location.search);
+        const token = query.get('token');
+
+        if (location.pathname === '/auth/success' && token) {
+            // Fetch user data with this token to verify and get config
+            const verifyToken = async () => {
+                try {
+                    const res = await fetch(`/api/user/me`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setUser({ ...data, token });
+                        addToast(`Logado com sucesso!`, 'success');
+                        navigate('/home');
+                    } else {
+                        addToast('Erro ao validar login do Google.', 'error');
+                        navigate('/login');
+                    }
+                } catch (err) {
+                    addToast('Erro de conexão.', 'error');
+                    navigate('/login');
+                }
+            };
+            verifyToken();
+        }
+
+        if (location.pathname === '/verify' && token && !hasVerified.current) {
+            hasVerified.current = true;
+            const verifyEmail = async () => {
+                try {
+                    console.log('[VERIFY] Calling API for token:', token);
+                    const res = await fetch(`/api/verify/${token}`);
+                    const data = await res.json();
+                    if (res.ok) {
+                        navigate('/login?verified=true', { replace: true });
+                    } else {
+                        console.error('[VERIFY] API Error:', data.error);
+                        navigate('/login?error=token', { replace: true });
+                    }
+                } catch (err) {
+                    console.error('[VERIFY] Connection error:', err);
+                    addToast('Erro ao verificar e-mail.', 'error');
+                    navigate('/login', { replace: true });
+                }
+            };
+            verifyEmail();
+        }
+    }, [location.pathname, location.search, navigate, addToast]);
 
     const [config, setConfig] = useState({ token: '', phoneId: '', wabaId: '', templateName: '', mapping: {}, webhookVerifyToken: '' });
     const [dispatches, setDispatches] = useState([]);
@@ -62,7 +128,6 @@ function AppContent() {
     const [showToken, setShowToken] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [toasts, setToasts] = useState([]);
 
     const activeTab = useMemo(() => {
         if (location.pathname === '/home') return 'disparos';
@@ -72,12 +137,6 @@ function AppContent() {
         if (location.pathname === '/flows') return 'fluxos';
         return 'disparos';
     }, [location.pathname]);
-
-    const addToast = useCallback((message, type = 'info') => {
-        const id = Date.now();
-        setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
-    }, []);
 
     // Fetch functions
     const fetchUserData = useCallback(async () => {
@@ -246,16 +305,16 @@ function AppContent() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                setUser(data.user);
-                if (data.config) {
-                    setConfig(data.config);
-                    setTemplateName(data.config.templateName || '');
-                    setMapping(data.config.mapping || {});
+                setUser({ ...data.user, token: data.token });
+                if (data.user.config) {
+                    setConfig(data.user.config);
+                    setTemplateName(data.user.config.templateName || '');
+                    setMapping(data.user.config.mapping || {});
                 }
-                addToast(`Bem-vindo, ${data.user.email}!`, 'success');
+                addToast(`Bem-vindo, ${data.user.name || data.user.email}!`, 'success');
                 navigate('/home');
             } else {
-                addToast(data.error || 'E-mail ou senha incorretos.', 'error');
+                addToast(data.error || 'Erro ao entrar.', 'error');
             }
         } catch (err) {
             addToast('Erro de conexão com o servidor.', 'error');
@@ -276,7 +335,7 @@ function AppContent() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                addToast('Usuário cadastrado com sucesso!', 'success');
+                addToast(data.message || 'Verifique seu e-mail para ativar a conta!', 'success');
                 navigate('/login');
             } else {
                 addToast(data.error || 'Erro ao cadastrar.', 'error');
@@ -372,8 +431,20 @@ function AppContent() {
         <>
             <Toast toasts={toasts} />
             <Routes>
-                <Route path="/login" element={!user ? <LoginView onLogin={handleLogin} onSwitch={() => navigate('/register')} /> : <Navigate to="/home" />} />
+                <Route path="/login" element={!user ? (
+                    <LoginView
+                        onLogin={handleLogin}
+                        onSwitch={(mode) => {
+                            if (mode === 'forgot') navigate('/forgot-password');
+                            else navigate('/register');
+                        }}
+                    />
+                ) : <Navigate to="/home" />} />
                 <Route path="/register" element={!user ? <RegisterView onRegister={handleRegister} onSwitch={() => navigate('/login')} /> : <Navigate to="/home" />} />
+                <Route path="/forgot-password" element={!user ? <ForgotPasswordView onSwitch={() => navigate('/login')} /> : <Navigate to="/home" />} />
+                <Route path="/reset-password" element={!user ? <ResetPasswordView /> : <Navigate to="/home" />} />
+                <Route path="/auth/success" element={<div className="loading-screen"><div className="spinner"></div><p>Finalizando login...</p></div>} />
+                <Route path="/verify" element={<div className="loading-screen"><div className="spinner"></div><p>Verificando e-mail...</p></div>} />
                 <Route path="/home" element={user ? <Dashboard {...commonProps} activeTab="disparos" /> : <Navigate to="/login" />} />
                 <Route path="/history" element={user ? <Dashboard {...commonProps} activeTab="historico" /> : <Navigate to="/login" />} />
                 <Route path="/received" element={user ? <Dashboard {...commonProps} activeTab="recebidas" /> : <Navigate to="/login" />} />

@@ -11,7 +11,8 @@ Este guia explica como configurar o Webhook no Painel da Meta para que o sistema
 Localize a seção **Webhooks** e clique em **Editar/Configurar**:
 
 - **URL de retorno (Callback URL):** 
-  `https://evolution-eric.hfzba0.easypanel.host/webhook`
+  `https://seu-dominio.com/webhook/SEU_USER_ID`
+  *(Substitua SEU_USER_ID pelo seu ID exibido no sistema)*
 - **Token de verificação:** 
   `ambev_webhook_token_2026` 
   *(Este token deve ser o mesmo configurado no backend)*

@@ -1,98 +1,82 @@
-# tizap! - WhatsApp Automation Platform
+# tiZAP! - Gerenciador de WhatsApp Business
 
-Technical documentation for the tizap! messaging management system.
+Plataforma profissional para automação de mensagens via WhatsApp Meta Business API.
 
-## Core Features
+## 🚀 Principais Funcionalidades
 
-- **Meta Business API Integration**: Native support for WhatsApp Business API for official message delivery.
-- **Mass Template Dispatch**: Automated notification system using Meta-approved templates with dynamic variable mapping.
-- **Visual Flow Builder**: Interactive editor based on ReactFlow for designing complex conversational branches.
-- **Real-time Chat Management**: Unified interface for receiving and responding to customer messages via WebSockets.
-- **Data Import**: Support for XLSX and CSV lead data parsing and processing.
-- **Operational Auditing**: Detailed logging of all dispatches, delivery statuses, and interactive session histories.
-- **Webhook Management**: Dynamic webhook generation and validation for Meta event synchronization.
+- **Integração Nativa Meta API**: Envio oficial de mensagens via templates aprovados.
+- **Disparos em Massa**: Automação de notificações com mapeamento dinâmico de variáveis (XLSX/CSV).
+- **Flow Builder Visual**: Construtor de fluxos conversacionais interativos (React Flow).
+- **Chat em Tempo Real**: Interface unificada para atendimento e respostas rápidas via WebSockets.
+- **Gestão de Webhooks**: Sistema robusto para recebimento de mensagens e mídias.
+- **Arquitetura Modular**: Backend organizado por rotas, serviços e middlewares para fácil manutenção.
 
-## Technology Stack
+## 🛠️ Stack Tecnológica
 
-- **Frontend**: React (Vite), ReactFlow, Lucide Icons, Framer Motion.
-- **Backend**: Node.js, Express.
-- **Database**: SQLite with Prisma ORM.
-- **Communication**: WebSockets (WS), Axios for REST API calls.
+- **Frontend**: React (Vite), ReactFlow, Framer Motion, Lucide Icons.
+- **Backend**: Node.js, Express (Arquitetura Modular).
+- **Banco de Dados**: SQLite com Prisma ORM.
+- **Comunicação**: WebSockets (WS), REST API.
+- **Deploy**: Docker (Multi-stage build).
 
-## Prerequisites
+## 📂 Estrutura do Projeto
 
-- Node.js (v18 or higher)
-- npm or yarn
-- Meta Business Account with WhatsApp Business API access
+```text
+/
+├── server/             # Backend Modular
+│   ├── config/         # Configurações (Email, Constantes)
+│   ├── middleware/     # Middlewares (Auth, Logger)
+│   ├── routes/         # Rotas da API (Auth, Flows, Msg, etc)
+│   ├── services/       # Lógica de Negócio (WhatsApp, FlowEngine, Dispatch)
+│   └── index.js        # Ponto de entrada do servidor
+├── src/                # Frontend React
+├── prisma/             # Schema e Migrações do Banco
+└── public/             # Assets Estáticos
+```
 
-## Installation
+## ⚙️ Pré-requisitos
 
-1. Install project dependencies:
+- Node.js (v20+)
+- Conta de Desenvolvedor na Meta (Facebook)
+- App configurado para WhatsApp Business API
+
+## 🚀 Instalação e Uso
+
+1. **Clone o repositório e instale as dependências:**
    ```bash
    npm install
    ```
 
-2. Configure environment variables:
-   Create a `.env` file in the root directory and define the following:
+2. **Configure as variáveis de ambiente (.env):**
    ```env
    PORT=3000
-   DATABASE_URL="file:./prisma/dev.db"
+   EMAIL_USER=seu-email@gmail.com
+   EMAIL_PASS=sua-senha-app-google
+   JWT_SECRET=chave-secreta-segura
    ```
 
-3. Initialize the database:
+3. **Inicie o projeto (Desenvolvimento):**
    ```bash
-   npx prisma db push
-   npx prisma generate
-   ```
+   # Terminal 1: Backend + Prisma
+   npm start
 
-## Development and Execution
-
-### Running the Project
-The project requires both the frontend and backend to be running.
-
-**Standard Start (Combined):**
-```bash
-npm start
-```
-
-**Manual Start:**
-1. Start the Backend Server:
-   ```bash
-   npm run server
-   ```
-2. Start the Frontend Development Server:
-   ```bash
+   # Terminal 2: Frontend
    npm run dev
    ```
 
-## Functional Modules
+## 🐳 Deploy com Docker
 
-### 1. Automation Tab
-- Upload contact lists (XLSX/CSV).
-- Select and configure WhatsApp templates.
-- Map spreadsheet columns to template placeholders.
-- Real-time dispatch monitoring with progress metrics.
+O projeto está pronto para deploy em ambientes como Easypanel, Coolify ou VPS pura:
 
-### 2. Flow Builder
-- Visual node-based editor for automated sequences.
-- Support for text, image, and interactive button messages.
-- Edge-based logic for branching conversations.
-- Deployment to active phone numbers via the dispatch engine.
+```bash
+docker build -t tizap .
+docker run -p 3000:3000 -v tizap_data:/data tizap
+```
 
-### 3. Messaging Dashboard
-- View incoming messages from contacts.
-- Live chat functionality with instant response capabilities.
-- Status synchronization via official webhooks.
+## 📘 Guias Adicionais
 
-### 4. History and Analytics
-- Campaign-level logs showing success and error rates.
-- Individual session logs for detailed flow debugging.
-- Retry mechanisms for failed message attempts.
+- [Guia de Webhooks](./WEBHOOK_GUIDE.md) - Como configurar a recepção de mensagens.
+- [Guia de Templates](./WHATSAPP_TEMPLATE_GUIDE.md) - Criando modelos no painel da Meta.
 
-## Configuration for Meta
-
-To enable messaging, navigate to the Settings tab and configure:
-1. **Access Token**: Permanent or temporary token from the Meta App Dashboard.
-2. **Phone Number ID**: ID of the specific WhatsApp number to be used for sending.
-3. **WABA ID**: WhatsApp Business Account ID.
-4. **Webhook URL**: Configure the generated URL in the Meta Webhooks section (Events: `messages`).
+---
+Desenvolvido com ❤️ para a equipe de Logística Ambev.

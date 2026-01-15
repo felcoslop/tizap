@@ -28,8 +28,8 @@ RUN npm install --legacy-peer-deps
 # Copy built frontend from build stage
 COPY --from=build /app/dist ./dist
 
-# Copy backend files, prisma schema and database logic
-COPY server.js .
+# Copy backend files and models
+COPY server ./server
 COPY prisma ./prisma
 COPY politics ./politics
 

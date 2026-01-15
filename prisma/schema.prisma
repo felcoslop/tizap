@@ -8,14 +8,21 @@ datasource db {
 }
 
 model User {
-  id         Int         @id @default(autoincrement())
-  email      String      @unique
-  name       String?
-  password   String
-  createdAt  DateTime    @default(now())
-  dispatches Dispatch[]
-  config     UserConfig?
-  flows      Flow[]
+  id                  Int         @id @default(autoincrement())
+  email               String      @unique
+  name                String?
+  password            String?
+  isVerified          Boolean     @default(false)
+  verificationToken   String?
+  verificationExpires DateTime?
+  googleId            String?     @unique
+  avatar              String?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  createdAt           DateTime    @default(now())
+  dispatches          Dispatch[]
+  config              UserConfig?
+  flows               Flow[]
 }
 
 model UserConfig {
