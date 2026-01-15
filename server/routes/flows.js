@@ -43,7 +43,7 @@ router.post('/flows', authenticateToken, async (req, res) => {
         if (id) {
             console.log('[FLOW SAVE] Updating existing flow:', id);
             flow = await prisma.flow.update({
-                where: { id },
+                where: { id: parseInt(id) },
                 data: { name, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
             });
         } else {

@@ -98,7 +98,10 @@ export function ReceivedTab({
 
                                         fetch('/api/messages/mark-read', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${user.token}`
+                                            },
                                             body: JSON.stringify({ phones: groupPhones, phoneId: config.phoneId, token: config.token })
                                         }).catch(err => console.error('Failed to mark as read:', err));
                                     }}
@@ -250,7 +253,10 @@ export function ReceivedTab({
                                     try {
                                         const res = await fetch('/api/send-message', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${user.token}`
+                                            },
                                             body: JSON.stringify({ phone: activeContact, body: text, config })
                                         });
                                         if (res.ok) {

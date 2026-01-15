@@ -108,6 +108,11 @@ router.post('/webhook/:userId', (req, res) => {
     handleIncomingWebhook(req, res, userId, req.app.get('broadcastMessage'));
 });
 
+// Generic Webhook (finds user by phone_number_id)
+router.post('/webhook', (req, res) => {
+    handleIncomingWebhook(req, res, null, req.app.get('broadcastMessage'));
+});
+
 // Backward compatibility (old webhook)
 router.get('/webhook', (req, res) => {
     if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === WEBHOOK_VERIFY_TOKEN) {

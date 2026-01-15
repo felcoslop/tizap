@@ -705,7 +705,10 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast }) {
 
             const res = await fetch(endpoint, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
                 body: JSON.stringify(payload)
             });
 
