@@ -40,10 +40,13 @@ const createTransporter = async () => {
 
 // Helper to encode message for Gmail API
 const makeBody = (to, from, subject, message) => {
+    // RFC 2047 Encoding for Subject: =?utf-8?B?base64_encoded_string?=
+    const encodedSubject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+
     const str = [
         `To: ${to}`,
         `From: ${from}`,
-        `Subject: ${subject}`,
+        `Subject: ${encodedSubject}`,
         `MIME-Version: 1.0`,
         `Content-Type: text/html; charset=utf-8`,
         ``,
