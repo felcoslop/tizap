@@ -14,12 +14,8 @@ const secure = port === 465;
 // Uses robust configuration with fallback for service 'gmail'
 const transporterConfig = {};
 
-if (EMAIL_PASS && EMAIL_PASS.trim().length > 0) {
-    console.log('[MAIL] Configuring via SMTP/App Password (Priority)');
-    transporterConfig.service = 'gmail';
-    transporterConfig.auth = { user: EMAIL_USER, pass: EMAIL_PASS };
-} else if (GMAIL_REFRESH_TOKEN && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
-    console.log('[MAIL] Configuring Gmail API (OAuth2)');
+if (GMAIL_REFRESH_TOKEN && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+    console.log('[MAIL] Configuring Gmail API (OAuth2) [VALIDATED]');
     transporterConfig.service = 'gmail';
     transporterConfig.auth = {
         type: 'OAuth2',
@@ -28,6 +24,10 @@ if (EMAIL_PASS && EMAIL_PASS.trim().length > 0) {
         clientSecret: GOOGLE_CLIENT_SECRET,
         refreshToken: GMAIL_REFRESH_TOKEN
     };
+} else if (EMAIL_PASS && EMAIL_PASS.trim().length > 0) {
+    console.log('[MAIL] Configuring via SMTP/App Password (Fallback)');
+    transporterConfig.service = 'gmail';
+    transporterConfig.auth = { user: EMAIL_USER, pass: EMAIL_PASS };
 } else if (process.env.EMAIL_SERVICE) {
     transporterConfig.service = process.env.EMAIL_SERVICE;
     transporterConfig.auth = { user: EMAIL_USER, pass: EMAIL_PASS };
