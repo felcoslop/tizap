@@ -6,7 +6,7 @@ import prisma from '../db.js';
 import { sendMail } from '../config/email.js';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { JWT_SECRET, FRONTEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '../config/constants.js';
+import { JWT_SECRET, FRONTEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } from '../config/constants.js';
 
 // Google Passport Strategy
 passport.use(new GoogleStrategy({
@@ -367,6 +367,39 @@ router.get('/auth/test-email', (req, res) => {
     }).catch(err => {
         console.error('[MAIL TEST] Failed:', err);
         res.status(500).json({ success: false, error: err.message });
+    });
+});
+
+// Debug Route for Email Config
+router.get('/auth/debug-email-config', async (req, res) => {
+    // SECURITY: Only show lengths or partials to avoid leaking full secrets in public logs if accessed
+    const status = {
+        EMAIL_USER: EMAIL_USER,
+        EMAIL_PASS_CONFIGURED: !!(process.env.EMAIL_PASS || process.env.MAIL_PASSWORD),
+        GMAIL_REFRESH_TOKEN_LENGTH: GMAIL_REFRESH_TOKEN ? GMAIL_REFRESH_TOKEN.length : 0,
+        GOOGLE_CLIENT_ID_CONFIGURED: !!GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET_CONFIGURED: !!GOOGLE_CLIENT_SECRET,
+        NODE_ENV: process.env.NODE_ENV
+    };
+
+    // Attempt verification
+    let connectionVerify = 'Not attempted';
+    try {
+        const { default: transporter } = await import('../config/email.js');
+        await new Promise((resolve, reject) => {
+            transporter.verify((error, success) => {
+                if (error) reject(error);
+                else resolve(success);
+            });
+        });
+        connectionVerify = 'SUCCESS';
+    } catch (err) {
+        connectionVerify = 'FAILED: ' + err.message;
+    }
+
+    res.json({
+        env_status: status,
+        connection_test: connectionVerify
     });
 });
 

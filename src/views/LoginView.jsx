@@ -96,7 +96,6 @@ export function LoginView({ onLogin, onSwitch }) {
                     <img src="/logo.png" alt="tizap!" className="rounded-logo" style={{ width: '80px', height: '80px', objectFit: 'cover', marginBottom: '1.5rem' }} />
                     <h1 className="logo-text" style={{ fontSize: '2.5rem', marginBottom: '0.2rem', color: 'var(--ambev-yellow)' }}>tizap!</h1>
                 </div>
-                <p className="subtitle" style={{ color: '#888', fontWeight: 600, opacity: 0.8, position: 'relative', zIndex: 1 }}>Comunicação inteligente para o seu negócio</p>
                 {window.location.search.includes('verified=true') && (
                     <div style={{ backgroundColor: 'rgba(0, 162, 118, 0.1)', color: 'var(--ambev-green)', padding: '10px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 'bold' }}>
                         E-mail confirmado! Faça login agora.
