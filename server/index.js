@@ -2,6 +2,7 @@ import express from 'express';
 import passport from 'passport';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -66,7 +67,7 @@ app.use(requestLogger);
 // Static files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Also serve /data/uploads if it exists (Docker production)
-if (require('fs').existsSync('/data/uploads')) {
+if (fs.existsSync('/data/uploads')) {
     app.use('/uploads', express.static('/data/uploads'));
 }
 app.use(express.static(path.join(__dirname, '../dist')));
