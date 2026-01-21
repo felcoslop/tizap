@@ -34,7 +34,8 @@ COPY prisma ./prisma
 COPY politics ./politics
 
 # Create data directory for persistent database
-RUN mkdir -p /data && chmod 777 /data
+RUN mkdir -p /data/uploads && chmod -R 777 /data
+RUN mkdir -p /app/uploads && chmod -R 777 /app/uploads
 
 # Set production environment
 ENV NODE_ENV=production

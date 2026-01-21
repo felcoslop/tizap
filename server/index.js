@@ -64,7 +64,11 @@ app.use(express.json({ limit: '50mb' }));
 app.use(requestLogger);
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Also serve /data/uploads if it exists (Docker production)
+if (require('fs').existsSync('/data/uploads')) {
+    app.use('/uploads', express.static('/data/uploads'));
+}
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // Specific route for logo if not in dist
@@ -106,6 +110,16 @@ app.use((req, res, next) => {
     } else {
         next();
     }
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('[SERVER ERROR]', err);
+    res.status(500).json({
+        error: 'Erro interno no servidor.',
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
 });
 
 // Initialize server
