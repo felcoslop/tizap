@@ -11,7 +11,7 @@ import ReactFlow, {
     MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { X, Plus, Trash2, Edit3, Play, Save, ArrowLeft, Image, MessageSquare, MessageCircle, ListOrdered, Upload, RefreshCw } from 'lucide-react';
+import { X, Plus, Trash2, Edit3, Play, Save, ArrowLeft, Image, MessageSquare, MessageCircle, ListOrdered, Upload, Download, RefreshCw, Mail } from 'lucide-react';
 
 const NODE_STYLES = `
     .flow-node {
@@ -64,6 +64,7 @@ const NODE_STYLES = `
 
     .template-header { background: linear-gradient(135deg, #00a276, #00c896) !important; }
     .image-header { background: linear-gradient(135deg, #e91e63, #f48fb1) !important; }
+    .email-header { background: linear-gradient(135deg, #7c3aed, #a78bfa) !important; }
     
     .node-content { padding: 12px; }
     .node-text { margin: 0; font-size: 13px; color: #333; white-space: pre-wrap; line-height: 1.4; }
@@ -602,11 +603,101 @@ function ImageNode({ data, id, selected }) {
     );
 }
 
+// Email Node Component
+function EmailNode({ data, id, selected }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [templates, setTemplates] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isEditing) {
+            fetchTemplates();
+        }
+    }, [isEditing]);
+
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const userId = data.userId;
+            const token = data.token;
+            if (!userId || !token) {
+                console.warn("[EmailNode] Missing userId or token", { userId, token });
+                return;
+            }
+
+            const res = await fetch(`/api/email-templates/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) setTemplates(await res.json());
+        } catch (e) {
+            console.error("Error fetching templates:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className={`flow-node email-node ${selected ? 'selected' : ''}`}>
+            <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
+
+            <div className="node-header email-header">
+                <Mail size={16} />
+                <span>E-mail</span>
+                <div className="node-header-btns">
+                    <button className="node-edit-btn" onClick={() => setIsEditing(!isEditing)} title="Editar">
+                        <Edit3 size={12} />
+                    </button>
+                    <button className="node-delete-btn" onClick={() => data.onDelete(id)} title="Excluir">
+                        <Trash2 size={12} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="node-content">
+                {isEditing ? (
+                    <div className="edit-mode">
+                        <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px', display: 'block' }}>Template:</label>
+                        <select
+                            value={data.templateId || ''}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                const t = templates.find(x => String(x.id) === String(val));
+                                data.onChange(id, { templateId: val, templateName: t ? t.name : '' });
+                            }}
+                            style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd', marginBottom: '10px' }}
+                        >
+                            <option value="">Selecione um template...</option>
+                            {templates.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+
+                        <div className="edit-actions">
+                            <button className="btn-small btn-primary" onClick={() => setIsEditing(false)}>Salvar</button>
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="node-text" style={{ color: '#7c3aed' }}>
+                            <strong>Template:</strong> {data.templateName || 'Nenhum selecionado'}
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            <div className="handles-row">
+                <Handle type="source" position={Position.Bottom} id="source-gray" style={{ background: '#6c757d', width: 14, height: 14, border: '2px solid #333' }} title="Continuar" />
+            </div>
+        </div>
+    );
+}
+
 const nodeTypes = {
     messageNode: MessageNode,
     optionsNode: OptionsNode,
     templateNode: TemplateNode,
-    imageNode: ImageNode
+    imageNode: ImageNode,
+    emailNode: EmailNode
 };
 
 // --- Flow Editor Component ---
@@ -646,14 +737,23 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
         if (params.sourceHandle?.includes('red')) edgeStyle = { stroke: '#dc3545', strokeWidth: 2 };
         if (params.sourceHandle?.includes('source-') && !params.sourceHandle.includes('gray')) edgeStyle = { stroke: '#fecb00', strokeWidth: 2 };
 
-        setEdges((eds) => addEdge({
-            ...params,
-            id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-            type: 'smoothstep',
-            animated: true,
-            style: edgeStyle,
-            markerEnd: { type: MarkerType.ArrowClosed }
-        }, eds));
+        setEdges((eds) => {
+            // Robust source handle check
+            const filteredEdges = eds.filter(e => {
+                const sameSource = String(e.source) === String(params.source);
+                const sameHandle = String(e.sourceHandle) === String(params.sourceHandle);
+                return !(sameSource && sameHandle);
+            });
+
+            return addEdge({
+                ...params,
+                id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                type: 'smoothstep',
+                animated: true,
+                style: edgeStyle,
+                markerEnd: { type: MarkerType.ArrowClosed }
+            }, filteredEdges);
+        });
     }, []);
 
     const handleNodeDataChange = useCallback((nodeId, newData) => {
@@ -678,7 +778,7 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
     const addNode = (type) => {
         const id = `node_${Date.now()}`;
         const position = reactFlowInstance ? reactFlowInstance.project({ x: 250, y: 150 }) : { x: 250, y: 150 };
-        const defaultData = { onChange: handleNodeDataChange, onDelete: handleDeleteNode, token };
+        const defaultData = { onChange: handleNodeDataChange, onDelete: handleDeleteNode, token, userId };
 
         if (type === 'messageNode') {
             defaultData.label = 'Nova mensagem';
@@ -694,6 +794,9 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
             defaultData.imageUrl = '';
             defaultData.caption = '';
             defaultData.hasImage = true;
+        } else if (type === 'emailNode') {
+            defaultData.templateId = '';
+            defaultData.templateName = '';
         }
 
         setNodes((nds) => [...nds, { id, type, position, data: defaultData }]);
@@ -744,8 +847,17 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
     };
 
     const nodesWithHandlers = useMemo(() => {
-        return nodes.map(node => ({ ...node, data: { ...node.data, onChange: handleNodeDataChange, onDelete: handleDeleteNode } }));
-    }, [nodes, handleNodeDataChange, handleDeleteNode]);
+        return nodes.map(node => ({
+            ...node,
+            data: {
+                ...node.data,
+                userId,
+                token,
+                onChange: handleNodeDataChange,
+                onDelete: handleDeleteNode
+            }
+        }));
+    }, [nodes, handleNodeDataChange, handleDeleteNode, userId, token]);
 
     return (
         <div className="flow-editor-container" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -770,6 +882,7 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
                 <button className="btn-small" style={{ background: 'white', border: '1px solid #ddd' }} onClick={() => addNode('optionsNode')}><ListOrdered size={16} /> Opções</button>
                 <button className="btn-small" style={{ background: 'white', border: '1px solid #ddd' }} onClick={() => addNode('templateNode')}><MessageCircle size={16} /> Template</button>
                 <button className="btn-small" style={{ background: 'white', border: '1px solid #ddd' }} onClick={() => addNode('imageNode')}><Image size={16} /> Imagem</button>
+                <button className="btn-small" style={{ background: 'white', border: '1px solid #ddd' }} onClick={() => addNode('emailNode')}><Mail size={16} /> E-mail</button>
             </div>
 
             <div className="flow-canvas" style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
@@ -802,6 +915,62 @@ export default function FlowBuilder({ user, addToast }) {
     const [flows, setFlows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingFlow, setEditingFlow] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [flowToDelete, setFlowToDelete] = useState(null);
+    const fileInputRef = useRef(null);
+
+    const downloadFlow = (flow) => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(flow, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `${flow.name}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        addToast('JSON do fluxo gerado!', 'success');
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const flowData = JSON.parse(event.target.result);
+                // Prepare payload for creation
+                const payload = {
+                    name: `Cópia de ${flowData.name || 'Fluxo Importado'}`,
+                    nodes: JSON.parse(flowData.nodes || '[]'),
+                    edges: JSON.parse(flowData.edges || '[]'),
+                    userId: user.id
+                };
+
+                const res = await fetch('/api/flows', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user.token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    addToast('Fluxo importado com sucesso!', 'success');
+                    fetchFlows();
+                } else {
+                    const err = await res.json();
+                    addToast('Erro ao importar: ' + (err.error || 'Desconhecido'), 'error');
+                }
+            } catch (err) {
+                console.error('Import error:', err);
+                addToast('Arquivo JSON inválido ou corrompido.', 'error');
+            }
+        };
+        reader.readAsText(file);
+        // Clear input
+        e.target.value = '';
+    };
 
     const fetchFlows = useCallback(async () => {
         setLoading(true);
@@ -824,25 +993,53 @@ export default function FlowBuilder({ user, addToast }) {
         fetchFlows();
     }, [fetchFlows]);
 
-    const deleteFlow = async (id) => {
-        if (!window.confirm('Excluir este fluxo?')) return;
+    const performDelete = async () => {
+        if (!flowToDelete) return;
         try {
-            const res = await fetch(`/api/flows/${user.id}/${id}`, {
+            const res = await fetch(`/api/flows/${flowToDelete}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${user.token}` }
             });
             if (res.ok) {
                 addToast('Fluxo excluído.', 'info');
                 fetchFlows();
+            } else {
+                addToast('Erro ao excluir no servidor.', 'error');
             }
         } catch (err) {
             addToast('Erro ao excluir.', 'error');
+        } finally {
+            setShowDeleteModal(false);
+            setFlowToDelete(null);
         }
+    };
+
+    const confirmDelete = (id) => {
+        setFlowToDelete(id);
+        setShowDeleteModal(true);
     };
 
     return (
         <div className="card" style={{ height: '100%', width: '100%', backgroundColor: 'white', padding: '2.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
             <style>{NODE_STYLES}</style>
+            {showDeleteModal && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content alert" style={{ textAlign: 'center' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ background: '#fff9e6', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                <Trash2 size={30} color="#ffc200" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)', marginBottom: '10px' }}>Excluir Fluxo?</h3>
+                            <p style={{ color: '#666', fontSize: '1rem' }}>Esta ação não pode ser desfeita. Tem certeza que deseja remover este fluxo?</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button className="btn-3d-blue" style={{ width: '120px' }} onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                            <button className="btn-3d-yellow" style={{ width: '120px' }} onClick={performDelete}>Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {editingFlow || editingFlow === 'new' ? (
                 <ReactFlowProvider>
                     <FlowEditor
@@ -862,9 +1059,21 @@ export default function FlowBuilder({ user, addToast }) {
                             <h2 style={{ fontSize: '2rem', color: 'var(--ambev-blue)', marginBottom: '8px' }}>Seus Fluxos</h2>
                             <p className="subtitle">Gerencie seus fluxos de conversas automáticas</p>
                         </div>
-                        <button className="btn-primary" onClick={() => setEditingFlow('new')} style={{ padding: '12px 24px', borderRadius: '10px' }}>
-                            <Plus size={18} /> Novo Fluxo
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                accept=".json"
+                                style={{ display: 'none' }}
+                            />
+                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', borderRadius: '10px' }}>
+                                <Upload size={18} /> Importar
+                            </button>
+                            <button className="btn-primary" onClick={() => setEditingFlow('new')} style={{ padding: '12px 24px', borderRadius: '10px' }}>
+                                <Plus size={18} /> Novo Fluxo
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -888,13 +1097,16 @@ export default function FlowBuilder({ user, addToast }) {
                                                 <span style={{ fontSize: '12px', color: '#999', fontWeight: 500 }}>ID do Fluxo: #{flow.id}</span>
                                             </div>
                                         </div>
-                                        <button className="btn-delete-flow" onClick={() => deleteFlow(flow.id)} title="Excluir Fluxo">
+                                        <button className="btn-delete-flow" onClick={() => confirmDelete(flow.id)} title="Excluir Fluxo">
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
                                     <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
                                         <button className="btn-edit-flow" style={{ flex: 1, height: '42px', padding: '0 15px', borderRadius: '8px' }} onClick={() => setEditingFlow(flow)}>
                                             <Edit3 size={16} /> Editar
+                                        </button>
+                                        <button className="btn-secondary" style={{ height: '42px', padding: '0 15px', borderRadius: '8px' }} onClick={() => downloadFlow(flow)} title="Baixar JSON">
+                                            <Download size={16} />
                                         </button>
                                     </div>
                                 </div>

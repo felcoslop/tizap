@@ -3,7 +3,7 @@ import {
     Send, GitBranch, History, MessageSquare, Settings,
     LogOut, Upload, CheckCircle2, RefreshCw, List,
     Pause, Play, RotateCcw, Download, Eye, EyeOff,
-    Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X
+    Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X, Mail
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 import AutomationTab from './AutomationTab';
 import HistoryTab from './HistoryTab';
 import ReceivedTab from './ReceivedTab';
+import EmailTab from './EmailTab';
 import SettingsTab from './SettingsTab';
 import FlowBuilder from './FlowBuilder'; // Assuming it's in the same dir or will be moved
 import LogModal from '../../components/Modals/LogModal';
@@ -92,6 +93,7 @@ export function Dashboard({
         { id: 'fluxos', label: 'Fluxos', icon: GitBranch },
         { id: 'historico', label: 'Histórico', icon: History },
         { id: 'recebidas', label: 'Recebidas', icon: MessageSquare },
+        { id: 'email', label: 'E-mail', icon: Mail },
         { id: 'ajustes', label: 'Ajustes', icon: Settings }
     ];
 
@@ -120,14 +122,16 @@ export function Dashboard({
 
             const nodes = JSON.parse(flow.nodes);
             const templateNodes = nodes.filter(n => n.type === 'templateNode');
+            const emailNodes = nodes.filter(n => n.type === 'emailNode');
 
-            if (templateNodes.length > 0) {
+            if (templateNodes.length > 0 || emailNodes.length > 0) {
                 const loadFlowVars = async () => {
                     setIsLoadingTemplate(true);
                     const newFlowVars = {};
                     let globalOrder = 0;
 
                     try {
+                        // Templates Meta
                         await Promise.all(templateNodes.map(async (node) => {
                             const tName = node.data.templateName;
                             if (!tName) return;
@@ -163,6 +167,22 @@ export function Dashboard({
                                 }
                             }
                         }));
+
+                        // Email Nodes
+                        emailNodes.forEach(node => {
+                            const key = `enode_${node.id}_email`;
+                            newFlowVars[key] = {
+                                component: 'E-MAIL',
+                                index: 'destinatário',
+                                type: 'column',
+                                value: 'email',
+                                nodeId: node.id,
+                                nodeName: `E-mail (${node.data.templateName || 'Sem Template'})`,
+                                templateName: node.data.templateName,
+                                order: globalOrder++
+                            };
+                        });
+
                         setTemplateVariables(newFlowVars);
                     } catch (e) {
                         console.error('Error fetching flow template:', e);
@@ -445,19 +465,20 @@ export function Dashboard({
         }
 
         try {
-            const res = await fetch(`/api/dispatch/${user.id}`, {
+            const res = await fetch(`/api/start-dispatch`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${user.token}`
                 },
                 body: JSON.stringify({
+                    userId: user.id,
                     dispatchSource,
                     dispatchType: dispatchSource === 'ambev' ? 'template' : dispatchMode,
                     templateName: (dispatchSource === 'ambev' || dispatchMode === 'template') ? templateName : 'Fluxo',
                     flowId: selectedFlowId,
                     variables: finalVariables,
-                    leads
+                    leadsData: leads
                 })
             });
             const data = await res.json();
@@ -573,7 +594,8 @@ export function Dashboard({
                             <h1>
                                 {activeTab === 'disparos' ? 'Automação de Notificações' :
                                     activeTab === 'historico' ? 'Histórico' :
-                                        activeTab === 'recebidas' ? 'Mensagens Recebidas' : 'Configurações'}
+                                        activeTab === 'recebidas' ? 'Mensagens Recebidas' :
+                                            activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
                             </h1>
                             {activeTab === 'disparos' && activeDispatch?.status === 'running' && <div className="badge-live">Live</div>}
                         </header>
@@ -646,6 +668,13 @@ export function Dashboard({
                             />
                         )}
 
+                        {activeTab === 'email' && (
+                            <EmailTab
+                                user={user}
+                                addToast={addToast}
+                            />
+                        )}
+
                         {activeTab === 'historico' && (
                             <HistoryTab
                                 user={user}
@@ -688,12 +717,22 @@ export function Dashboard({
                 <button className={`mobile-nav-item ${activeTab === 'historico' ? 'active' : ''}`} onClick={() => setActiveTab('historico')}>
                     <History size={24} /> <span>Histórico</span>
                 </button>
+                <button className={`mobile-nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => setActiveTab('email')}>
+                    <Mail size={24} /> <span>E-mail</span>
+                </button>
                 <button className={`mobile-nav-item ${activeTab === 'ajustes' ? 'active' : ''}`} onClick={() => setActiveTab('ajustes')}>
                     <Settings size={24} /> <span>Ajustes</span>
                 </button>
             </div>
 
-            {selectedLogDispatch && <LogModal dispatch={selectedLogDispatch} onClose={() => setSelectedLogDispatch(null)} />}
+            {selectedLogDispatch && (
+                <LogModal
+                    dispatch={selectedLogDispatch}
+                    user={user}
+                    addToast={addToast}
+                    onClose={() => setSelectedLogDispatch(null)}
+                />
+            )}
 
             {showProfileModal && (
                 <div className="profile-modal-overlay" onClick={() => setShowProfileModal(null)}>

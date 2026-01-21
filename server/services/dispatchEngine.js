@@ -54,13 +54,17 @@ export const processDispatch = async (dispatchId, broadcastProgress) => {
                         const edges = JSON.parse(flow.edges);
                         const startNodeId = FlowEngine.findStartNode(nodes, edges);
 
+                        // Merge static lead data with dynamic variables mapping
+                        const initialVars = { ...lead };
+                        const mappingVars = JSON.parse(dispatch.variables || '{}');
+
                         const session = await prisma.flowSession.create({
                             data: {
                                 flowId: flow.id,
                                 contactPhone: String(phone),
                                 currentStep: String(startNodeId),
                                 status: 'active',
-                                variables: JSON.stringify(lead)
+                                variables: JSON.stringify({ ...initialVars, _mapping: mappingVars })
                             }
                         });
                         await FlowEngine.executeStep(session, flow, userConfig);
@@ -105,7 +109,7 @@ export const processDispatch = async (dispatchId, broadcastProgress) => {
 
 export const startDispatch = async (req, res, broadcastProgress) => {
     try {
-        const { userId, templateName, leadsData, dispatchType, flowId } = req.body;
+        const { userId, templateName, leadsData, dispatchType, flowId, variables } = req.body;
         const dispatch = await prisma.dispatch.create({
             data: {
                 userId,
@@ -115,6 +119,7 @@ export const startDispatch = async (req, res, broadcastProgress) => {
                 leadsData: JSON.stringify(leadsData),
                 dispatchType: dispatchType || 'template',
                 flowId: flowId ? parseInt(flowId) : null,
+                variables: variables ? JSON.stringify(variables) : '[]',
                 dateOld: '',
                 dateNew: ''
             }
@@ -123,6 +128,7 @@ export const startDispatch = async (req, res, broadcastProgress) => {
         res.json({ success: true, dispatchId: dispatch.id });
         processDispatch(dispatch.id, broadcastProgress);
     } catch (err) {
+        console.error('[START DISPATCH ERROR]', err);
         res.status(500).json({ error: 'Erro ao iniciar campanha' });
     }
 };

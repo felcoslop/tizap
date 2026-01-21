@@ -1,5 +1,6 @@
 import prisma from '../db.js';
 import { sendWhatsApp, uploadMediaToMeta } from './whatsapp.js';
+import { sendSingleEmail } from './emailEngine.js';
 import { sleep } from '../utils/helpers.js';
 
 const FlowEngine = {
@@ -53,19 +54,27 @@ const FlowEngine = {
                 const templateName = currentNode.data.templateName;
                 if (templateName) {
                     const sessionVars = JSON.parse(session.variables || '{}');
+                    const mapping = sessionVars._mapping || {};
                     const headerParams = [];
                     const bodyParams = [];
 
-                    const nodeVars = Object.keys(sessionVars)
-                        .filter(k => k.startsWith(`fnode_${currentNode.id}_`))
-                        .map(k => ({ key: k, ...sessionVars[k] }))
-                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+                    // Identify variables for this specific node from the mapping
+                    const nodeVarKeys = Object.keys(mapping).filter(k => k.startsWith(`fnode_${currentNode.id}_`));
 
-                    nodeVars.forEach(v => {
-                        const val = String(v.value || '').substring(0, 100);
-                        const paramObj = { name: v.index, value: val };
-                        v.component === 'HEADER' ? headerParams.push(paramObj) : bodyParams.push(paramObj);
-                    });
+                    if (nodeVarKeys.length > 0) {
+                        const nodeVars = nodeVarKeys.map(k => ({ key: k, ...mapping[k] }))
+                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                        nodeVars.forEach(v => {
+                            let resolvedValue = v.value || '';
+                            if (v.type === 'column' && v.value) {
+                                resolvedValue = String(sessionVars[v.value] || '').substring(0, 100);
+                            }
+
+                            const paramObj = { name: v.index, value: resolvedValue };
+                            v.component === 'HEADER' ? headerParams.push(paramObj) : bodyParams.push(paramObj);
+                        });
+                    }
 
                     const finalComponents = (headerParams.length > 0 || bodyParams.length > 0)
                         ? { header: headerParams, body: bodyParams }
@@ -117,6 +126,42 @@ const FlowEngine = {
                             isRead: true
                         }
                     });
+                }
+            } else if (currentNode.type === 'emailNode') {
+                const templateId = currentNode.data.templateId;
+                const sessionVars = JSON.parse(session.variables || '{}');
+                const mapping = sessionVars._mapping || {};
+
+                // Find the mapping for this email node
+                const emailVarKey = `enode_${currentNode.id}_email`;
+                const emailMap = mapping[emailVarKey];
+
+                let recipientEmail = null;
+                if (emailMap) {
+                    if (emailMap.type === 'column' && emailMap.value) {
+                        recipientEmail = sessionVars[emailMap.value];
+                    } else {
+                        recipientEmail = emailMap.value;
+                    }
+                }
+
+                // Fallback to default columns if no mapping found
+                if (!recipientEmail) {
+                    recipientEmail = sessionVars['email'] || sessionVars['Email'] || sessionVars['E-mail'] || sessionVars['TELEFONE'] || sessionVars['Tel. Promax'];
+                }
+
+                if (templateId && recipientEmail) {
+                    try {
+                        await sendSingleEmail({
+                            userId: flow.userId,
+                            to: recipientEmail,
+                            templateId: templateId,
+                            leadData: sessionVars
+                        });
+                        await this.logAction(session.id, currentNode.id, nodeName, 'sent_email', `Enviado para ${recipientEmail}`);
+                    } catch (e) {
+                        await this.logAction(session.id, currentNode.id, nodeName, 'error', `Falha ao enviar e-mail: ${e.message}`);
+                    }
                 }
             }
 

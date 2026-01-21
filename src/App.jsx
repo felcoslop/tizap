@@ -135,6 +135,7 @@ function AppContent() {
         if (location.pathname === '/received') return 'recebidas';
         if (location.pathname === '/settings') return 'ajustes';
         if (location.pathname === '/flows') return 'fluxos';
+        if (location.pathname === '/email') return 'email';
         return 'disparos';
     }, [location.pathname]);
 
@@ -260,6 +261,11 @@ function AppContent() {
 
         } else if (event === 'dispatch:complete') {
             fetchDispatches();
+        } else if (event === 'email:progress') {
+            // We could add an activeEmailCampaign state to App if needed
+            // For now, let's just trigger a refresh of campaigns in the UI if possible
+            // or just log it. Detailed progress is handled inside EmailTab if it subscribes.
+            console.log('[WS] Email progress:', payload);
         } else if (event === 'message:received') {
             fetchMessages();
         }
@@ -277,6 +283,19 @@ function AppContent() {
             setIsLoading(false);
         }
     }, [user?.id, fetchUserData, fetchDispatches, fetchMessages]);
+
+    // Auto-polling for dispatch status on home/history
+    useEffect(() => {
+        if (user?.id && (location.pathname === '/home' || location.pathname === '/history' || location.pathname === '/')) {
+            const hasActive = dispatches.some(d => !['completed', 'error', 'stopped'].includes(d.status));
+            if (hasActive) {
+                const interval = setInterval(() => {
+                    fetchDispatches();
+                }, 3000); // 3 seconds for dispatches
+                return () => clearInterval(interval);
+            }
+        }
+    }, [user?.id, location.pathname, fetchDispatches, dispatches]);
 
     // Auto-polling for new messages
     useEffect(() => {
@@ -436,7 +455,7 @@ function AppContent() {
         setTemplatePreview,
         dates,
         setDates,
-        setActiveTab: (tab) => navigate(`/${tab === 'disparos' ? 'home' : tab === 'historico' ? 'history' : tab === 'recebidas' ? 'received' : tab === 'fluxos' ? 'flows' : 'settings'}`),
+        setActiveTab: (tab) => navigate(`/${tab === 'disparos' ? 'home' : tab === 'historico' ? 'history' : tab === 'recebidas' ? 'received' : tab === 'fluxos' ? 'flows' : tab === 'email' ? 'email' : 'settings'}`),
         isRefreshing,
         fetchMessages,
         activeContact,
@@ -476,6 +495,7 @@ function AppContent() {
                 <Route path="/history" element={user ? <Dashboard {...commonProps} activeTab="historico" /> : <Navigate to="/login" />} />
                 <Route path="/received" element={user ? <Dashboard {...commonProps} activeTab="recebidas" /> : <Navigate to="/login" />} />
                 <Route path="/flows" element={user ? <Dashboard {...commonProps} activeTab="fluxos" /> : <Navigate to="/login" />} />
+                <Route path="/email" element={user ? <Dashboard {...commonProps} activeTab="email" /> : <Navigate to="/login" />} />
                 <Route path="/settings" element={user ? <Dashboard {...commonProps} activeTab="ajustes" /> : <Navigate to="/login" />} />
                 <Route path="*" element={<Navigate to={user ? "/home" : "/login"} />} />
             </Routes>

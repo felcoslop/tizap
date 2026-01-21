@@ -17,6 +17,8 @@ import messageRoutes from './routes/messages.js';
 import dispatchRoutes from './routes/dispatch.js';
 import webhookRoutes from './routes/webhooks.js';
 import metaRoutes from './routes/meta.js';
+import uploadRoutes from './routes/uploads.js';
+import emailRoutes from './routes/emails.js';
 import { startDispatch, stopDispatch } from './services/dispatchEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -76,6 +78,8 @@ app.use('/api', flowRoutes);
 app.use('/api', messageRoutes);
 app.use('/api', dispatchRoutes);
 app.use('/api', metaRoutes);
+app.use('/api', uploadRoutes);
+app.use('/api', emailRoutes);
 app.use('/', webhookRoutes);
 
 // Special Action Routes (that need broadcast)

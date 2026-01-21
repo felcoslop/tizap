@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, List, RotateCcw } from 'lucide-react';
+import { History, List, RotateCcw, Eye } from 'lucide-react';
 import Pagination from '../../components/Pagination';
 import FlowSessionsHistory from './FlowSessionsHistory';
 
@@ -62,7 +62,7 @@ export function HistoryTab({
                                                 </span>
                                             </td>
                                             <td style={{ display: 'flex', gap: '8px' }}>
-                                                <button className="btn-icon" onClick={() => setSelectedLogDispatch(d)} title="Ver Logs" style={{ color: 'var(--ambev-blue)' }}><List size={18} /></button>
+                                                <button className="btn-icon" onClick={() => setSelectedLogDispatch(d)} title="Ver Logs" style={{ color: 'var(--ambev-blue)' }}><Eye size={18} /></button>
                                                 {d.errorCount > 0 && d.status !== 'running' && (
                                                     <button className="btn-icon" onClick={() => retryFailed(d.id)} title="Reintentar Erros" style={{ color: 'var(--ambev-green)' }}><RotateCcw size={18} /></button>
                                                 )}
