@@ -38,7 +38,7 @@ export const processDispatch = async (dispatchId, broadcastProgress) => {
             }
 
             const lead = leads[i];
-            const phone = lead['TELEFONE'] || lead['telefone'] || lead['Phone'] || lead['phone'];
+            const phone = lead['Tel. Promax'] || lead['TELEFONE'] || lead['telefone'] || lead['Phone'] || lead['phone'];
 
             if (!phone) {
                 jobs.errorCount++;
