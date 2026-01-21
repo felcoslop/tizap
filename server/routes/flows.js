@@ -9,11 +9,15 @@ const router = express.Router();
 router.get('/flow-sessions/:userId', authenticateToken, async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
+        console.log(`[API] Fetching flow sessions for UserID: ${userId}`);
+
         const sessions = await prisma.flowSession.findMany({
             where: { flow: { userId } },
             orderBy: { updatedAt: 'desc' },
             include: { flow: true }
         });
+
+        console.log(`[API] Found ${sessions.length} sessions for UserID: ${userId}`);
 
         const enriched = sessions.map(s => {
             let currentStepName = s.currentStep;
@@ -22,13 +26,16 @@ router.get('/flow-sessions/:userId', authenticateToken, async (req, res) => {
                     const nodes = JSON.parse(s.flow.nodes);
                     const node = nodes.find(n => String(n.id) === String(s.currentStep));
                     if (node) currentStepName = node.data?.label || node.data?.templateName || `Nó ${node.id}`;
-                } catch (e) { }
+                } catch (e) {
+                    console.error(`[API] Error parsing nodes for session ${s.id}:`, e.message);
+                }
             }
             return { ...s, flowName: s.flow?.name || 'Fluxo removido', currentStepName };
         });
 
         res.json(enriched);
     } catch (err) {
+        console.error('[API] Error in /flow-sessions:', err);
         res.status(500).json({ error: 'Erro ao buscar sessões' });
     }
 });
