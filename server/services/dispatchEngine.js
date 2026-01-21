@@ -38,11 +38,27 @@ export const processDispatch = async (dispatchId, broadcastProgress) => {
             }
 
             const lead = leads[i];
-            const phone = lead['Tel. Promax'] || lead['TELEFONE'] || lead['telefone'] || lead['Phone'] || lead['phone'];
+            let phone = lead['Tel. Promax'] || lead['TELEFONE'] || lead['telefone'] || lead['Phone'] || lead['phone'];
+
+            // Magic Pattern Finder: If no phone found by key, search in values
+            if (!phone) {
+                const values = Object.values(lead);
+                for (const val of values) {
+                    if (val && (typeof val === 'string' || typeof val === 'number')) {
+                        const sVal = String(val).replace(/\D/g, '');
+                        // Check for BR format: 55 + (2 digits DDD) + (8 or 9 digits) = 12 or 13 chars
+                        if (sVal.startsWith('55') && (sVal.length === 12 || sVal.length === 13)) {
+                            phone = sVal;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if (!phone) {
                 jobs.errorCount++;
-                await log('N/A', 'error', 'Telefone não encontrado');
+                const availableKeys = Object.keys(lead).join(', ');
+                await log('N/A', 'error', `Telefone não encontrado. Chaves disponíveis: [${availableKeys}]`);
                 continue;
             }
 
