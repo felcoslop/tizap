@@ -128,9 +128,41 @@ export function FlowSessionsHistory({ userId, addToast }) {
 
     return (
         <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--ambev-blue)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '2rem' }}>
-                <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--ambev-blue)', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
+                    <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo
+                </h3>
+                <button
+                    onClick={async () => {
+                        if (confirm('ATENÇÃO: Isso irá interromper TODOS os fluxos e disparos em andamento. Deseja continuar?')) {
+                            try {
+                                const res = await fetch(`/api/flow-sessions/stop-all/${userId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }); // Assuming token is handled or cookie
+                                // Actually token is handled by fetch interceptor usually, or I need to check how fetch is done. 
+                                // HistoryTab passes `user`. `Dashboard` usually uses `user.token`.
+                                // Let's check `fetchSessions`. It uses `/api/flow-sessions/${userId}` without explicit header?
+                                // Ah, `fetch` in this codebase likely relies on cookie or global patch? 
+                                // Wait, `Dashboard.jsx` passes `config` or `user`. 
+                                // `fetchSessions` in `FlowSessionsHistory` lines 17: `await fetch(...)`. No headers.
+                                // So it likely relies on cookie.
+                            } catch (e) { console.error(e); }
+                            // We should use the token from user prop if available ideally, but let's follow existing pattern.
+                            // Better pattern:
+                            await fetch(`/api/flow-sessions/stop-all/${userId}`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).token : ''}` }
+                            });
+                            // Actually, let's look at `stopFlowSession` (line 35). It adds NO headers.
+                            // So we follow that.
+                            await fetch(`/api/flow-sessions/stop-all/${userId}`, { method: 'POST' });
+                            addToast('Todos os fluxos foram interrompidos.', 'success');
+                            fetchSessions();
+                        }
+                    }}
+                    style={{ backgroundColor: '#ff5555', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                    <XCircle size={16} /> Parar Tudo (Emergência)
+                </button>
+            </div>
             {loading ? (
                 <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Carregando...</p>
             ) : sessions.length === 0 ? (

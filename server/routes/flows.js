@@ -115,6 +115,38 @@ router.post('/flow-sessions/:id/stop', authenticateToken, async (req, res) => {
     }
 });
 
+// Emergency Stop All (Dispatches & Sessions)
+router.post('/flow-sessions/stop-all/:userId', authenticateToken, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        console.log(`[EMERGENCY STOP] Stopping all for User ${userId}`);
+
+        // Stop Dispatches
+        const dispatches = await prisma.dispatch.updateMany({
+            where: { userId, status: { in: ['running', 'idle'] } },
+            data: { status: 'stopped' }
+        });
+
+        // Stop Flow Sessions
+        // Note: flow sessions are linked via Flow, so we find flows first or use wait to updatemany
+        // Prisma doesn't support deep relation updateMany easily, so we find and update.
+        // Actually we can find flowIds first.
+        const flows = await prisma.flow.findMany({ where: { userId }, select: { id: true } });
+        const flowIds = flows.map(f => f.id);
+
+        const sessions = await prisma.flowSession.updateMany({
+            where: { flowId: { in: flowIds }, status: { in: ['active', 'waiting_reply'] } },
+            data: { status: 'stopped' }
+        });
+
+        console.log(`[EMERGENCY STOP] Stopped ${dispatches.count} dispatches and ${sessions.count} sessions.`);
+        res.json({ success: true, stopped: { dispatches: dispatches.count, sessions: sessions.count } });
+    } catch (err) {
+        console.error('[EMERGENCY STOP ERROR]', err);
+        res.status(500).json({ error: 'Erro ao parar tudo.' });
+    }
+});
+
 router.get('/flow-session-logs/:sessionId', authenticateToken, async (req, res) => {
     try {
         const logs = await prisma.flowSessionLog.findMany({
