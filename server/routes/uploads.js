@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/index.js';
+import { UPLOAD_DIR } from '../config/constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,35 +14,8 @@ const router = express.Router();
 // Configure storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Prefer /data/uploads for persistence in Docker (Easypanel)
-        // Fallback to local uploads folder
-        const possiblePaths = [
-            '/data/uploads',
-            path.join(process.cwd(), 'uploads')
-        ];
-
-        let uploadPath = '';
-        for (const p of possiblePaths) {
-            try {
-                if (!fs.existsSync(p)) {
-                    fs.mkdirSync(p, { recursive: true });
-                }
-                // Test writability
-                fs.accessSync(p, fs.constants.W_OK);
-                uploadPath = p;
-                break;
-            } catch (err) {
-                console.warn(`[UPLOAD] Cannot use path ${p}:`, err.message);
-            }
-        }
-
-        if (!uploadPath) {
-            console.error('[UPLOAD ERROR] No writable directory found!');
-            return cb(new Error('Nenhum diretório com permissão de escrita encontrado para uploads.'));
-        }
-
-        console.log('[UPLOAD] Selected Destination:', uploadPath);
-        cb(null, uploadPath);
+        console.log('[UPLOAD] Saving to:', UPLOAD_DIR);
+        cb(null, UPLOAD_DIR);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

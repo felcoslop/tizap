@@ -12,3 +12,13 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY;
 export const GMAIL_REFRESH_TOKEN = (process.env.GMAIL_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN || '').trim();
 export const GOOGLE_CLIENT_ID = (process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID || '').trim();
 export const GOOGLE_CLIENT_SECRET = (process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_SECRET || '').trim();
+
+// Centralized Uploads directory
+import path from 'path';
+import fs from 'fs';
+const dataPath = '/data/uploads';
+export const UPLOAD_DIR = fs.existsSync('/data') ? dataPath : path.join(process.cwd(), 'uploads');
+// Ensure it exists
+if (!fs.existsSync(UPLOAD_DIR)) {
+    try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch (e) { }
+}
