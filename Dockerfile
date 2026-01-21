@@ -33,6 +33,9 @@ COPY server ./server
 COPY prisma ./prisma
 COPY politics ./politics
 
+# Generate Prisma Client at build time
+RUN npx prisma generate
+
 # Create data directory for persistent database
 RUN mkdir -p /data/uploads && chmod -R 777 /data
 RUN mkdir -p /app/uploads && chmod -R 777 /app/uploads
