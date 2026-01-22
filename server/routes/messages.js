@@ -67,15 +67,18 @@ router.post('/send-message', authenticateToken, async (req, res) => {
             if (mediaType === 'image') {
                 payload.type = 'image';
                 payload.image = { link: mediaUrl };
+                if (body) payload.image.caption = body;
             } else if (mediaType === 'audio') {
                 payload.type = 'audio';
                 payload.audio = { link: mediaUrl };
             } else if (mediaType === 'video') {
                 payload.type = 'video';
                 payload.video = { link: mediaUrl };
+                if (body) payload.video.caption = body;
             } else {
                 payload.type = 'document';
                 payload.document = { link: mediaUrl };
+                if (body) payload.document.caption = body;
             }
         } else {
             payload.type = 'text';

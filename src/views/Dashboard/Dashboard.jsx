@@ -77,7 +77,12 @@ export function Dashboard({
     const [stagedMedia, setStagedMedia] = useState([]);
     const [showMediaModal, setShowMediaModal] = useState(false);
     const [busyData, setBusyData] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [audioStream, setAudioStream] = useState(null);
     const fileInputRef = useRef(null);
+    const recordingInterval = useRef(null);
 
     const [showProfileModal, setShowProfileModal] = useState(null);
     const [dispatchMode, setDispatchMode] = useState('template');
@@ -308,6 +313,93 @@ export function Dashboard({
         } finally {
             setIsLoadingTemplate(false);
         }
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.onstop = async () => {
+                const blob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
+                const file = new File([blob], `recording-${Date.now()}.ogg`, { type: 'audio/ogg' });
+
+                setIsUploadingMedia(true);
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const uploadRes = await fetch('/api/upload-media', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${user.token}` },
+                        body: formData
+                    });
+                    if (uploadRes.ok) {
+                        const data = await uploadRes.json();
+                        await fetch('/api/send-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${user.token}`
+                            },
+                            body: JSON.stringify({
+                                phone: activeContact,
+                                mediaUrl: data.url,
+                                mediaType: 'audio'
+                            })
+                        });
+                        addToast('Áudio enviado!', 'success');
+                        fetchMessages();
+                    }
+                } catch (err) {
+                    addToast('Erro ao enviar áudio.', 'error');
+                } finally {
+                    setIsUploadingMedia(false);
+                }
+            };
+
+            setAudioStream(stream);
+            setMediaRecorder(recorder);
+            recorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingInterval.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (err) {
+            console.error('Mic Error:', err);
+            addToast('Permissão de microfone negada ou erro ao acessar.', 'error');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        clearInterval(recordingInterval.current);
+        setIsRecording(false);
+        setMediaRecorder(null);
+        setAudioStream(null);
+    };
+
+    const cancelRecording = () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.onstop = null;
+            mediaRecorder.stop();
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        clearInterval(recordingInterval.current);
+        setIsRecording(false);
+        setMediaRecorder(null);
+        setAudioStream(null);
+        setRecordingTime(0);
+        addToast('Gravação cancelada.', 'info');
     };
 
     const generateWebhook = () => {
@@ -546,7 +638,6 @@ export function Dashboard({
                 setLastSyncConfig({ ...tempConfig, templateName, mapping });
                 setIsEditing(false);
                 addToast('Configurações salvas!', 'success');
-                // Refresh user data to ensure everything is in sync
                 await fetchUserData();
             } else {
                 const errorData = await res.json();
@@ -665,6 +756,11 @@ export function Dashboard({
                                 handleMediaUpload={handleMediaUpload}
                                 isUploadingMedia={isUploadingMedia}
                                 addToast={addToast}
+                                isRecording={isRecording}
+                                recordingTime={recordingTime}
+                                startRecording={startRecording}
+                                stopRecording={stopRecording}
+                                cancelRecording={cancelRecording}
                             />
                         )}
 

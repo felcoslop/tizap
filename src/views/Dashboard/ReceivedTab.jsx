@@ -20,7 +20,12 @@ export function ReceivedTab({
     fileInputRef,
     handleMediaUpload,
     isUploadingMedia,
-    addToast
+    addToast,
+    isRecording,
+    recordingTime,
+    startRecording,
+    stopRecording,
+    cancelRecording
 }) {
     const normalize = p => {
         let s = String(p || '').replace(/\D/g, '');
@@ -245,7 +250,7 @@ export function ReceivedTab({
                                 })()}
                             </div>
                             <form
-                                style={{ padding: '1rem', borderTop: '1px solid #eee', display: 'flex', gap: '10px' }}
+                                style={{ padding: '1rem', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}
                                 onSubmit={async (e) => {
                                     e.preventDefault();
                                     const text = e.target.reply.value;
@@ -277,16 +282,63 @@ export function ReceivedTab({
                                     onChange={handleMediaUpload}
                                     accept="image/*,audio/*,video/*,application/pdf"
                                 />
-                                <button type="button" className="btn-icon" onClick={() => fileInputRef.current?.click()} disabled={isUploadingMedia} style={{ color: '#666', marginRight: '5px' }}>
-                                    {isUploadingMedia ? <RefreshCw className="animate-spin" size={20} /> : <Paperclip size={20} />}
-                                </button>
-                                <input name="reply" type="text" placeholder="Digite uma resposta..." style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #ddd' }} />
-                                <button type="button" className="btn-icon" style={{ color: '#666', marginRight: '5px' }} title="Gravar Áudio (Em breve)">
-                                    <Mic size={20} />
-                                </button>
-                                <button type="submit" className="btn-icon" style={{ backgroundColor: 'var(--ambev-blue)', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Send size={20} />
-                                </button>
+
+                                {!isRecording ? (
+                                    <>
+                                        <button type="button" className="btn-icon" onClick={() => fileInputRef.current?.click()} disabled={isUploadingMedia} style={{ color: '#666' }}>
+                                            {isUploadingMedia ? <RefreshCw className="animate-spin" size={20} /> : <Paperclip size={20} />}
+                                        </button>
+                                        <input name="reply" type="text" placeholder="Digite uma resposta..." style={{ flex: 1, padding: '10px 16px', borderRadius: '24px', border: '1px solid #ddd', outline: 'none' }} />
+                                        <button
+                                            type="button"
+                                            className="btn-icon"
+                                            style={{ color: '#666', padding: '8px' }}
+                                            onClick={startRecording}
+                                        >
+                                            <Mic size={20} />
+                                        </button>
+                                        <button type="submit" className="btn-icon" style={{ backgroundColor: 'var(--ambev-blue)', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}>
+                                            <Send size={20} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '5px 15px', backgroundColor: '#f0f2f5', borderRadius: '24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e02424' }}>
+                                            <div className="pulse-red" style={{ width: '10px', height: '10px', backgroundColor: '#e02424', borderRadius: '50%' }}></div>
+                                            <span style={{ fontWeight: 600, minWidth: '40px' }}>
+                                                {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
+                                            </span>
+                                        </div>
+                                        <div style={{ flex: 1, color: '#666', fontSize: '0.9rem' }}>Gravando áudio...</div>
+                                        <button
+                                            type="button"
+                                            onClick={cancelRecording}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#666' }}
+                                            title="Cancelar"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={stopRecording}
+                                            style={{
+                                                backgroundColor: '#e02424',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                width: '32px',
+                                                height: '32px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Parar e Enviar"
+                                        >
+                                            <div style={{ width: '12px', height: '12px', backgroundColor: 'white', borderRadius: '2px' }}></div>
+                                        </button>
+                                    </div>
+                                )}
                             </form>
                         </>
                     ) : (

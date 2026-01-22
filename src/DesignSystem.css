@@ -420,6 +420,30 @@ button:focus {
   border-color: #ccc;
 }
 
+@keyframes pulse-red {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(224, 36, 36, 0.7);
+    opacity: 0.7;
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(224, 36, 36, 0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(224, 36, 36, 0);
+    opacity: 0.7;
+  }
+}
+
+.pulse-red {
+  animation: pulse-red 1.5s infinite;
+}
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(40, 0, 145, 0.4);
