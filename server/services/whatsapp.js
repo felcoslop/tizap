@@ -167,10 +167,13 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
         });
 
         const data = await response.json();
-        if (!response.ok) return null;
+        if (!response.ok) {
+            console.error('[UPLOAD META ERROR RESPONSE]', JSON.stringify(data, null, 2));
+            return null;
+        }
         return data.id;
     } catch (err) {
-        console.error('[UPLOAD META ERROR]', err);
+        console.error('[UPLOAD META EXCEPTION]', err);
         return null;
     }
-};
+}
