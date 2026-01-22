@@ -77,7 +77,17 @@ export const sendWhatsApp = async (phone, config, templateName, components) => {
         const data = await response.json();
         if (!response.ok) {
             console.error('[WHATSAPP API ERROR]', JSON.stringify(data, null, 2));
-            return { success: false, error: data.error?.message || 'Erro na Meta API' };
+
+            let errorMessage = data.error?.message || 'Erro na Meta API';
+            const errorCode = data.error?.code;
+
+            if (errorCode === 132001) {
+                errorMessage = `Template '${finalTemplateName}' não existe ou não foi aprovado (Cod: 132001)`;
+            } else if (errorCode === 132000) {
+                errorMessage = `Número de parâmetros incorreto para o template (Cod: 132000)`;
+            }
+
+            return { success: false, error: errorMessage };
         }
         return { success: true, data };
     } catch (err) {

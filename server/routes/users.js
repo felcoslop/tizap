@@ -32,6 +32,19 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
         const userId = parseInt(req.params.userId);
         const { token, phoneId, wabaId, templateName, mapping, webhookVerifyToken } = req.body;
 
+        if (token) {
+            const existingConfig = await prisma.userConfig.findFirst({
+                where: {
+                    token: token,
+                    userId: { not: userId }
+                }
+            });
+
+            if (existingConfig) {
+                return res.status(400).json({ error: 'Este token do WhatsApp já está sendo utilizado por outra conta.' });
+            }
+        }
+
         await prisma.userConfig.upsert({
             where: { userId },
             update: { token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken },
@@ -40,6 +53,7 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
+        console.error('[CONFIG SAVE ERROR]', err);
         res.status(500).json({ error: 'Erro ao salvar configuração' });
     }
 });

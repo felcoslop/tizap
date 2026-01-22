@@ -80,19 +80,33 @@ const FlowEngine = {
                         ? { header: headerParams, body: bodyParams }
                         : (currentNode.data.params || { header: [], body: [] });
 
-                    await sendWhatsApp(session.contactPhone, config, templateName, finalComponents);
-                    await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Template: ${templateName}`);
+                    const res = await sendWhatsApp(session.contactPhone, config, templateName, finalComponents);
 
-                    await prisma.receivedMessage.create({
-                        data: {
-                            whatsappPhoneId: String(config.phoneId),
-                            contactPhone: String(session.contactPhone).replace(/\D/g, ''),
-                            contactName: 'Eu',
-                            messageBody: `[Fluxo] Template: ${templateName}`,
-                            isFromMe: true,
-                            isRead: true
-                        }
-                    });
+                    if (res.success) {
+                        await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Template: ${templateName}`);
+
+                        await prisma.receivedMessage.create({
+                            data: {
+                                whatsappPhoneId: String(config.phoneId),
+                                contactPhone: String(session.contactPhone).replace(/\D/g, ''),
+                                contactName: 'Eu',
+                                messageBody: `[Fluxo] Template: ${templateName}`,
+                                isFromMe: true,
+                                isRead: true
+                            }
+                        });
+                    } else {
+                        // Handle Template Error
+                        const errorMsg = res.error || 'Erro desconhecido ao enviar template';
+                        await this.logAction(session.id, currentNode.id, nodeName, 'error', errorMsg);
+
+                        // If it's a template error (like #132001), mark session as error and stop
+                        await prisma.flowSession.update({
+                            where: { id: session.id },
+                            data: { status: 'error' }
+                        });
+                        return; // Stop flow execution
+                    }
                 }
             } else if (currentNode.type === 'imageNode') {
                 const images = currentNode.data.imageUrls || (currentNode.data.imageUrl ? [currentNode.data.imageUrl] : []);
