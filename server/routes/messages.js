@@ -126,6 +126,29 @@ router.post('/messages/mark-read', async (req, res) => {
     }
 });
 
+// Delete conversations by phone numbers
+router.post('/messages/delete', authenticateToken, async (req, res) => {
+    try {
+        const { phones, phoneId } = req.body;
+        if (!phones || !phones.length) {
+            return res.status(400).json({ error: 'No phones provided' });
+        }
+
+        const result = await prisma.receivedMessage.deleteMany({
+            where: {
+                contactPhone: { in: phones },
+                whatsappPhoneId: String(phoneId)
+            }
+        });
+
+        console.log(`[DELETE MESSAGES] Deleted ${result.count} messages for ${phones.length} contacts`);
+        res.json({ success: true, count: result.count });
+    } catch (err) {
+        console.error('[DELETE MESSAGES ERROR]', err);
+        res.status(500).json({ error: 'Erro ao excluir conversas' });
+    }
+});
+
 // Get Contact Photo (with Initials fallback)
 router.get('/contacts/:phone/photo', async (req, res) => {
     try {
