@@ -58,17 +58,20 @@ export function SettingsTab({
                         <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
                             <input
                                 type="text"
-                                value={`${window.location.origin}/webhook/${user.id}`}
+                                value={config.webhookToken ? `${window.location.origin}/webhook/token/${config.webhookToken}` : 'Salve as configurações para gerar a URL'}
                                 readOnly
                                 style={{ flex: 1 }}
                             />
                             <button
                                 className="btn-icon"
                                 onClick={() => {
-                                    navigator.clipboard.writeText(`${window.location.origin}/webhook/${user.id}`);
-                                    addToast('URL copiada!', 'info');
+                                    if (config.webhookToken) {
+                                        navigator.clipboard.writeText(`${window.location.origin}/webhook/token/${config.webhookToken}`);
+                                        addToast('URL copiada!', 'info');
+                                    }
                                 }}
                                 title="Copiar URL"
+                                disabled={!config.webhookToken}
                             >
                                 <Copy size={18} />
                             </button>

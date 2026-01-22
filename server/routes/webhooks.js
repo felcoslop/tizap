@@ -110,6 +110,22 @@ router.post('/webhook/:userId', (req, res) => {
     handleIncomingWebhook(req, res, userId, req.app.get('broadcastMessage'));
 });
 
+// Token-based Webhook (finds user by webhookToken)
+router.post('/webhook/token/:token', async (req, res) => {
+    try {
+        const token = req.params.token;
+        const config = await prisma.userConfig.findFirst({ where: { webhookToken: token } });
+        if (!config) {
+            console.error('[WEBHOOK] Invalid token:', token);
+            return res.sendStatus(404);
+        }
+        handleIncomingWebhook(req, res, config.userId, req.app.get('broadcastMessage'));
+    } catch (err) {
+        console.error('[WEBHOOK TOKEN ERROR]', err);
+        res.sendStatus(500);
+    }
+});
+
 // Generic Webhook (finds user by phone_number_id)
 router.post('/webhook', (req, res) => {
     handleIncomingWebhook(req, res, null, req.app.get('broadcastMessage'));

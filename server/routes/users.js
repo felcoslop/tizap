@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/index.js';
+import { generateWebhookToken } from '../utils/webhookToken.js';
 
 const router = express.Router();
 
@@ -46,10 +47,14 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
             }
         }
 
+        // Generate webhook token from user email
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+        const webhookToken = user ? generateWebhookToken(user.email) : '';
+
         await prisma.userConfig.upsert({
             where: { userId },
-            update: { token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken },
-            create: { userId, token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken }
+            update: { token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken },
+            create: { userId, token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken }
         });
 
         res.json({ success: true });
