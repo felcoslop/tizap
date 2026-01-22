@@ -35,15 +35,18 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
 
         if (token && token.trim()) {
             const cleanToken = token.trim();
-            const existingConfig = await prisma.userConfig.findFirst({
-                where: {
-                    token: cleanToken,
-                    userId: { not: userId }
-                }
-            });
+            // Only check for duplicates if token is not empty
+            if (cleanToken.length > 0) {
+                const existingConfig = await prisma.userConfig.findFirst({
+                    where: {
+                        token: cleanToken,
+                        userId: { not: userId }
+                    }
+                });
 
-            if (existingConfig) {
-                return res.status(400).json({ error: 'Este token do WhatsApp já está sendo utilizado por outra conta.' });
+                if (existingConfig) {
+                    return res.status(400).json({ error: 'Este token do WhatsApp já está sendo utilizado por outra conta.' });
+                }
             }
         }
 

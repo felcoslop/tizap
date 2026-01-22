@@ -81,14 +81,19 @@ export function SettingsTab({
                     <div className="input-group mt-3" style={{ gridColumn: 'span 2' }}>
                         <label>Verify Token (Configurações do App Meta)</label>
                         <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="text"
-                                value={isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken}
-                                onChange={e => setTempConfig({ ...tempConfig, webhookVerifyToken: e.target.value })}
-                                readOnly={!isEditing}
-                                placeholder="Clique em Gerar ou digite um token"
-                                style={{ flex: 1 }}
-                            />
+                            <div className="input-with-btn" style={{ flex: 1, display: 'flex' }}>
+                                <input
+                                    type={showToken ? "text" : "password"}
+                                    value={isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken}
+                                    onChange={e => setTempConfig({ ...tempConfig, webhookVerifyToken: e.target.value })}
+                                    readOnly={!isEditing}
+                                    placeholder="Clique em Gerar ou digite um token"
+                                    style={{ flex: 1 }}
+                                />
+                                <button type="button" className="btn-secondary" onClick={() => setShowToken(!showToken)} style={{ padding: '0 12px' }}>
+                                    {showToken ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                             <button
                                 className="btn-icon"
                                 onClick={() => {
