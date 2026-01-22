@@ -1,6 +1,5 @@
-import nodemailer from 'nodemailer';
 import prisma from '../db.js';
-import { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } from '../config/constants.js';
+import { sendMail } from '../config/email.js';
 import { sleep } from '../utils/helpers.js';
 
 const activeCampaigns = new Map();
@@ -15,21 +14,6 @@ export async function sendSingleEmail({ userId, to, templateId, leadData = {}, s
 
     if (!template) throw new Error('Template não encontrado');
 
-    const transporter = nodemailer.createTransport({
-        host: EMAIL_HOST,
-        port: parseInt(EMAIL_PORT),
-        secure: parseInt(EMAIL_PORT) === 465,
-        auth: {
-            user: EMAIL_USER,
-            pass: EMAIL_PASS,
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000,
-        logger: true,
-        debug: true
-    });
-
     // Replace variables in HTML
     let html = template.html || '';
     Object.keys(leadData).forEach(key => {
@@ -38,8 +22,7 @@ export async function sendSingleEmail({ userId, to, templateId, leadData = {}, s
     });
 
     try {
-        await transporter.sendMail({
-            from: `"tiZAP! Automação" <${EMAIL_USER}>`,
+        await sendMail({
             to: to,
             subject: overrideSubject || template.subject || template.name,
             html: html

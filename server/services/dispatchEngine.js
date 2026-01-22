@@ -74,10 +74,16 @@ export const processDispatch = async (dispatchId, broadcastProgress) => {
                         const initialVars = { ...lead };
                         const mappingVars = JSON.parse(dispatch.variables || '{}');
 
+                        // Normalize phone to always have 55 prefix for webhook matching
+                        let normalizedPhone = String(phone).replace(/\D/g, '');
+                        if (!normalizedPhone.startsWith('55')) {
+                            normalizedPhone = '55' + normalizedPhone;
+                        }
+
                         const session = await prisma.flowSession.create({
                             data: {
                                 flowId: flow.id,
-                                contactPhone: String(phone),
+                                contactPhone: normalizedPhone,
                                 currentStep: String(startNodeId),
                                 status: 'active',
                                 variables: JSON.stringify({ ...initialVars, _mapping: mappingVars })
