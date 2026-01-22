@@ -105,6 +105,25 @@ router.get('/webhook/:userId', async (req, res) => {
     }
 });
 
+// GET verification for token-based webhook
+router.get('/webhook/token/:token', async (req, res) => {
+    const webhookToken = req.params.token;
+    const mode = req.query['hub.mode'];
+    const verifyToken = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && verifyToken) {
+        const config = await prisma.userConfig.findFirst({ where: { webhookToken } });
+        if (mode === 'subscribe' && config?.webhookVerifyToken === verifyToken) {
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    } else {
+        res.sendStatus(400);
+    }
+});
+
 // Token-based Webhook (finds user by webhookToken) - MUST BE BEFORE /:userId route!
 router.post('/webhook/token/:token', async (req, res) => {
     try {
