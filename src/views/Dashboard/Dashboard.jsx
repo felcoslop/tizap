@@ -758,7 +758,7 @@ export function Dashboard({
                                 };
                                 const uniquePhones = [...new Set(receivedMessages.filter(m => selectedContacts.includes(normalize(m.contactPhone))).map(m => m.contactPhone))];
                                 try {
-                                    await fetch('/api/messages/delete', {
+                                    const res = await fetch('/api/messages/delete', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -766,11 +766,21 @@ export function Dashboard({
                                         },
                                         body: JSON.stringify({ phones: uniquePhones, phoneId: config.phoneId, token: config.token })
                                     });
-                                    addToast('Conversas excluídas.', 'success');
-                                    if (activeContact && uniquePhones.some(p => normalize(p) === normalize(activeContact))) setActiveContact(null);
-                                    setIsDeleting(false); setSelectedContacts([]); setShowDeleteConfirm(false);
-                                    await fetchMessages();
-                                } catch (e) { addToast('Falha ao excluir.', 'error'); }
+
+                                    if (res.ok) {
+                                        addToast('Conversas excluídas.', 'success');
+                                        if (activeContact && uniquePhones.some(p => normalize(p) === normalize(activeContact))) setActiveContact(null);
+                                        setIsDeleting(false); setSelectedContacts([]); setShowDeleteConfirm(false);
+                                        await fetchMessages();
+                                    } else {
+                                        const error = await res.text();
+                                        console.error('Delete error:', error);
+                                        addToast('Erro ao excluir conversas.', 'error');
+                                    }
+                                } catch (e) {
+                                    console.error('Delete exception:', e);
+                                    addToast('Falha ao excluir.', 'error');
+                                }
                             }}>Excluir</button>
                         </div>
                     </div>
