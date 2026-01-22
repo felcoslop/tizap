@@ -1,7 +1,7 @@
-# 📦 Backup e Restauração - tiZAP v1.0-stable
-
-## ✅ Tag Git Criada
-- **Versão:** v1.0-stable
+# 📦 Backup e Restauração - tiZAP v1.1.0
+ 
+ ## ✅ Tag Git Criada
+ - **Versão:** v1.1.0
 - **Data:** 22/01/2026
 - **Repositório:** https://github.com/felcoslop/tizap
 
@@ -13,7 +13,7 @@
 ```bash
 cd c:\Users\manu_\Downloads\app-village-att\ambev
 git fetch --all --tags
-git checkout v1.0-stable
+git checkout v1.1.0
 ```
 
 ### 2. Reinstalar Dependências
@@ -63,14 +63,14 @@ Variáveis importantes:
 
 ## 📋 Checklist de Backup Completo
 
-- [x] Tag Git criada (`v1.0-stable`)
+- [x] Tag Git criada (`v1.1.0`)
 - [ ] Backup do banco de dados baixado
 - [ ] Cópia do `.env` salva em local seguro
 - [ ] (Opcional) Snapshot do Easypanel criado
 
 ---
 
-## 🚀 Funcionalidades da v1.0-stable
+## 🚀 Funcionalidades da v1.1.0
 
 ### Principais Features:
 - ✅ Disparo de WhatsApp (templates e fluxos)
@@ -87,12 +87,14 @@ Variáveis importantes:
 - 250-1000 leads/dia confortavelmente
 - ~300-400 sessões simultâneas (1GB RAM)
 
-### Correções Aplicadas:
-- Email em campanhas/fluxos
-- Telefones normalizados
-- Rotas de webhook
-- Deleção de conversas
-- UI consistente
+### Correções Aplicadas (v1.1.0):
+- ✅ Entrega de Áudio estável (MP3)
+- ✅ Correção do erro de `audio/webm` no Chrome
+- ✅ Normalização de telefones global
+- ✅ Deleção de conversas e contatos fixa
+- ✅ UI consistente e rápida
+- ✅ Segurança: Ocultar Token e Gerador fixo
+- ✅ Webhooks reordenados (Seguro)
 
 ---
 
