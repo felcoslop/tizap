@@ -563,7 +563,7 @@ export default function EmailTab({ user, addToast }) {
                                     </div>
 
                                     <button className="btn-primary mt-4 w-full" onClick={startCampaign} disabled={loading || !mapping.email} style={{ height: '56px', fontSize: '1.2rem', boxShadow: '0 4px 0 #1e006e' }}>
-                                        <Send size={22} /> Iniciar Campanha Nacional
+                                        <Send size={22} /> Iniciar Campanha
                                     </button>
                                 </div>
                             )}

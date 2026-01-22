@@ -32,10 +32,11 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
         const userId = parseInt(req.params.userId);
         const { token, phoneId, wabaId, templateName, mapping, webhookVerifyToken } = req.body;
 
-        if (token) {
+        if (token && token.trim()) {
+            const cleanToken = token.trim();
             const existingConfig = await prisma.userConfig.findFirst({
                 where: {
-                    token: token,
+                    token: cleanToken,
                     userId: { not: userId }
                 }
             });
@@ -47,8 +48,8 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
 
         await prisma.userConfig.upsert({
             where: { userId },
-            update: { token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken },
-            create: { userId, token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken }
+            update: { token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken },
+            create: { userId, token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken }
         });
 
         res.json({ success: true });
