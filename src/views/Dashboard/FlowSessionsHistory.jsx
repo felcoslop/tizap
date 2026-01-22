@@ -134,6 +134,8 @@ export function FlowSessionsHistory({ user, addToast }) {
         }
     };
 
+    const hasActiveSessions = sessions.some(s => s.status === 'active' || s.status === 'waiting_reply');
+
     return (
         <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -141,48 +143,63 @@ export function FlowSessionsHistory({ user, addToast }) {
                     <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo
                 </h3>
                 <button
-                    onClick={() => setShowStopConfirm(true)}
-                    className="btn-primary"
-                    style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(211, 47, 47, 0.3)' }}
+                    onClick={() => hasActiveSessions && setShowStopConfirm(true)}
+                    className={hasActiveSessions ? "btn-primary" : ""}
+                    disabled={!hasActiveSessions}
+                    style={{
+                        backgroundColor: hasActiveSessions ? '#d32f2f' : '#ccc',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        cursor: hasActiveSessions ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s',
+                        boxShadow: hasActiveSessions ? '0 2px 5px rgba(211, 47, 47, 0.3)' : 'none',
+                        opacity: hasActiveSessions ? 1 : 0.7
+                    }}
                 >
                     <XCircle size={16} /> Parar Tudo (Emergência)
                 </button>
             </div>
 
             {showStopConfirm && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999,
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    animation: 'fadeIn 0.2s ease-out'
-                }}>
-                    <div className="card fade-in" style={{
-                        backgroundColor: 'white', padding: '24px', borderRadius: '12px',
-                        width: '400px', maxWidth: '90%',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#d32f2f' }}>
-                            <AlertCircle size={32} />
-                            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Parada de Emergência</h3>
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content alert" style={{ textAlign: 'center' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ background: '#ffebee', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                <AlertCircle size={30} color="#d32f2f" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', color: '#d32f2f', marginBottom: '10px' }}>Parada de Emergência</h3>
+                            <p style={{ color: '#666', fontSize: '1rem', lineHeight: '1.5' }}>
+                                Tem certeza que deseja <strong>interromper todos os fluxos</strong> em andamento?
+                                <br />
+                                <span style={{ fontSize: '0.9rem', color: '#888' }}>Essa ação não pode ser desfeita.</span>
+                            </p>
                         </div>
-
-                        <p style={{ color: '#555', lineHeight: '1.5', marginBottom: '24px', fontSize: '0.95rem' }}>
-                            Tem certeza que deseja <strong>interromper todos os fluxos e disparos</strong> em andamento?
-                            <br /><br />
-                            <span style={{ fontSize: '0.85rem', color: '#666' }}>Isso irá parar todas as automações ativas para sua conta. Essa ação não pode ser desfeita.</span>
-                        </p>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                             <button
+                                className="btn-secondary"
+                                style={{ width: '120px', padding: '10px' }}
                                 onClick={() => setShowStopConfirm(false)}
-                                style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd',
-                                    backgroundColor: 'white', color: '#666', fontWeight: 600, cursor: 'pointer'
-                                }}
                             >
                                 Cancelar
                             </button>
                             <button
+                                style={{
+                                    width: '180px',
+                                    padding: '10px',
+                                    backgroundColor: '#d32f2f',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px rgba(211, 47, 47, 0.3)'
+                                }}
                                 onClick={async () => {
                                     try {
                                         const res = await fetch(`/api/flow-sessions/stop-all/${user.id}`, {
@@ -204,13 +221,8 @@ export function FlowSessionsHistory({ user, addToast }) {
                                         setShowStopConfirm(false);
                                     }
                                 }}
-                                style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    backgroundColor: '#d32f2f', color: 'white', fontWeight: 600, cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px'
-                                }}
                             >
-                                <XCircle size={16} /> Confirmar Parada
+                                Confirmar Parada
                             </button>
                         </div>
                     </div>

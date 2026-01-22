@@ -596,12 +596,32 @@ export default function EmailTab({ user, addToast }) {
                                             <td>{new Date(c.createdAt).toLocaleDateString()}</td>
                                             <td><strong>{c.name}</strong></td>
                                             <td>{c.subject || '-'}</td>
-                                            <td><span className={`status-badge ${c.status}`}>{c.status}</span></td>
+                                            <td>
+                                                <span style={{
+                                                    padding: '4px 10px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    backgroundColor: c.status === 'completed' ? '#e8f5e9' : c.status === 'error' ? '#ffebee' : c.status === 'running' ? '#e3f2fd' : '#f5f5f5',
+                                                    color: c.status === 'completed' ? '#388e3c' : c.status === 'error' ? '#d32f2f' : c.status === 'running' ? '#1976d2' : '#666',
+                                                    textTransform: 'uppercase',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
+                                                }}>
+                                                    {c.status === 'running' && <RefreshCw size={10} className="spinning" />}
+                                                    {c.status === 'completed' && <CheckCircle2 size={10} />}
+                                                    {c.status === 'error' && <AlertCircle size={10} />}
+                                                    {c.status === 'completed' ? 'Concluído' : c.status === 'error' ? 'Erro' : c.status === 'running' ? 'Em andamento' : c.status === 'paused' ? 'Pausado' : c.status === 'stopped' ? 'Parado' : c.status}
+                                                </span>
+                                            </td>
                                             <td>{c.currentIndex} / {c.totalLeads}</td>
                                             <td style={{ color: 'var(--ambev-green)', fontWeight: 700 }}>{c.successCount}</td>
                                             <td style={{ color: '#ef4444', fontWeight: 700 }}>{c.errorCount}</td>
                                             <td>
-                                                <button className="btn-secondary btn-sm" title="Ver Detalhes" onClick={() => setSelectedLogCampaign(c)}><Eye size={14} /> Ver Logs</button>
+                                                <button className="btn-icon" onClick={() => setSelectedLogCampaign(c)} title="Ver Detalhes" style={{ color: 'var(--ambev-blue)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px' }}>
+                                                    <Eye size={18} />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
