@@ -268,14 +268,17 @@ const FlowEngine = {
             possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
+        console.log('[DEBUG FLOW] Processing message from:', contactPhone, 'Normalized:', possibleNumbers);
         const sessionWhere = { contactPhone: { in: possibleNumbers }, status: 'waiting_reply' };
         if (targetUserId) sessionWhere.flow = { userId: targetUserId };
+        console.log('[DEBUG FLOW] Session Where:', JSON.stringify(sessionWhere));
 
         const session = await prisma.flowSession.findFirst({
             where: sessionWhere,
             include: { flow: { include: { user: { include: { config: true } } } } }
         });
 
+        console.log('[DEBUG FLOW] Session Found:', session ? session.id : 'NONE');
         if (!session) return;
 
         const flow = session.flow;
@@ -295,6 +298,7 @@ const FlowEngine = {
 
         if (currentNode.type === 'optionsNode') {
             const body = messageBody.trim().toLowerCase();
+            console.log('[DEBUG FLOW] Options Node - Body:', body);
             if (body.startsWith('source-')) {
                 const choice = body.split('-')[1];
                 const edge = outboundEdges.find(e => e.sourceHandle === `source-${choice}`);

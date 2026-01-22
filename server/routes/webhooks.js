@@ -17,6 +17,8 @@ export const handleIncomingWebhook = async (req, res, targetUserId = null, broad
                     const value = change.value;
                     if (!value.messages) continue;
 
+                    console.log('[DEBUG WEBHOOK] Incoming Value:', JSON.stringify(value, null, 2));
+
                     const whatsappPhoneId = value.metadata.phone_number_id;
 
                     for (const message of value.messages) {
