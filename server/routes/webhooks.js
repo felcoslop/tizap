@@ -105,12 +105,7 @@ router.get('/webhook/:userId', async (req, res) => {
     }
 });
 
-router.post('/webhook/:userId', (req, res) => {
-    const userId = parseInt(req.params.userId);
-    handleIncomingWebhook(req, res, userId, req.app.get('broadcastMessage'));
-});
-
-// Token-based Webhook (finds user by webhookToken)
+// Token-based Webhook (finds user by webhookToken) - MUST BE BEFORE /:userId route!
 router.post('/webhook/token/:token', async (req, res) => {
     try {
         const token = req.params.token;
@@ -124,6 +119,11 @@ router.post('/webhook/token/:token', async (req, res) => {
         console.error('[WEBHOOK TOKEN ERROR]', err);
         res.sendStatus(500);
     }
+});
+
+router.post('/webhook/:userId', (req, res) => {
+    const userId = parseInt(req.params.userId);
+    handleIncomingWebhook(req, res, userId, req.app.get('broadcastMessage'));
 });
 
 // Generic Webhook (finds user by phone_number_id)
