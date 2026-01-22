@@ -15,9 +15,6 @@ export const handleIncomingWebhook = async (req, res, targetUserId = null, broad
                 if (!entry.changes) continue;
                 for (const change of entry.changes) {
                     const value = change.value;
-                    if (value.statuses) {
-                        console.log('[DEBUG WEBHOOK] Incoming Status:', JSON.stringify(value.statuses, null, 2));
-                    }
                     if (!value.messages) continue;
 
                     console.log('[DEBUG WEBHOOK] Incoming Value:', JSON.stringify(value, null, 2));

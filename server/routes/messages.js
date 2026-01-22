@@ -83,7 +83,10 @@ router.post('/send-message', authenticateToken, async (req, res) => {
             } else if (mediaType === 'audio') {
                 payload.type = 'audio';
                 payload.audio = mediaId ? { id: mediaId } : { link: mediaUrl };
-                payload.is_voice = true;
+                // Voice note (ptt) is strictly for OGG files in Meta Cloud API
+                if (mediaUrl.toLowerCase().endsWith('.ogg')) {
+                    payload.is_voice = true;
+                }
             } else if (mediaType === 'video') {
                 payload.type = 'video';
                 payload.video = mediaId ? { id: mediaId } : { link: mediaUrl };
@@ -107,8 +110,6 @@ router.post('/send-message', authenticateToken, async (req, res) => {
         });
 
         if (response.ok) {
-            const okData = await response.json();
-            console.log('[SEND MSG SUCCESS]', JSON.stringify(okData, null, 2));
             await prisma.receivedMessage.create({
                 data: {
                     whatsappPhoneId: String(config.phoneId),

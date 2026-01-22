@@ -323,8 +323,13 @@ export function Dashboard({
 
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = async () => {
-                const blob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
-                const file = new File([blob], `recording-${Date.now()}.ogg`, { type: 'audio/ogg' });
+                const mimeType = recorder.mimeType || 'audio/webm';
+                const extension = mimeType.includes('ogg') ? 'ogg' :
+                    mimeType.includes('webm') ? 'webm' :
+                        mimeType.includes('mp4') ? 'mp4' : 'aac';
+
+                const blob = new Blob(chunks, { type: mimeType });
+                const file = new File([blob], `recording-${Date.now()}.${extension}`, { type: mimeType });
 
                 setIsUploadingMedia(true);
                 try {
@@ -361,6 +366,16 @@ export function Dashboard({
 
             setAudioStream(stream);
             setMediaRecorder(recorder);
+            // Try to find the best supported format for WhatsApp
+            const preferredTypes = [
+                'audio/ogg; codecs=opus',
+                'audio/webm; codecs=opus',
+                'audio/webm',
+                'audio/aac',
+                'audio/mp4'
+            ];
+            const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t));
+
             recorder.start();
             setIsRecording(true);
             setRecordingTime(0);

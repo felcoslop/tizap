@@ -149,6 +149,7 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
         else if (ext === '.png') mimeType = 'image/png';
         else if (ext === '.ogg') mimeType = 'audio/ogg';
         else if (ext === '.mp3') mimeType = 'audio/mpeg';
+        else if (ext === '.webm') mimeType = 'audio/webm';
         else if (ext === '.mp4') mimeType = 'video/mp4';
         else if (ext === '.pdf') mimeType = 'application/pdf';
 
