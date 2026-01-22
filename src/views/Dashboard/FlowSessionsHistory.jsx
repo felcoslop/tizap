@@ -11,7 +11,7 @@ export function FlowSessionsHistory({ user, addToast }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [stoppingSession, setStoppingSession] = useState(null);
     const [showStopConfirm, setShowStopConfirm] = useState(false);
-    const rowsPerPage = 15;
+    const rowsPerPage = 10;
 
     const fetchSessions = async () => {
         try {
