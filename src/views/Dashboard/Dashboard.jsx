@@ -317,25 +317,30 @@ export function Dashboard({
 
     const startRecording = async () => {
         try {
+            // Ensure library is loaded
             if (typeof window.OpusMediaRecorder === 'undefined') {
                 if (!document.getElementById('opus-recorder-script')) {
                     const script = document.createElement('script');
                     script.id = 'opus-recorder-script';
-                    script.src = '/recorder/OpusMediaRecorder.js';
+                    script.src = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/OpusMediaRecorder.min.js';
+                    script.onload = () => {
+                        console.log('OpusMediaRecorder CDN loaded');
+                        addToast('Gravador pronto! Clique novamente para gravar.', 'success');
+                    };
                     document.head.appendChild(script);
-                    addToast('Carregando biblioteca... Tente em 2 segundos.', 'info');
+                    addToast('Carregando biblioteca... Aguarde 2 segundos.', 'info');
                     return;
                 }
-                return addToast('Gravador não carregado. Recarregue a página.', 'error');
+                return addToast('O gravador está carregando. Clique novamente em instantes.', 'info');
             }
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const options = { mimeType: 'audio/ogg' };
             const workerOptions = {
                 encoderWorkerFactory: function () {
-                    return new Worker('/recorder/encoderWorker.min.js');
+                    return new Worker('https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/encoderWorker.min.js');
                 },
-                OggOpusEncoderWasmPath: '/recorder/OggOpusEncoder.wasm'
+                OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/OggOpusEncoder.wasm'
             };
 
             const recorder = new window.OpusMediaRecorder(stream, options, workerOptions);
@@ -389,7 +394,7 @@ export function Dashboard({
             }, 1000);
         } catch (err) {
             console.error('Mic Error:', err);
-            addToast('Permissão de microfone negada ou erro ao acessar.', 'error');
+            addToast('Microfone bloqueado ou erro ao acessar.', 'error');
         }
     };
 
