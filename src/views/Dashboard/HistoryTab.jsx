@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, List, RotateCcw, Eye } from 'lucide-react';
+import { History, List, RotateCcw, Eye, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import Pagination from '../../components/Pagination';
 import FlowSessionsHistory from './FlowSessionsHistory';
 
@@ -56,8 +56,14 @@ export function HistoryTab({
                                                     fontWeight: 700,
                                                     backgroundColor: d.status === 'completed' ? '#e8f5e9' : d.status === 'error' ? '#ffebee' : d.status === 'running' ? '#e3f2fd' : '#f5f5f5',
                                                     color: d.status === 'completed' ? '#388e3c' : d.status === 'error' ? '#d32f2f' : d.status === 'running' ? '#1976d2' : '#666',
-                                                    textTransform: 'uppercase'
+                                                    textTransform: 'uppercase',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
                                                 }}>
+                                                    {d.status === 'completed' && <Check size={10} />}
+                                                    {d.status === 'error' && <AlertCircle size={10} />}
+                                                    {d.status === 'running' && <RefreshCw size={10} className="spinning" />}
                                                     {d.status === 'completed' ? 'Concluído' : d.status === 'error' ? 'Erro' : d.status === 'running' ? 'Em andamento' : d.status}
                                                 </span>
                                             </td>

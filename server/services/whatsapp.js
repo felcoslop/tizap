@@ -143,7 +143,16 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
 
         const formData = new FormData();
         const fileBuffer = fs.readFileSync(absolutePath);
-        const fileBlob = new Blob([fileBuffer], { type: type === 'image' ? 'image/jpeg' : 'audio/mpeg' });
+        const ext = path.extname(absolutePath).toLowerCase();
+        let mimeType = 'application/octet-stream';
+        if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+        else if (ext === '.png') mimeType = 'image/png';
+        else if (ext === '.ogg') mimeType = 'audio/ogg';
+        else if (ext === '.mp3') mimeType = 'audio/mpeg';
+        else if (ext === '.mp4') mimeType = 'video/mp4';
+        else if (ext === '.pdf') mimeType = 'application/pdf';
+
+        const fileBlob = new Blob([fileBuffer], { type: mimeType });
 
         formData.append('file', fileBlob, path.basename(absolutePath));
         formData.append('type', type);

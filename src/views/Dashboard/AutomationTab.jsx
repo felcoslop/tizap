@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle2, Send, Eye, RefreshCw, GitBranch, Download } from 'lucide-react';
+import { Upload, CheckCircle2, Send, Eye, RefreshCw, GitBranch, Download, Check, AlertCircle } from 'lucide-react';
 
 export function AutomationTab({
     user,
@@ -51,7 +51,12 @@ export function AutomationTab({
                             <span>#{activeDispatch.id} - Progresso: {activeDispatch.currentIndex} / {activeDispatch.totalLeads}</span>
                             <div className="status-group">
                                 {activeDispatch.errorCount > 0 && <span className="error-badge">{activeDispatch.errorCount} erros</span>}
-                                <span className={`status-badge ${activeDispatch.status}`}>{activeDispatch.status}</span>
+                                <span className={`status-badge ${activeDispatch.status}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
+                                    {activeDispatch.status === 'completed' && <Check size={10} />}
+                                    {activeDispatch.status === 'error' && <AlertCircle size={10} />}
+                                    {activeDispatch.status === 'running' && <RefreshCw size={10} className="spinning" />}
+                                    {activeDispatch.status === 'completed' ? 'Concluído' : activeDispatch.status === 'error' ? 'Erro' : activeDispatch.status === 'running' ? 'Em andamento' : activeDispatch.status}
+                                </span>
                             </div>
                         </div>
                         <div className="progress-bar-bg">

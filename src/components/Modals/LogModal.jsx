@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Check, AlertCircle, RefreshCw } from 'lucide-react';
 
 export function LogModal({ dispatch, onClose }) {
     const [logs, setLogs] = useState([]);
@@ -64,9 +64,13 @@ export function LogModal({ dispatch, onClose }) {
                                                 fontWeight: 700,
                                                 textTransform: 'uppercase',
                                                 backgroundColor: log.status === 'success' || log.status === 'sent_message' || log.status === 'sent_email' ? '#e8f5e9' : '#ffebee',
-                                                color: log.status === 'success' || log.status === 'sent_message' || log.status === 'sent_email' ? '#388e3c' : '#d32f2f'
+                                                color: log.status === 'success' || log.status === 'sent_message' || log.status === 'sent_email' ? '#388e3c' : '#d32f2f',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
                                             }}>
-                                                {log.status}
+                                                {(log.status === 'success' || log.status === 'sent_message' || log.status === 'sent_email') ? <Check size={10} /> : <AlertCircle size={10} />}
+                                                {(log.status === 'success' || log.status === 'sent_message' || log.status === 'sent_email') ? 'Concluído' : 'Erro'}
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px', fontSize: '0.85rem', color: '#444' }}>{log.message || '-'}</td>

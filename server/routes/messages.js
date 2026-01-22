@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/index.js';
+import { uploadMediaToMeta } from '../services/whatsapp.js';
 
 const router = express.Router();
 
@@ -64,20 +65,33 @@ router.post('/send-message', authenticateToken, async (req, res) => {
         };
 
         if (mediaUrl) {
+            // Upload to Meta if it's a local file
+            const host = req.get('host');
+            const isLocal = mediaUrl.includes(`/uploads/`) && (mediaUrl.includes(host) || mediaUrl.startsWith('/'));
+            let mediaId = null;
+
+            if (isLocal) {
+                console.log('[SEND MSG] Local media detected, uploading to Meta...');
+                mediaId = await uploadMediaToMeta(mediaUrl, mediaType, config);
+                if (!mediaId) console.warn('[SEND MSG] Meta upload failed, falling back to link');
+            }
+
             if (mediaType === 'image') {
                 payload.type = 'image';
-                payload.image = { link: mediaUrl };
+                payload.image = mediaId ? { id: mediaId } : { link: mediaUrl };
                 if (body) payload.image.caption = body;
             } else if (mediaType === 'audio') {
                 payload.type = 'audio';
-                payload.audio = { link: mediaUrl };
+                payload.audio = mediaId ? { id: mediaId } : { link: mediaUrl };
+                // Send as voice message (PTT)
+                payload.audio.ptt = true;
             } else if (mediaType === 'video') {
                 payload.type = 'video';
-                payload.video = { link: mediaUrl };
+                payload.video = mediaId ? { id: mediaId } : { link: mediaUrl };
                 if (body) payload.video.caption = body;
             } else {
                 payload.type = 'document';
-                payload.document = { link: mediaUrl };
+                payload.document = mediaId ? { id: mediaId } : { link: mediaUrl };
                 if (body) payload.document.caption = body;
             }
         } else {
