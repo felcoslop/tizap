@@ -67,6 +67,7 @@ app.use(requestLogger);
 // Static files
 console.log('[SERVER] Serving uploads from:', UPLOAD_DIR);
 app.use('/uploads', express.static(UPLOAD_DIR));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // Specific route for logo if not in dist

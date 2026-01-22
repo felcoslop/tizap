@@ -325,7 +325,7 @@ export function Dashboard({
             const options = { mimeType: 'audio/ogg' };
             const workerOptions = {
                 encoderWorkerFactory: function () {
-                    return new Worker('/recorder/encoderWorker.js');
+                    return new Worker('/recorder/encoderWorker.min.js');
                 },
                 OggOpusEncoderWasmPath: '/recorder/OggOpusEncoder.wasm'
             };
