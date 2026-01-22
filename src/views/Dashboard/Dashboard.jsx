@@ -327,8 +327,9 @@ export function Dashboard({
                         console.log('OpusMediaRecorder CDN loaded');
                         addToast('Gravador pronto! Clique novamente para gravar.', 'success');
                     };
+                    script.onerror = () => addToast('Erro ao carregar gravador. Verifique sua internet.', 'error');
                     document.head.appendChild(script);
-                    addToast('Carregando biblioteca... Aguarde 2 segundos.', 'info');
+                    addToast('Carregando tecnologia de áudio... Aguarde 2 segundos.', 'info');
                     return;
                 }
                 return addToast('O gravador está carregando. Clique novamente em instantes.', 'info');
@@ -336,9 +337,15 @@ export function Dashboard({
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const options = { mimeType: 'audio/ogg' };
+
+            // Bypass Worker CORS by using a Blob URL for the worker script
+            const workerCode = `importScripts("https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/encoderWorker.min.js");`;
+            const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(workerBlob);
+
             const workerOptions = {
                 encoderWorkerFactory: function () {
-                    return new Worker('https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/encoderWorker.min.js');
+                    return new Worker(workerUrl);
                 },
                 OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/OggOpusEncoder.wasm'
             };
@@ -349,7 +356,7 @@ export function Dashboard({
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = async () => {
                 const blob = new Blob(chunks, { type: 'audio/ogg' });
-                const file = new File([blob], `recording-${Date.now()}.ogg`, { type: 'audio/ogg' });
+                const file = new File([blob], `voice-note-${Date.now()}.ogg`, { type: 'audio/ogg' });
 
                 setIsUploadingMedia(true);
                 try {
@@ -381,6 +388,7 @@ export function Dashboard({
                     addToast('Erro ao enviar áudio.', 'error');
                 } finally {
                     setIsUploadingMedia(false);
+                    try { URL.revokeObjectURL(workerUrl); } catch (e) { }
                 }
             };
 
