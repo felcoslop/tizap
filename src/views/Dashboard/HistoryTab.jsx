@@ -63,9 +63,24 @@ export function HistoryTab({
                                             </td>
                                             <td style={{ display: 'flex', gap: '8px' }}>
                                                 <button className="btn-icon" onClick={() => setSelectedLogDispatch(d)} title="Ver Logs" style={{ color: 'var(--ambev-blue)' }}><Eye size={18} /></button>
-                                                {d.errorCount > 0 && d.status !== 'running' && (
-                                                    <button className="btn-icon" onClick={() => retryFailed(d.id)} title="Reintentar Erros" style={{ color: 'var(--ambev-green)' }}><RotateCcw size={18} /></button>
-                                                )}
+                                                {(() => {
+                                                    const canRetry = d.errorCount > 0 && d.status !== 'running';
+                                                    return (
+                                                        <button
+                                                            className="btn-icon"
+                                                            onClick={canRetry ? () => retryFailed(d.id) : undefined}
+                                                            title={canRetry ? "Reintentar Erros" : "Sem erros para reintentar"}
+                                                            style={{
+                                                                color: canRetry ? 'var(--ambev-green)' : '#ccc',
+                                                                cursor: canRetry ? 'pointer' : 'not-allowed',
+                                                                opacity: canRetry ? 1 : 0.5
+                                                            }}
+                                                            disabled={!canRetry}
+                                                        >
+                                                            <RotateCcw size={18} />
+                                                        </button>
+                                                    );
+                                                })()}
                                             </td>
                                         </tr>
                                     ))}

@@ -10,6 +10,7 @@ export function FlowSessionsHistory({ user, addToast }) {
     const [loadingLogs, setLoadingLogs] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [stoppingSession, setStoppingSession] = useState(null);
+    const [showStopConfirm, setShowStopConfirm] = useState(false);
     const rowsPerPage = 15;
 
     const fetchSessions = async () => {
@@ -134,38 +135,87 @@ export function FlowSessionsHistory({ user, addToast }) {
     };
 
     return (
-        <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem' }}>
+        <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--ambev-blue)', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
                     <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo
                 </h3>
                 <button
-                    onClick={async () => {
-                        if (confirm('ATENÇÃO: Isso irá interromper TODOS os fluxos e disparos em andamento. Deseja continuar?')) {
-                            try {
-                                const res = await fetch(`/api/flow-sessions/stop-all/${user.id}`, {
-                                    method: 'POST',
-                                    headers: { 'Authorization': `Bearer ${user.token}` }
-                                });
-
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    addToast('Todos os fluxos foram interrompidos.', 'success');
-                                    fetchSessions();
-                                } else {
-                                    addToast('Erro ao parar tudo.', 'error');
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                addToast('Erro de conexão.', 'error');
-                            }
-                        }
-                    }}
-                    style={{ backgroundColor: '#ff5555', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => setShowStopConfirm(true)}
+                    className="btn-primary"
+                    style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(211, 47, 47, 0.3)' }}
                 >
                     <XCircle size={16} /> Parar Tudo (Emergência)
                 </button>
             </div>
+
+            {showStopConfirm && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    animation: 'fadeIn 0.2s ease-out'
+                }}>
+                    <div className="card fade-in" style={{
+                        backgroundColor: 'white', padding: '24px', borderRadius: '12px',
+                        width: '400px', maxWidth: '90%',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#d32f2f' }}>
+                            <AlertCircle size={32} />
+                            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Parada de Emergência</h3>
+                        </div>
+
+                        <p style={{ color: '#555', lineHeight: '1.5', marginBottom: '24px', fontSize: '0.95rem' }}>
+                            Tem certeza que deseja <strong>interromper todos os fluxos e disparos</strong> em andamento?
+                            <br /><br />
+                            <span style={{ fontSize: '0.85rem', color: '#666' }}>Isso irá parar todas as automações ativas para sua conta. Essa ação não pode ser desfeita.</span>
+                        </p>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button
+                                onClick={() => setShowStopConfirm(false)}
+                                style={{
+                                    padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd',
+                                    backgroundColor: 'white', color: '#666', fontWeight: 600, cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch(`/api/flow-sessions/stop-all/${user.id}`, {
+                                            method: 'POST',
+                                            headers: { 'Authorization': `Bearer ${user.token}` }
+                                        });
+
+                                        if (res.ok) {
+                                            await res.json();
+                                            addToast('Todos os fluxos foram interrompidos.', 'success');
+                                            fetchSessions();
+                                        } else {
+                                            addToast('Erro ao parar tudo.', 'error');
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                        addToast('Erro de conexão.', 'error');
+                                    } finally {
+                                        setShowStopConfirm(false);
+                                    }
+                                }}
+                                style={{
+                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
+                                    backgroundColor: '#d32f2f', color: 'white', fontWeight: 600, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}
+                            >
+                                <XCircle size={16} /> Confirmar Parada
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {loading ? (
                 <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Carregando...</p>
             ) : sessions.length === 0 ? (
@@ -203,18 +253,36 @@ export function FlowSessionsHistory({ user, addToast }) {
                                             <td>{getStatusBadge(s.status)}</td>
                                             <td style={{ fontSize: '0.8rem' }}>{new Date(s.updatedAt).toLocaleString('pt-BR')}</td>
                                             <td>
-                                                {(s.status === 'active' || s.status === 'waiting_reply') && (
-                                                    <button
-                                                        className="btn-link"
-                                                        style={{ color: '#d32f2f', fontSize: '11px', padding: '4px 8px' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setStoppingSession(s);
-                                                        }}
-                                                    >
-                                                        Cancelar
-                                                    </button>
-                                                )}
+                                                {(() => {
+                                                    const canCancel = (s.status === 'active' || s.status === 'waiting_reply');
+                                                    return (
+                                                        <button
+                                                            disabled={!canCancel}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (canCancel && confirm('Deseja cancelar esta sessão?')) {
+                                                                    stopFlowSession(s.id);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                backgroundColor: 'transparent',
+                                                                border: canCancel ? '1px solid #d32f2f' : '1px solid #ccc',
+                                                                color: canCancel ? '#d32f2f' : '#ccc',
+                                                                borderRadius: '4px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 600,
+                                                                padding: '4px 10px',
+                                                                cursor: canCancel ? 'pointer' : 'not-allowed',
+                                                                transition: 'all 0.2s',
+                                                                opacity: canCancel ? 1 : 0.6
+                                                            }}
+                                                            onMouseOver={(e) => { if (canCancel) e.target.style.backgroundColor = '#ffebee'; }}
+                                                            onMouseOut={(e) => { if (canCancel) e.target.style.backgroundColor = 'transparent'; }}
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    );
+                                                })()}
                                             </td>
                                         </tr>
                                         {expandedSession === s.id && (
