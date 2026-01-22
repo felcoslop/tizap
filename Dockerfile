@@ -37,7 +37,8 @@ COPY politics ./politics
 RUN npx prisma generate
 
 # Copy utility scripts
-COPY fix_stuck_state.js ./
+COPY scripts ./scripts
+COPY scripts/migrations/fix_stuck_state.js ./
 
 # Create data directory for persistent database
 RUN mkdir -p /data/uploads && chmod -R 777 /data
