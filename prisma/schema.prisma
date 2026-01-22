@@ -36,7 +36,7 @@ model UserConfig {
   templateName       String @default("")
   mapping            String @default("{}")
   webhookVerifyToken String @default("")
-  webhookToken       String @default("") @unique
+  webhookToken       String @default("")
   user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
