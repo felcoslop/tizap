@@ -82,7 +82,7 @@ export function HistoryTab({
                 )}
             </div>
 
-            <FlowSessionsHistory userId={user.id} addToast={addToast} />
+            <FlowSessionsHistory user={user} addToast={addToast} />
         </div>
     );
 }

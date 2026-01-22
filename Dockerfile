@@ -36,6 +36,9 @@ COPY politics ./politics
 # Generate Prisma Client at build time
 RUN npx prisma generate
 
+# Copy utility scripts
+COPY fix_stuck_state.js ./
+
 # Create data directory for persistent database
 RUN mkdir -p /data/uploads && chmod -R 777 /data
 RUN mkdir -p /app/uploads && chmod -R 777 /app/uploads

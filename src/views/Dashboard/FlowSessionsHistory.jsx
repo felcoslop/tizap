@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Check, AlertCircle, Send, Clock, Download, XCircle, FileText, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 import Pagination from '../../components/Pagination';
 
-export function FlowSessionsHistory({ userId, addToast }) {
+export function FlowSessionsHistory({ user, addToast }) {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedSession, setExpandedSession] = useState(null);
@@ -14,7 +14,9 @@ export function FlowSessionsHistory({ userId, addToast }) {
 
     const fetchSessions = async () => {
         try {
-            const res = await fetch(`/api/flow-sessions/${userId}`);
+            const res = await fetch(`/api/flow-sessions/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setSessions(data);
@@ -27,12 +29,15 @@ export function FlowSessionsHistory({ userId, addToast }) {
     };
 
     useEffect(() => {
-        fetchSessions();
-    }, [userId]);
+        if (user?.id) fetchSessions();
+    }, [user?.id]);
 
     const stopFlowSession = async (sessionId) => {
         try {
-            const res = await fetch(`/api/flow-sessions/${sessionId}/stop`, { method: 'POST' });
+            const res = await fetch(`/api/flow-sessions/${sessionId}/stop`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 addToast('Fluxo interrompido', 'success');
             } else {
@@ -59,7 +64,9 @@ export function FlowSessionsHistory({ userId, addToast }) {
         setExpandedSession(sessionId);
         setLoadingLogs(true);
         try {
-            const res = await fetch(`/api/flow-session-logs/${sessionId}`);
+            const res = await fetch(`/api/flow-session-logs/${sessionId}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setSessionLogs(data);
@@ -136,26 +143,22 @@ export function FlowSessionsHistory({ userId, addToast }) {
                     onClick={async () => {
                         if (confirm('ATENÇÃO: Isso irá interromper TODOS os fluxos e disparos em andamento. Deseja continuar?')) {
                             try {
-                                const res = await fetch(`/api/flow-sessions/stop-all/${userId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }); // Assuming token is handled or cookie
-                                // Actually token is handled by fetch interceptor usually, or I need to check how fetch is done. 
-                                // HistoryTab passes `user`. `Dashboard` usually uses `user.token`.
-                                // Let's check `fetchSessions`. It uses `/api/flow-sessions/${userId}` without explicit header?
-                                // Ah, `fetch` in this codebase likely relies on cookie or global patch? 
-                                // Wait, `Dashboard.jsx` passes `config` or `user`. 
-                                // `fetchSessions` in `FlowSessionsHistory` lines 17: `await fetch(...)`. No headers.
-                                // So it likely relies on cookie.
-                            } catch (e) { console.error(e); }
-                            // We should use the token from user prop if available ideally, but let's follow existing pattern.
-                            // Better pattern:
-                            await fetch(`/api/flow-sessions/stop-all/${userId}`, {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).token : ''}` }
-                            });
-                            // Actually, let's look at `stopFlowSession` (line 35). It adds NO headers.
-                            // So we follow that.
-                            await fetch(`/api/flow-sessions/stop-all/${userId}`, { method: 'POST' });
-                            addToast('Todos os fluxos foram interrompidos.', 'success');
-                            fetchSessions();
+                                const res = await fetch(`/api/flow-sessions/stop-all/${user.id}`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${user.token}` }
+                                });
+
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    addToast('Todos os fluxos foram interrompidos.', 'success');
+                                    fetchSessions();
+                                } else {
+                                    addToast('Erro ao parar tudo.', 'error');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                addToast('Erro de conexão.', 'error');
+                            }
                         }
                     }}
                     style={{ backgroundColor: '#ff5555', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
