@@ -23,6 +23,11 @@ export async function sendSingleEmail({ userId, to, templateId, leadData = {}, s
             user: EMAIL_USER,
             pass: EMAIL_PASS,
         },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+        logger: true,
+        debug: true
     });
 
     // Replace variables in HTML
