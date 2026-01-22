@@ -12,7 +12,7 @@ export function HistoryTab({
     retryFailed,
     addToast
 }) {
-    const rowsPerPage = 15;
+    const rowsPerPage = 10;
     const totalPages = Math.ceil(dispatches.length / rowsPerPage);
     const paginatedDispatches = dispatches.slice((currentDispatchPage - 1) * rowsPerPage, currentDispatchPage * rowsPerPage);
 
