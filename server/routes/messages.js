@@ -107,6 +107,8 @@ router.post('/send-message', authenticateToken, async (req, res) => {
         });
 
         if (response.ok) {
+            const okData = await response.json();
+            console.log('[SEND MSG SUCCESS]', JSON.stringify(okData, null, 2));
             await prisma.receivedMessage.create({
                 data: {
                     whatsappPhoneId: String(config.phoneId),
