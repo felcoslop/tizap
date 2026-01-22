@@ -83,8 +83,7 @@ router.post('/send-message', authenticateToken, async (req, res) => {
             } else if (mediaType === 'audio') {
                 payload.type = 'audio';
                 payload.audio = mediaId ? { id: mediaId } : { link: mediaUrl };
-                // Send as voice message (PTT)
-                payload.audio.ptt = true;
+                payload.is_voice = true;
             } else if (mediaType === 'video') {
                 payload.type = 'video';
                 payload.video = mediaId ? { id: mediaId } : { link: mediaUrl };
