@@ -317,46 +317,19 @@ export function Dashboard({
 
     const startRecording = async () => {
         try {
-            // Ensure library is loaded
-            if (typeof window.OpusMediaRecorder === 'undefined') {
-                if (!document.getElementById('opus-recorder-script')) {
-                    const script = document.createElement('script');
-                    script.id = 'opus-recorder-script';
-                    script.src = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/OpusMediaRecorder.min.js';
-                    script.onload = () => {
-                        console.log('OpusMediaRecorder CDN loaded');
-                        addToast('Gravador pronto! Clique novamente para gravar.', 'success');
-                    };
-                    script.onerror = () => addToast('Erro ao carregar gravador. Verifique sua internet.', 'error');
-                    document.head.appendChild(script);
-                    addToast('Carregando tecnologia de áudio... Aguarde 2 segundos.', 'info');
-                    return;
-                }
-                return addToast('O gravador está carregando. Clique novamente em instantes.', 'info');
-            }
-
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = { mimeType: 'audio/ogg' };
-
-            // Bypass Worker CORS by using a Blob URL for the worker script
-            const workerCode = `importScripts("https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/encoderWorker.min.js");`;
-            const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
-            const workerUrl = URL.createObjectURL(workerBlob);
-
-            const workerOptions = {
-                encoderWorkerFactory: function () {
-                    return new Worker(workerUrl);
-                },
-                OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@0.8.0/OggOpusEncoder.wasm'
-            };
-
-            const recorder = new window.OpusMediaRecorder(stream, options, workerOptions);
+            const recorder = new MediaRecorder(stream);
             const chunks = [];
 
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = async () => {
-                const blob = new Blob(chunks, { type: 'audio/ogg' });
-                const file = new File([blob], `voice-note-${Date.now()}.ogg`, { type: 'audio/ogg' });
+                const mimeType = recorder.mimeType || 'audio/webm';
+                const extension = mimeType.includes('ogg') ? 'ogg' :
+                    mimeType.includes('webm') ? 'webm' :
+                        mimeType.includes('mp4') ? 'mp4' : 'aac';
+
+                const blob = new Blob(chunks, { type: mimeType });
+                const file = new File([blob], `recording-${Date.now()}.${extension}`, { type: mimeType });
 
                 setIsUploadingMedia(true);
                 try {
@@ -388,7 +361,6 @@ export function Dashboard({
                     addToast('Erro ao enviar áudio.', 'error');
                 } finally {
                     setIsUploadingMedia(false);
-                    try { URL.revokeObjectURL(workerUrl); } catch (e) { }
                 }
             };
 
@@ -402,7 +374,7 @@ export function Dashboard({
             }, 1000);
         } catch (err) {
             console.error('Mic Error:', err);
-            addToast('Microfone bloqueado ou erro ao acessar.', 'error');
+            addToast('Erro ao acessar microfone.', 'error');
         }
     };
 
@@ -420,8 +392,11 @@ export function Dashboard({
     };
 
     const cancelRecording = () => {
-        if (mediaRecorder) {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
         }
         clearInterval(recordingInterval.current);
         setIsRecording(false);
