@@ -318,6 +318,14 @@ export function Dashboard({
     const startRecording = async () => {
         try {
             if (typeof window.OpusMediaRecorder === 'undefined') {
+                if (!document.getElementById('opus-recorder-script')) {
+                    const script = document.createElement('script');
+                    script.id = 'opus-recorder-script';
+                    script.src = '/recorder/OpusMediaRecorder.js';
+                    document.head.appendChild(script);
+                    addToast('Carregando biblioteca... Tente em 2 segundos.', 'info');
+                    return;
+                }
                 return addToast('Gravador não carregado. Recarregue a página.', 'error');
             }
 
