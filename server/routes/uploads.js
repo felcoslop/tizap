@@ -58,4 +58,30 @@ router.post('/upload-image', authenticateToken, (req, res, next) => {
     });
 });
 
+// Single media upload route for Chat (field mapping: 'file' -> 'file')
+const singleUpload = multer({
+    storage,
+    limits: { fileSize: 20 * 1024 * 1024 } // 20MB for generic media
+}).single('file');
+
+router.post('/upload-media', authenticateToken, (req, res) => {
+    singleUpload(req, res, (err) => {
+        if (err) {
+            console.error('[UPLOAD MEDIA ERROR]', err);
+            return res.status(500).json({ error: err.message });
+        }
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+        const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+        const host = req.get('host');
+        const url = `${protocol}://${host}/uploads/${req.file.filename}`;
+
+        const type = req.file.mimetype.startsWith('image/') ? 'image' :
+            req.file.mimetype.startsWith('audio/') ? 'audio' :
+                req.file.mimetype.startsWith('video/') ? 'video' : 'document';
+
+        res.json({ success: true, url, type });
+    });
+});
+
 export default router;

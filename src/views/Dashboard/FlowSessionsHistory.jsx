@@ -241,7 +241,7 @@ export function FlowSessionsHistory({ user, addToast }) {
                             <thead>
                                 <tr>
                                     <th style={{ width: '40px' }}></th>
-                                    <th>ID Fluxo</th>
+                                    <th>ID</th>
                                     <th>Telefone</th>
                                     <th>Fluxo</th>
                                     <th>Mensagem Atual</th>
@@ -258,7 +258,7 @@ export function FlowSessionsHistory({ user, addToast }) {
                                             onClick={() => toggleLogs(s.id)}
                                         >
                                             <td style={{ textAlign: 'center' }}>{expandedSession === s.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</td>
-                                            <td style={{ fontSize: '0.8rem', color: '#666' }}>{s.flowId}</td>
+                                            <td style={{ fontSize: '0.8rem', color: '#666' }}>{s.id}</td>
                                             <td style={{ fontFamily: 'monospace' }}>{s.contactPhone}</td>
                                             <td><strong>{s.flowName}</strong></td>
                                             <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.currentStepName}>
@@ -288,22 +288,24 @@ export function FlowSessionsHistory({ user, addToast }) {
                                                                         setShowCancelConfirm(true);
                                                                     }
                                                                 }}
+                                                                title="Cancelar Fluxo"
                                                                 style={{
                                                                     backgroundColor: 'transparent',
                                                                     border: canCancel ? '1px solid #d32f2f' : '1px solid #ccc',
-                                                                    color: canCancel ? 'd32f2f' : '#ccc',
+                                                                    color: canCancel ? '#d32f2f' : '#ccc',
                                                                     borderRadius: '4px',
-                                                                    fontSize: '11px',
-                                                                    fontWeight: 600,
-                                                                    padding: '4px 10px',
+                                                                    padding: '4px',
                                                                     cursor: canCancel ? 'pointer' : 'not-allowed',
                                                                     transition: 'all 0.2s',
-                                                                    opacity: canCancel ? 1 : 0.6
+                                                                    opacity: canCancel ? 1 : 0.6,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center'
                                                                 }}
-                                                                onMouseOver={(e) => { if (canCancel) e.target.style.backgroundColor = '#ffebee'; }}
-                                                                onMouseOut={(e) => { if (canCancel) e.target.style.backgroundColor = 'transparent'; }}
+                                                                onMouseOver={(e) => { if (canCancel) e.currentTarget.style.backgroundColor = '#ffebee'; }}
+                                                                onMouseOut={(e) => { if (canCancel) e.currentTarget.style.backgroundColor = 'transparent'; }}
                                                             >
-                                                                Cancelar
+                                                                <XCircle size={18} />
                                                             </button>
                                                         </div>
                                                     );

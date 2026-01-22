@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { UPLOAD_DIR } from '../config/constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../../uploads');
+// Removed hardcoded uploadsDir - using UPLOAD_DIR from constants.js
 
 export const sendWhatsApp = async (phone, config, templateName, components) => {
     try {
@@ -121,9 +122,9 @@ export const downloadMedia = async (mediaId, config) => {
         const buffer = await response.arrayBuffer();
         const ext = mimeType ? mimeType.split('/')[1].split(';')[0] : 'bin';
         const filename = `${mediaId}.${ext}`;
-        const filepath = path.join(uploadsDir, filename);
+        const filepath = path.join(UPLOAD_DIR, filename);
 
-        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
         fs.writeFileSync(filepath, Buffer.from(buffer));
 
         return `/uploads/${filename}`;
@@ -135,8 +136,8 @@ export const downloadMedia = async (mediaId, config) => {
 
 export const uploadMediaToMeta = async (fileUrl, type, config) => {
     try {
-        const relativePath = fileUrl.startsWith('/') ? fileUrl.substring(1) : fileUrl;
-        const absolutePath = path.join(__dirname, '../../', relativePath);
+        const filename = path.basename(fileUrl);
+        const absolutePath = path.join(UPLOAD_DIR, filename);
 
         if (!fs.existsSync(absolutePath)) return null;
 
