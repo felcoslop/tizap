@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Check, AlertCircle, Send, Clock, Download, XCircle, FileText, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Check, AlertCircle, Send, Clock, Download, XCircle, FileText, ChevronDown, ChevronRight, CheckCircle2, Eye } from 'lucide-react';
 import Pagination from '../../components/Pagination';
 
 export function FlowSessionsHistory({ user, addToast }) {
@@ -268,31 +268,41 @@ export function FlowSessionsHistory({ user, addToast }) {
                                                 {(() => {
                                                     const canCancel = (s.status === 'active' || s.status === 'waiting_reply');
                                                     return (
-                                                        <button
-                                                            disabled={!canCancel}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (canCancel && confirm('Deseja cancelar esta sessão?')) {
-                                                                    stopFlowSession(s.id);
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                backgroundColor: 'transparent',
-                                                                border: canCancel ? '1px solid #d32f2f' : '1px solid #ccc',
-                                                                color: canCancel ? '#d32f2f' : '#ccc',
-                                                                borderRadius: '4px',
-                                                                fontSize: '11px',
-                                                                fontWeight: 600,
-                                                                padding: '4px 10px',
-                                                                cursor: canCancel ? 'pointer' : 'not-allowed',
-                                                                transition: 'all 0.2s',
-                                                                opacity: canCancel ? 1 : 0.6
-                                                            }}
-                                                            onMouseOver={(e) => { if (canCancel) e.target.style.backgroundColor = '#ffebee'; }}
-                                                            onMouseOut={(e) => { if (canCancel) e.target.style.backgroundColor = 'transparent'; }}
-                                                        >
-                                                            Cancelar
-                                                        </button>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <button
+                                                                className="btn-icon"
+                                                                onClick={(e) => { e.stopPropagation(); toggleLogs(s.id); }}
+                                                                title="Ver Logs"
+                                                                style={{ color: 'var(--ambev-blue)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px' }}
+                                                            >
+                                                                <Eye size={18} />
+                                                            </button>
+                                                            <button
+                                                                disabled={!canCancel}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (canCancel && confirm('Deseja cancelar esta sessão?')) {
+                                                                        stopFlowSession(s.id);
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    backgroundColor: 'transparent',
+                                                                    border: canCancel ? '1px solid #d32f2f' : '1px solid #ccc',
+                                                                    color: canCancel ? 'd32f2f' : '#ccc',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: 600,
+                                                                    padding: '4px 10px',
+                                                                    cursor: canCancel ? 'pointer' : 'not-allowed',
+                                                                    transition: 'all 0.2s',
+                                                                    opacity: canCancel ? 1 : 0.6
+                                                                }}
+                                                                onMouseOver={(e) => { if (canCancel) e.target.style.backgroundColor = '#ffebee'; }}
+                                                                onMouseOut={(e) => { if (canCancel) e.target.style.backgroundColor = 'transparent'; }}
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
                                                     );
                                                 })()}
                                             </td>

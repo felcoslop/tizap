@@ -75,7 +75,7 @@ export function EmailLogModal({ campaign, onClose }) {
                                                 gap: '4px'
                                             }}>
                                                 {log.status === 'success' || log.status === 'sent' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
-                                                {log.status}
+                                                {log.status === 'success' || log.status === 'sent' || log.status === 'completed' ? 'Sucesso' : log.status === 'error' ? 'Erro' : log.status}
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px', fontSize: '0.85rem', color: '#444' }}>{log.message || 'E-mail enviado com sucesso'}</td>

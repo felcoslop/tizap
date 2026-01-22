@@ -37,7 +37,7 @@ export function HistoryTab({
                                         <th>Sucesso</th>
                                         <th>Erros</th>
                                         <th>Status</th>
-                                        <th>Ação</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
