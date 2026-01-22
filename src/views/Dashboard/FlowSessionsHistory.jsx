@@ -11,6 +11,8 @@ export function FlowSessionsHistory({ user, addToast }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [stoppingSession, setStoppingSession] = useState(null);
     const [showStopConfirm, setShowStopConfirm] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [sessionToCancel, setSessionToCancel] = useState(null);
     const rowsPerPage = 10;
 
     const fetchSessions = async () => {
@@ -173,11 +175,11 @@ export function FlowSessionsHistory({ user, addToast }) {
                             <div style={{ background: '#ffebee', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
                                 <AlertCircle size={30} color="#d32f2f" />
                             </div>
-                            <h3 style={{ fontSize: '1.5rem', color: '#d32f2f', marginBottom: '10px' }}>Parada de Emergência</h3>
-                            <p style={{ color: '#666', fontSize: '1rem', lineHeight: '1.5' }}>
+                            <h3 style={{ fontSize: '1.3rem', color: '#d32f2f', marginBottom: '10px' }}>Parada de Emergência</h3>
+                            <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>
                                 Tem certeza que deseja <strong>interromper todos os fluxos</strong> em andamento?
                                 <br />
-                                <span style={{ fontSize: '0.9rem', color: '#888' }}>Essa ação não pode ser desfeita.</span>
+                                <span style={{ fontSize: '0.85rem', color: '#888' }}>Essa ação não pode ser desfeita.</span>
                             </p>
                         </div>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
@@ -281,8 +283,9 @@ export function FlowSessionsHistory({ user, addToast }) {
                                                                 disabled={!canCancel}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    if (canCancel && confirm('Deseja cancelar esta sessão?')) {
-                                                                        stopFlowSession(s.id);
+                                                                    if (canCancel) {
+                                                                        setSessionToCancel(s);
+                                                                        setShowCancelConfirm(true);
                                                                     }
                                                                 }}
                                                                 style={{
@@ -351,6 +354,47 @@ export function FlowSessionsHistory({ user, addToast }) {
                         onPageChange={setCurrentPage}
                     />
                 </>
+            )}
+
+            {showCancelConfirm && sessionToCancel && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content alert" style={{ textAlign: 'center', maxWidth: '400px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ background: '#fff3e0', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                <AlertCircle size={30} color="#ff9800" />
+                            </div>
+                            <h3 style={{ fontSize: '1.3rem', color: '#333', marginBottom: '10px' }}>Cancelar Sessão?</h3>
+                            <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                                Tem certeza que deseja cancelar a sessão de <strong>{sessionToCancel.flowName}</strong>?
+                                <br />
+                                <span style={{ fontSize: '0.85rem', color: '#888' }}>Telefone: {sessionToCancel.contactPhone}</span>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                                className="btn-secondary"
+                                style={{ width: '110px', padding: '10px' }}
+                                onClick={() => {
+                                    setShowCancelConfirm(false);
+                                    setSessionToCancel(null);
+                                }}
+                            >
+                                Não
+                            </button>
+                            <button
+                                className="btn-primary"
+                                style={{ width: '110px', padding: '10px' }}
+                                onClick={() => {
+                                    stopFlowSession(sessionToCancel.id);
+                                    setShowCancelConfirm(false);
+                                    setSessionToCancel(null);
+                                }}
+                            >
+                                Sim, Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
