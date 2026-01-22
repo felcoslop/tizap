@@ -24,7 +24,11 @@ router.get('/meta/templates/:userId', authenticateToken, async (req, res) => {
 
         const templateName = req.query.templateName;
         // Meta API for templates usually needs the WABA ID
-        const url = `https://graph.facebook.com/v21.0/${config.wabaId}/message_templates`;
+        let url = `https://graph.facebook.com/v21.0/${config.wabaId}/message_templates?limit=250`; // Increase limit
+
+        if (templateName) {
+            url += `&name=${encodeURIComponent(templateName)}`;
+        }
 
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${config.token}` }
@@ -43,7 +47,7 @@ router.get('/meta/templates/:userId', authenticateToken, async (req, res) => {
         if (templateName) {
             const template = data.data.find(t => t.name === templateName);
             if (template) {
-                return res.json(template);
+                return res.json({ data: [template] });
             } else {
                 return res.status(404).json({ error: 'Template não encontrado na sua conta Meta' });
             }
