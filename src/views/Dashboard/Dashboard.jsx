@@ -317,14 +317,63 @@ export function Dashboard({
 
     const startRecording = async () => {
         try {
-            if (typeof window.MicRecorder === 'undefined') {
+            if (typeof window.OpusMediaRecorder === 'undefined') {
                 return addToast('Gravador não carregado. Recarregue a página.', 'error');
             }
 
-            const recorder = new window.MicRecorder({ bitRate: 128 });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const options = { mimeType: 'audio/ogg' };
+            const workerOptions = {
+                encoderWorkerFactory: function () {
+                    return new Worker('/recorder/encoderWorker.js');
+                },
+                OggOpusEncoderWasmPath: '/recorder/OggOpusEncoder.wasm'
+            };
 
-            await recorder.start();
+            const recorder = new window.OpusMediaRecorder(stream, options, workerOptions);
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.onstop = async () => {
+                const blob = new Blob(chunks, { type: 'audio/ogg' });
+                const file = new File([blob], `recording-${Date.now()}.ogg`, { type: 'audio/ogg' });
+
+                setIsUploadingMedia(true);
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const uploadRes = await fetch('/api/upload-media', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${user.token}` },
+                        body: formData
+                    });
+                    if (uploadRes.ok) {
+                        const data = await uploadRes.json();
+                        await fetch('/api/send-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${user.token}`
+                            },
+                            body: JSON.stringify({
+                                phone: activeContact,
+                                mediaUrl: data.url,
+                                mediaType: 'audio'
+                            })
+                        });
+                        addToast('Áudio enviado!', 'success');
+                        fetchMessages();
+                    }
+                } catch (err) {
+                    addToast('Erro ao enviar áudio.', 'error');
+                } finally {
+                    setIsUploadingMedia(false);
+                }
+            };
+
+            setAudioStream(stream);
             setMediaRecorder(recorder);
+            recorder.start();
             setIsRecording(true);
             setRecordingTime(0);
             recordingInterval.current = setInterval(() => {
@@ -337,47 +386,12 @@ export function Dashboard({
     };
 
     const stopRecording = () => {
-        if (!mediaRecorder) return;
-
-        mediaRecorder.stop().getMp3().then(async ([buffer, blob]) => {
-            const file = new File(buffer, `recording-${Date.now()}.mp3`, { type: 'audio/mpeg' });
-
-            setIsUploadingMedia(true);
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const uploadRes = await fetch('/api/upload-media', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${user.token}` },
-                    body: formData
-                });
-                if (uploadRes.ok) {
-                    const data = await uploadRes.json();
-                    await fetch('/api/send-message', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${user.token}`
-                        },
-                        body: JSON.stringify({
-                            phone: activeContact,
-                            mediaUrl: data.url,
-                            mediaType: 'audio'
-                        })
-                    });
-                    addToast('Áudio enviado!', 'success');
-                    fetchMessages();
-                }
-            } catch (err) {
-                addToast('Erro ao enviar áudio.', 'error');
-            } finally {
-                setIsUploadingMedia(false);
-            }
-        }).catch((e) => {
-            console.error('Stop Recording Error:', e);
-            addToast('Erro ao processar áudio.', 'error');
-        });
-
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
         clearInterval(recordingInterval.current);
         setIsRecording(false);
         setMediaRecorder(null);
