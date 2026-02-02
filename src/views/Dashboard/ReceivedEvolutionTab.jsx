@@ -309,25 +309,20 @@ export function ReceivedEvolutionTab({
                                     >
                                         {(() => {
                                             const photo = lastMsg.profilePicUrl || contactMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
-                                            if (photo && photo.startsWith('http')) {
-                                                return <img
-                                                    src={photo}
-                                                    alt=""
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    onError={(e) => {
-                                                        e.target.onerror = null;
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = contactName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
-                                                    }}
-                                                />;
-                                            }
-                                            const initials = contactName
-                                                .split(' ')
-                                                .map(n => n[0])
-                                                .join('')
-                                                .slice(0, 2)
-                                                .toUpperCase();
-                                            return initials || '?';
+                                            const photoUrl = (photo && photo.startsWith('http'))
+                                                ? photo
+                                                : `/api/evolution/public/contact/${user.id}/${lastMsg.contactPhone}/photo?name=${encodeURIComponent(contactName)}`;
+
+                                            return <img
+                                                src={photoUrl}
+                                                alt=""
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    const initials = contactName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                                    e.target.parentElement.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #00a276; color: white;">${initials}</div>`;
+                                                }}
+                                            />;
                                         })()}
                                     </div>
                                     {isDeleting && (
@@ -376,12 +371,24 @@ export function ReceivedEvolutionTab({
                                 >
                                     {(() => {
                                         const cMsgs = groups[normalize(activeContact)] || [];
-                                        const withPhoto = cMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
-                                        if (withPhoto && withPhoto.startsWith('http')) {
-                                            return <img src={withPhoto} alt="Avatar" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />;
-                                        }
-                                        const name = cMsgs.find(m => !m.isFromMe)?.pushName || activeContact;
-                                        return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                        const nonMe = cMsgs.find(m => !m.isFromMe);
+                                        const name = nonMe?.pushName || nonMe?.contactName || activeContact;
+                                        const photo = cMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
+
+                                        const photoUrl = (photo && photo.startsWith('http'))
+                                            ? photo
+                                            : `/api/evolution/public/contact/${user.id}/${activeContact}/photo?name=${encodeURIComponent(name)}`;
+
+                                        return <img
+                                            src={photoUrl}
+                                            alt="Avatar"
+                                            style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                                e.target.parentElement.innerHTML = initials;
+                                            }}
+                                        />;
                                     })()}
                                 </div>
                                 <div style={{ flex: 1 }}>
@@ -541,7 +548,7 @@ export function ReceivedEvolutionTab({
 
                         {(() => {
                             const photo = showProfileModal.photo;
-                            const fallbackUrl = `/api/evolution/contact/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`;
+                            const fallbackUrl = `/api/evolution/public/contact/${user.id}/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`;
 
                             return (
                                 <img

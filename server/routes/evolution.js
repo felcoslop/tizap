@@ -526,39 +526,38 @@ router.post('/evolution/messages/delete', authenticateToken, async (req, res) =>
     }
 });
 
-// Fetch contact profile picture from Evolution
-router.get('/evolution/contact/:phone/photo', authenticateToken, async (req, res) => {
+// Public route for fetching profile pictures (to avoid 401 on <img> tags)
+router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) => {
     try {
-        const userId = req.userId;
-        const { phone } = req.params;
+        const { userId, phone } = req.params;
         const name = req.query.name || 'Cliente';
 
-        const config = await prisma.userConfig.findUnique({ where: { userId } });
+        const config = await prisma.userConfig.findUnique({ where: { userId: parseInt(userId) } });
 
         if (config?.evolutionApiUrl && config?.evolutionInstanceName) {
             try {
                 let normalizedPhone = String(phone).replace(/\D/g, '');
-                if (!normalizedPhone.startsWith('55')) {
-                    normalizedPhone = '55' + normalizedPhone;
-                }
 
+                // Evolution v2 expects phone without @s.whatsapp.net for this specific endpoint usually, 
+                // but let's follow the user's provided snippet: phone: "5581999999999"
                 const profileData = await evolutionRequest(
                     config.evolutionApiUrl,
                     config.evolutionApiKey,
-                    `/chat/fetchProfilePictureUrl/${config.evolutionInstanceName}`,
+                    `/profile/fetchProfilePictureUrl/${config.evolutionInstanceName}`,
                     'POST',
-                    { number: `${normalizedPhone}@s.whatsapp.net` }
+                    { phone: normalizedPhone }
                 );
 
-                if (profileData.profilePictureUrl) {
-                    return res.redirect(profileData.profilePictureUrl);
+                if (profileData && (profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url)) {
+                    const url = profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
+                    return res.redirect(url);
                 }
             } catch (e) {
                 console.log('[EVOLUTION] Could not fetch profile pic:', e.message);
             }
         }
 
-        // Fallback to initials
+        // Fallback to initials SVG
         const initials = name
             .split(' ')
             .map(n => n[0])
@@ -585,6 +584,14 @@ router.get('/evolution/contact/:phone/photo', authenticateToken, async (req, res
         console.error('[EVOLUTION PHOTO ERROR]', err);
         res.status(500).send('Error');
     }
+});
+
+// Original route (optional, but let's keep it for compatibility if needed, though public is better for images)
+router.get('/evolution/contact/:phone/photo', authenticateToken, async (req, res) => {
+    // Redirect to the public one using req.userId
+    const { phone } = req.params;
+    const name = req.query.name || '';
+    res.redirect(`/api/evolution/public/contact/${req.userId}/${phone}/photo?name=${encodeURIComponent(name)}`);
 });
 
 // --- Evolution Automations CRUD ---
