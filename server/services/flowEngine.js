@@ -454,6 +454,30 @@ const FlowEngine = {
 
         if (!isValid) {
             const redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+
+            if (currentNode.type === 'optionsNode' && currentNode.data?.validateSelection && !redEdge) {
+                // Dynamic validation message
+                const optionsCount = (currentNode.data?.options || []).length;
+                if (optionsCount > 0) {
+                    const numbers = Array.from({ length: optionsCount }, (_, i) => i + 1);
+                    let validMsg = "";
+                    if (numbers.length === 1) validMsg = "1";
+                    else {
+                        const last = numbers.pop();
+                        validMsg = `${numbers.join(', ')} ou ${last}`;
+                    }
+                    const errorMsg = `por favor, responda apenas com ${validMsg}`;
+
+                    if (platform === 'evolution') {
+                        await this.sendEvolutionMessage(normalizedPhone, errorMsg, null, null, userConfig);
+                    } else {
+                        await this.sendWhatsAppText(normalizedPhone, errorMsg, userConfig);
+                    }
+                    await this.logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Validação: ${messageBody}`);
+                    return true; // Keep waiting for reply on same node
+                }
+            }
+
             if (redEdge) {
                 const nextSession = await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: redEdge.target, status: 'active' } });
                 await this.logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Resposta inválida: ${messageBody}`);

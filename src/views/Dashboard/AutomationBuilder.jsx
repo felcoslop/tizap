@@ -179,7 +179,7 @@ function OptionsNode({ data, id, selected }) {
     const [isEditing, setIsEditing] = useState(false);
     const [tempLabel, setTempLabel] = useState(data.label || '');
     const [options, setOptions] = useState(data.options || ['Sim', 'Não']);
-    const handleSave = () => { data.onChange(id, { label: tempLabel, options, waitForReply: true }); setIsEditing(false); };
+    const handleSave = () => { data.onChange(id, { label: tempLabel, options, validateSelection: data.validateSelection, waitForReply: true }); setIsEditing(false); };
     return (
         <div className={`flow-node options-node ${selected ? 'selected' : ''}`}>
             <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
@@ -200,8 +200,20 @@ function OptionsNode({ data, id, selected }) {
                                 <button onClick={() => setOptions(options.filter((_, idx) => idx !== i))} className="btn-small"><X size={12} /></button>
                             </div>
                         ))}
-                        <button onClick={() => setOptions([...options, 'Opção'])} className="btn-small">+ Opção</button>
-                        <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
+                        <button onClick={() => setOptions([...options, 'Opção'])} className="btn-small" style={{ marginBottom: '8px', display: 'block' }}>+ Adicionar Opção</button>
+
+                        <div style={{ marginBottom: '12px', padding: '8px', background: '#f8f9fa', borderRadius: '6px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                                <input
+                                    type="checkbox"
+                                    checked={data.validateSelection}
+                                    onChange={(e) => data.onChange(id, { validateSelection: e.target.checked })}
+                                />
+                                <span style={{ fontSize: '12px' }}>Validar resposta (exigir número)</span>
+                            </label>
+                        </div>
+
+                        <button className="btn-small btn-primary" onClick={handleSave} style={{ width: '100%' }}>Salvar Configuração</button>
                     </div>
                 ) : (
                     <>
@@ -215,9 +227,9 @@ function OptionsNode({ data, id, selected }) {
                     </>
                 )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px', background: '#fff0f0' }}>
-                <span style={{ fontSize: 10, color: '#ff5555' }}>Inválido →</span>
-                <Handle type="source" position={Position.Right} id="source-invalid" style={{ background: '#dc3545', width: 14, height: 14, border: '2px solid #333', position: 'relative', right: -8, top: 'auto' }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px', background: '#fff0f0', borderRadius: '0 0 8px 8px' }}>
+                <span style={{ fontSize: 10, color: '#ff5555', marginRight: '4px' }}>Inválido →</span>
+                <Handle type="source" position={Position.Right} id="source-invalid" style={{ background: '#dc3545', width: 14, height: 14, border: '2px solid #333', position: 'static', transform: 'none' }} />
             </div>
         </div>
     );
