@@ -23,11 +23,22 @@ import emailRoutes from './routes/emails.js';
 import evolutionRoutes from './routes/evolution.js';
 import { startDispatch, stopDispatch } from './services/dispatchEngine.js';
 import FlowEngine from './services/flowEngine.js';
+import CleanupService from './services/cleanupService.js';
 
 // Background Job for Scheduled Flows (Business Hours, Delays)
 setInterval(() => {
     FlowEngine.processScheduledFlows().catch(err => console.error('[BG FLOW JOB ERROR]', err));
 }, 60000); // Every 1 minute
+
+// Background Job for Disk Cleanup (Media files older than 30 days)
+setInterval(() => {
+    CleanupService.runDiskCleanup().catch(err => console.error('[BG CLEANUP JOB ERROR]', err));
+}, 24 * 60 * 60 * 1000); // Every 24 hours
+
+// Initial cleanup on start
+setTimeout(() => {
+    CleanupService.runDiskCleanup().catch(err => console.error('[STARTUP CLEANUP ERROR]', err));
+}, 5000); // Run 5 seconds after start
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
