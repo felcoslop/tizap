@@ -708,15 +708,27 @@ export function AutomationBuilder({ user, addToast }) {
                             <h2 style={{ fontSize: '2rem', color: 'var(--ambev-blue)', marginBottom: '8px' }}>Automações Evolution</h2>
                             <p className="subtitle">Gerencie suas automações inteligentes</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="btn-secondary" onClick={() => setShowCloseAllModal(true)} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #ff4444', color: '#ff4444' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => setShowCloseAllModal(true)}
+                                style={{ height: '48px', padding: '0 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #ff4444', color: '#ff4444', background: 'transparent' }}
+                            >
                                 <XCircle size={18} /> Encerrar Sessões
                             </button>
                             <input type="file" ref={fileInputRef} onChange={handleImport} style={{ display: 'none' }} accept=".json" />
-                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{ height: '48px', padding: '0 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
                                 <Upload size={18} /> Importar
                             </button>
-                            <button className="btn-primary" onClick={() => setEditingAutomation('new')} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="btn-primary"
+                                onClick={() => setEditingAutomation('new')}
+                                style={{ height: '48px', padding: '0 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
                                 <Plus size={18} /> Nova Automação
                             </button>
                         </div>

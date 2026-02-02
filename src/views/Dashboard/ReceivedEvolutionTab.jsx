@@ -283,6 +283,15 @@ export function ReceivedEvolutionTab({
                                     }}
                                 >
                                     <div
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const photo = lastMsg.profilePicUrl || contactMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
+                                            setShowProfileModal({
+                                                name: contactName,
+                                                phone: lastMsg.contactPhone,
+                                                photo: photo
+                                            });
+                                        }}
                                         style={{
                                             width: '40px',
                                             height: '40px',
@@ -294,13 +303,23 @@ export function ReceivedEvolutionTab({
                                             color: isSelected ? 'white' : '#00a276',
                                             fontWeight: 700,
                                             flexShrink: 0,
-                                            overflow: 'hidden'
+                                            overflow: 'hidden',
+                                            cursor: 'pointer'
                                         }}
                                     >
                                         {(() => {
                                             const photo = lastMsg.profilePicUrl || contactMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
                                             if (photo && photo.startsWith('http')) {
-                                                return <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                                return <img
+                                                    src={photo}
+                                                    alt=""
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = contactName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                                    }}
+                                                />;
                                             }
                                             const initials = contactName
                                                 .split(' ')
@@ -500,19 +519,44 @@ export function ReceivedEvolutionTab({
 
             {/* Profile Modal */}
             {showProfileModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-                    <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
-                        <button onClick={() => setShowProfileModal(null)} style={{ position: 'absolute', top: '-40px', right: '0', background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
-                            <X size={32} />
+                <div
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}
+                    onClick={() => setShowProfileModal(null)}
+                >
+                    <div
+                        style={{ position: 'relative', width: 'min(500px, 90vw)', aspectRatio: '1/1', backgroundColor: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setShowProfileModal(null)}
+                            style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.8)', border: 'none', color: '#333', cursor: 'pointer', zIndex: 10, borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+                        >
+                            <X size={20} />
                         </button>
-                        <img
-                            src={(() => {
-                                const cMsgs = groups[normalize(showProfileModal.phone)] || [];
-                                return cMsgs.find(m => m.profilePicUrl)?.profilePicUrl || `/api/evolution/contact/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`;
-                            })()}
-                            alt="Profile"
-                            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '8px' }}
-                        />
+
+                        {(() => {
+                            const photo = showProfileModal.photo;
+                            const fallbackUrl = `/api/evolution/contact/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`;
+
+                            return (
+                                <img
+                                    src={photo && photo.startsWith('http') ? photo : fallbackUrl}
+                                    alt="Profile"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                        // If Evolution API photo fails, show initials
+                                        e.target.onerror = null;
+                                        const initials = showProfileModal.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                        const parent = e.target.parentElement;
+                                        parent.innerHTML = `
+                                            <div style="width: 100%; height: 100%; display: flex; alignItems: center; justifyContent: center; backgroundColor: #00a276; color: white; fontSize: 120px; fontWeight: 700; fontFamily: Arial">
+                                                ${initials}
+                                            </div>
+                                        `;
+                                    }}
+                                />
+                            );
+                        })()}
                     </div>
                 </div>
             )}
