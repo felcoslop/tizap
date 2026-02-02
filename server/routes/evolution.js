@@ -536,10 +536,9 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
 
         if (config?.evolutionApiUrl && config?.evolutionInstanceName) {
             try {
-                let normalizedPhone = String(phone).replace(/\D/g, '');
+                const normalizedPhone = String(phone).replace(/\D/g, '');
+                console.log(`[EVOLUTION DEBUG] Fetching photo for ${normalizedPhone} on instance ${config.evolutionInstanceName}`);
 
-                // Evolution v2 expects phone without @s.whatsapp.net for this specific endpoint usually, 
-                // but let's follow the user's provided snippet: phone: "5581999999999"
                 const profileData = await evolutionRequest(
                     config.evolutionApiUrl,
                     config.evolutionApiKey,
@@ -548,12 +547,18 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
                     { phone: normalizedPhone }
                 );
 
-                if (profileData && (profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url)) {
-                    const url = profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
-                    return res.redirect(url);
+                console.log(`[EVOLUTION DEBUG] Full response for ${normalizedPhone}:`, JSON.stringify(profileData));
+
+                const photoUrl = profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
+
+                if (photoUrl) {
+                    console.log(`[EVOLUTION DEBUG] Redirecting to photo: ${photoUrl}`);
+                    return res.redirect(photoUrl);
+                } else {
+                    console.log(`[EVOLUTION DEBUG] No photo URL found in keys for ${normalizedPhone}`);
                 }
             } catch (e) {
-                console.log('[EVOLUTION] Could not fetch profile pic:', e.message);
+                console.log('[EVOLUTION DEBUG] Error fetching profile pic:', e.message);
             }
         }
 
