@@ -33,7 +33,7 @@ async function evolutionRequest(baseUrl, apiKey, endpoint, method = 'GET', body 
         }
 
         if (!response.ok) {
-            console.error('[EVOLUTION API ERROR]', data);
+            console.error('[EVOLUTION API ERROR]', JSON.stringify(data, null, 2));
             throw new Error(data.message || data.error || `Erro da Evolution API: ${response.status}`);
         }
 
@@ -222,18 +222,20 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             {
                 enabled: true,
                 url: finalWebhookUrl,
-                webhookByEvents: false, // Set to false for a single URL
-                webhookBase64: true,    // Enable base64 for media
+                webhookByEvents: true, // Use true when providing an explicit events list
+                webhook_by_events: true, // Compatibility for older versions
+                webhookBase64: true,
+                webhook_base_64: true, // Compatibility for older versions
                 events: [
-                    "MESSAGES_UPSERT",
-                    "MESSAGES_UPDATE",
-                    "MESSAGES_DELETE",
-                    "CONNECTION_UPDATE",
-                    "QRCODE_UPDATED",
-                    "PRESENCE_UPDATE",
-                    "CONTACTS_UPSERT",
-                    "CHATS_UPSERT",
-                    "SEND_MESSAGE" // Important for tracking outgoing messages
+                    'MESSAGES_UPSERT',
+                    'MESSAGES_UPDATE',
+                    'MESSAGES_DELETE',
+                    'SEND_MESSAGE',
+                    'CONNECTION_UPDATE',
+                    'QRCODE_UPDATED',
+                    'PRESENCE_UPDATE',
+                    'CONTACTS_UPSERT',
+                    'CHATS_UPSERT'
                 ]
             }
         );
@@ -691,7 +693,7 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 
         // Handle Contacts
         if (event === 'contacts.upsert' || event === 'CONTACTS_UPSERT') {
-            const contacts = body.data || [body];
+            const contacts = Array.isArray(body.data) ? body.data : (body.data ? [body.data] : [body]);
             for (const c of contacts) {
                 const phone = (c.id || c.key?.remoteJid || '').replace(/\D/g, '');
                 if (phone) await processEventAutomations(userId, 'contacts_upsert', `New contact: ${phone}`);
@@ -700,7 +702,7 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 
         // Handle incoming messages
         if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT') {
-            const messages = body.data || [body];
+            const messages = Array.isArray(body.data) ? body.data : (body.data ? [body.data] : [body]);
 
             for (const msgData of messages) {
                 const key = msgData.key || {};

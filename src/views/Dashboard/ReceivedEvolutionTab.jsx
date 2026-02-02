@@ -17,7 +17,7 @@ export function ReceivedEvolutionTab({
     }, [globalMessages]);
 
     const [activeContact, setActiveContact] = useState(null);
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isFetching, setIsFetching] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedContacts, setSelectedContacts] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -33,7 +33,7 @@ export function ReceivedEvolutionTab({
             return globalFetchMessages();
         }
         // Fallback local fetch
-        setIsRefreshing(true);
+        setIsFetching(true);
         try {
             const res = await fetch(`/api/evolution/messages/${user.id}`, {
                 headers: { 'Authorization': `Bearer ${user.token}` }
@@ -46,7 +46,7 @@ export function ReceivedEvolutionTab({
             console.error('Error fetching evolution messages:', err);
             addToast('Erro ao carregar mensagens Evolution', 'error');
         } finally {
-            setIsRefreshing(false);
+            setIsFetching(false);
         }
     };
 
@@ -206,7 +206,7 @@ export function ReceivedEvolutionTab({
                                 <Trash2 size={18} />
                             </button>
                             <button
-                                className={isRefreshing ? 'animate-spin' : ''}
+                                className={isFetching ? 'animate-spin' : ''}
                                 onClick={fetchMessages}
                                 style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: '#00a276' }}
                             >
