@@ -1,0 +1,113 @@
+{
+  "id": 1,
+  "userId": 2,
+  "name": "automação josiane",
+  "isActive": true,
+  "triggerType": "message",
+  "triggerKeywords": "",
+  "conditions": "[]",
+  "flowId": null,
+  "nodes": [
+    {
+      "id": "node_business_hours",
+      "type": "businessHoursNode",
+      "position": { "x": 200, "y": 0 },
+      "data": {
+        "label": "Verificar horário comercial",
+        "userId": 2,
+        "start": "08:00",
+        "end": "19:00",
+        "fallback": "Oi! 😊\nAqui é a Manu, secretária da professora Josiane.\nNo momento estamos fora do horário de atendimento, mas assim que retornarmos eu te respondo.\n\nSe quiser, já pode me dizer o que procura:\n\n1️⃣ Piano\n2️⃣ Canto\n3️⃣ Teclado\n4️⃣ Cursos e Workshops\n5️⃣ Aula experimental\n6️⃣ Valores\n7️⃣ Falar com a professora"
+      }
+    },
+    {
+      "id": "node_welcome",
+      "type": "messageNode",
+      "position": { "x": 200, "y": 140 },
+      "data": {
+        "label": "Oi! 😊\nSeja bem-vindo(a) ao Estúdio Josi Drumond 🎶\n\nAqui é a Manu, secretária da professora Josiane.\nVou te ajudar com as informações, tá?",
+        "userId": 2,
+        "waitForReply": false
+      }
+    },
+    {
+      "id": "node_options",
+      "type": "optionsNode",
+      "position": { "x": 200, "y": 300 },
+      "data": {
+        "label": "Para agilizar, escolha uma opção 👇",
+        "userId": 2,
+        "options": [
+          "1️⃣ Aulas de Piano",
+          "2️⃣ Aulas de Canto",
+          "3️⃣ Aulas de Teclado",
+          "4️⃣ Cursos e Workshops",
+          "5️⃣ Aula experimental / avaliação vocal",
+          "6️⃣ Valores",
+          "7️⃣ Falar com a professora"
+        ],
+        "waitForReply": true
+      }
+    },
+    {
+      "id": "node_values_text",
+      "type": "messageNode",
+      "position": { "x": 600, "y": 300 },
+      "data": {
+        "label": "Perfeito 😊\nVou te enviar a tabela com os valores atualizados para 2026 👇",
+        "userId": 2,
+        "waitForReply": false
+      }
+    },
+    {
+      "id": "node_values_image",
+      "type": "imageNode",
+      "position": { "x": 600, "y": 460 },
+      "data": {
+        "label": "Tabela de valores 2026",
+        "userId": 2,
+        "imageUrls": [
+          "https://SEU_LINK_DA_IMAGEM_AQUI"
+        ],
+        "caption": "Qualquer dúvida, estou por aqui 😊\n— Manu",
+        "hasImage": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_business_hours",
+      "sourceHandle": "source-green",
+      "target": "node_welcome",
+      "targetHandle": "target",
+      "animated": true,
+      "markerEnd": { "type": "arrowclosed" }
+    },
+    {
+      "source": "node_welcome",
+      "sourceHandle": "source-green",
+      "target": "node_options",
+      "targetHandle": "target",
+      "animated": true,
+      "markerEnd": { "type": "arrowclosed" }
+    },
+    {
+      "source": "node_options",
+      "sourceHandle": "source-6",
+      "target": "node_values_text",
+      "targetHandle": "target",
+      "animated": true,
+      "markerEnd": { "type": "arrowclosed" }
+    },
+    {
+      "source": "node_values_text",
+      "sourceHandle": "source-green",
+      "target": "node_values_image",
+      "targetHandle": "target",
+      "animated": true,
+      "markerEnd": { "type": "arrowclosed" }
+    }
+  ],
+  "createdAt": "2026-02-02T19:16:01.639Z",
+  "updatedAt": "2026-02-02T19:16:01.639Z"
+}

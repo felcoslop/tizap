@@ -180,19 +180,34 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
 
 export const downloadEvolutionMedia = async (msgData, config) => {
     try {
-        if (!msgData.key || !msgData.message) return null;
+        if (!msgData.key) return null;
 
-        const response = await fetch(`${config.evolutionApiUrl}/message/downloadMedia/${config.evolutionInstanceName}`, {
+        // Try getBase64FromMediaMessage first (v2 default)
+        let response = await fetch(`${config.evolutionApiUrl}/chat/getBase64FromMediaMessage/${config.evolutionInstanceName}`, {
             method: 'POST',
             headers: {
                 'apikey': config.evolutionApiKey,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                key: msgData.key,
-                message: msgData.message
+                key: msgData.key
             })
         });
+
+        // Fallback to /message/downloadMedia if 404
+        if (response.status === 404) {
+            response = await fetch(`${config.evolutionApiUrl}/message/downloadMedia/${config.evolutionInstanceName}`, {
+                method: 'POST',
+                headers: {
+                    'apikey': config.evolutionApiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: msgData.key,
+                    message: msgData.message
+                })
+            });
+        }
 
         if (!response.ok) {
             console.error('[DOWNLOAD EVO MEDIA] Failed:', response.status);
@@ -200,13 +215,16 @@ export const downloadEvolutionMedia = async (msgData, config) => {
         }
 
         const data = await response.json();
-        if (!data.base64) {
+        const base64Content = data.base64 || data.data?.base64 || data.message?.base64;
+
+        if (!base64Content) {
             console.error('[DOWNLOAD EVO MEDIA] No base64 in response');
             return null;
         }
 
-        const buffer = Buffer.from(data.base64, 'base64');
-        const ext = data.mimetype ? data.mimetype.split('/')[1].split(';')[0] : 'bin';
+        const buffer = Buffer.from(base64Content, 'base64');
+        const mimetype = data.mimetype || data.data?.mimetype || 'image/jpeg';
+        const ext = mimetype.split('/')[1].split(';')[0] || 'bin';
         const filename = `evo_${msgData.key.id}.${ext}`;
         const filepath = path.join(UPLOAD_DIR, filename);
 

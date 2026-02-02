@@ -457,36 +457,33 @@ router.get('/evolution/messages/:userId', authenticateToken, async (req, res) =>
         res.json(messages);
 
     } catch (err) {
-        console.error('[EVOLUTION MESSAGES ERROR]', err);
+        console.error('[GET EVOLUTION MSGS ERROR]', err);
         res.status(500).json({ error: 'Erro ao buscar mensagens' });
     }
 });
 
-// Mark Evolution messages as read
+// Mark messages as read for a contact
 router.post('/evolution/messages/mark-read', authenticateToken, async (req, res) => {
     try {
         const { phones, phone } = req.body;
         const userId = req.userId;
 
-        const targetPhones = phones || [phone];
-        if (!targetPhones || !targetPhones.length || !targetPhones[0]) {
+        const targetPhones = Array.isArray(phones) ? phones : (phone ? [phone] : []);
+        if (targetPhones.length === 0) {
             return res.json({ success: true });
         }
+
+        const normalizedPhones = targetPhones.map(p => String(p).replace(/\D/g, ''));
 
         await prisma.evolutionMessage.updateMany({
             where: {
                 userId,
-                contactPhone: { in: targetPhones },
-                isRead: false
+                OR: normalizedPhones.map(p => ({
+                    contactPhone: { contains: p }
+                }))
             },
             data: { isRead: true }
         });
-
-        // Broadcast via WebSocket
-        const broadcastMessage = req.app.get('broadcastMessage');
-        if (broadcastMessage) {
-            broadcastMessage('evolution:message', { action: 'mark-read', phones: targetPhones }, userId);
-        }
 
         res.json({ success: true });
     } catch (err) {
@@ -498,21 +495,27 @@ router.post('/evolution/messages/mark-read', authenticateToken, async (req, res)
 // Delete Evolution conversations
 router.post('/evolution/messages/delete', authenticateToken, async (req, res) => {
     try {
-        const { phones, userId } = req.body;
+        const { phones } = req.body;
+        const userId = req.userId;
+
         if (!phones || !phones.length) {
-            return res.status(400).json({ error: 'No phones provided' });
+            return res.status(400).json({ error: 'Nenhum telefone enviado' });
         }
 
-        const result = await prisma.evolutionMessage.deleteMany({
+        const normalizedPhones = phones.map(p => String(p).replace(/\D/g, ''));
+
+        await prisma.evolutionMessage.deleteMany({
             where: {
-                userId: parseInt(userId),
-                contactPhone: { in: phones }
+                userId,
+                OR: normalizedPhones.map(p => ({
+                    contactPhone: { contains: p }
+                }))
             }
         });
 
-        res.json({ success: true, count: result.count });
+        res.json({ success: true });
     } catch (err) {
-        console.error('[EVOLUTION DELETE ERROR]', err);
+        console.error('[DELETE EVOLUTION MSGS ERROR]', err);
         res.status(500).json({ error: 'Erro ao excluir conversas' });
     }
 });
@@ -731,32 +734,40 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 let mediaType = null;
 
                 // Extract message content and media
-                if (message.conversation) {
-                    messageBody = message.conversation;
-                } else if (message.extendedTextMessage) {
-                    messageBody = message.extendedTextMessage.text;
-                } else if (message.imageMessage) {
-                    messageBody = message.imageMessage.caption || '[Imagem]';
+                const content = message.ephemeralMessage?.message || message.viewOnceMessage?.message || message.viewOnceMessageV2?.message || message;
+
+                if (content.conversation) {
+                    messageBody = content.conversation;
+                } else if (content.extendedTextMessage) {
+                    messageBody = content.extendedTextMessage.text;
+                } else if (content.imageMessage) {
+                    messageBody = content.imageMessage.caption || '[Imagem]';
                     mediaType = 'image';
-                    if (msgData.base64) mediaUrl = `data:image/jpeg;base64,${msgData.base64}`;
-                } else if (message.audioMessage) {
+                    const b64 = msgData.base64 || content.imageMessage.base64;
+                    if (b64) mediaUrl = `data:image/jpeg;base64,${b64}`;
+                } else if (content.audioMessage) {
                     messageBody = '[Áudio]';
                     mediaType = 'audio';
-                    if (msgData.base64) mediaUrl = `data:audio/ogg;base64,${msgData.base64}`;
-                } else if (message.videoMessage) {
-                    messageBody = message.videoMessage.caption || '[Vídeo]';
+                    const b64 = msgData.base64 || content.audioMessage.base64;
+                    if (b64) mediaUrl = `data:audio/ogg;base64,${b64}`;
+                } else if (content.videoMessage) {
+                    messageBody = content.videoMessage.caption || '[Vídeo]';
                     mediaType = 'video';
-                    if (msgData.base64) mediaUrl = `data:video/mp4;base64,${msgData.base64}`;
-                } else if (message.stickerMessage) {
+                    const b64 = msgData.base64 || content.videoMessage.base64;
+                    if (b64) mediaUrl = `data:video/mp4;base64,${b64}`;
+                } else if (content.stickerMessage) {
                     messageBody = '[Figurinha]';
-                    mediaType = 'image'; // Treat as image for simpler preview
-                    if (msgData.base64) mediaUrl = `data:image/webp;base64,${msgData.base64}`;
-                } else if (message.documentMessage) {
-                    messageBody = message.documentMessage.fileName || '[Documento]';
+                    mediaType = 'image';
+                    const b64 = msgData.base64 || content.stickerMessage.base64;
+                    if (b64) mediaUrl = `data:image/webp;base64,${b64}`;
+                } else if (content.documentMessage || content.documentWithCaptionMessage) {
+                    const doc = content.documentMessage || content.documentWithCaptionMessage?.message?.documentMessage;
+                    messageBody = doc?.fileName || doc?.caption || '[Documento]';
                     mediaType = 'document';
-                    if (msgData.base64) {
-                        const mime = message.documentMessage.mimetype || 'application/octet-stream';
-                        mediaUrl = `data:${mime};base64,${msgData.base64}`;
+                    const b64 = msgData.base64 || doc?.base64;
+                    if (b64) {
+                        const mime = doc?.mimetype || 'application/octet-stream';
+                        mediaUrl = `data:${mime};base64,${b64}`;
                     }
                 }
 
