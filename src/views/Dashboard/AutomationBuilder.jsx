@@ -535,8 +535,10 @@ export function AutomationBuilder({ user, addToast }) {
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <input type="file" ref={fileInputRef} onChange={handleImport} style={{ display: 'none' }} accept=".json" />
-                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', borderRadius: '10px' }}><Upload size={18} /> Importar</button>
-                            <button className="btn-primary" onClick={() => setEditingAutomation('new')} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700 }}>
+                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Upload size={18} /> Importar
+                            </button>
+                            <button className="btn-primary" onClick={() => setEditingAutomation('new')} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Plus size={18} /> Nova Automação
                             </button>
                         </div>

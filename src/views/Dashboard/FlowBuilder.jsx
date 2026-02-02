@@ -1067,10 +1067,10 @@ export default function FlowBuilder({ user, addToast }) {
                                 accept=".json"
                                 style={{ display: 'none' }}
                             />
-                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', borderRadius: '10px' }}>
+                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Upload size={18} /> Importar
                             </button>
-                            <button className="btn-primary" onClick={() => setEditingFlow('new')} style={{ padding: '12px 24px', borderRadius: '10px' }}>
+                            <button className="btn-primary" onClick={() => setEditingFlow('new')} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Plus size={18} /> Novo Fluxo
                             </button>
                         </div>
