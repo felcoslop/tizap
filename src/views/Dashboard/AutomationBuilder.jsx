@@ -378,7 +378,7 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token 
             <div className="editor-toolbar" style={{ padding: '10px 20px', background: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <select value={triggerType} onChange={e => setTriggerType(e.target.value)} style={{ padding: '6px', borderRadius: '6px' }}>
                     <option value="keyword">Palavras-chave</option>
-                    <option value="messages_upsert">Nova Mensagem</option>
+                    <option value="message">Nova Mensagem</option>
                     <option value="connection_update">Conexão Caiu</option>
                     <option value="qrcode_updated">QR Code</option>
                 </select>
@@ -472,9 +472,39 @@ export function AutomationBuilder({ user, addToast }) {
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                await fetch('/api/evolution/automations', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` }, body: JSON.stringify({ name: `Copia - ${data.name}`, triggerType: data.triggerType, triggerKeywords: data.triggerKeywords, nodes: JSON.parse(data.nodes || '[]'), edges: JSON.parse(data.edges || '[]'), userId: user.id }) });
-                fetchAutomations();
-            } catch (e) { addToast('Erro!', 'error'); }
+
+                // Robust parsing of nodes/edges (could be strings from DB or objects from UI)
+                const parseField = (f) => {
+                    if (!f) return [];
+                    if (typeof f === 'string') return JSON.parse(f);
+                    return f;
+                };
+
+                const res = await fetch('/api/evolution/automations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+                    body: JSON.stringify({
+                        name: `Importado - ${data.name || 'Sem nome'}`,
+                        triggerType: data.triggerType || 'message',
+                        triggerKeywords: data.triggerKeywords || '',
+                        nodes: parseField(data.nodes),
+                        edges: parseField(data.edges),
+                        conditions: parseField(data.conditions)
+                    })
+                });
+
+                if (res.ok) {
+                    fetchAutomations();
+                    addToast('Importado com sucesso!', 'success');
+                } else {
+                    const errData = await res.json();
+                    console.error('Import failure:', errData);
+                    addToast(`Erro ao importar: ${errData.error || 'Erro no servidor'}`, 'error');
+                }
+            } catch (e) {
+                console.error('Import error:', e);
+                addToast('Erro ao processar JSON.', 'error');
+            }
         };
         reader.readAsText(file);
     };

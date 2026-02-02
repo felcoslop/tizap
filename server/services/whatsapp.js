@@ -194,8 +194,9 @@ export const downloadEvolutionMedia = async (msgData, config) => {
             })
         });
 
-        // Fallback to /message/downloadMedia if 404
-        if (response.status === 404) {
+        // Fallback to /message/downloadMedia if ANY error
+        if (!response.ok) {
+            console.log(`[DOWNLOAD EVO MEDIA] getBase64 failed (${response.status}), trying fallback...`);
             response = await fetch(`${config.evolutionApiUrl}/message/downloadMedia/${config.evolutionInstanceName}`, {
                 method: 'POST',
                 headers: {
@@ -210,7 +211,7 @@ export const downloadEvolutionMedia = async (msgData, config) => {
         }
 
         if (!response.ok) {
-            console.error('[DOWNLOAD EVO MEDIA] Failed:', response.status);
+            console.error('[DOWNLOAD EVO MEDIA] Fallback also failed:', response.status);
             return null;
         }
 

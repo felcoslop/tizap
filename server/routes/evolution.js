@@ -602,38 +602,59 @@ router.get('/evolution/automations/:userId', authenticateToken, async (req, res)
 router.post('/evolution/automations', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
-        const { id, name, triggerKeywords, nodes, edges, isActive } = req.body;
+        const { id, name, triggerKeywords, nodes, edges, conditions, isActive, triggerType } = req.body;
+
+        console.log(`[SAVE AUTOMATION] User: ${userId}, ID: ${id || 'NEW'}, Name: ${name}`);
+        // console.log('[SAVE AUTOMATION DATA]', JSON.stringify(req.body).slice(0, 1000));
+
+        // Helper to stringify if it's an object/array
+        const ensureString = (val) => {
+            if (val === null || val === undefined) return '[]';
+            if (typeof val === 'string') return val;
+            return JSON.stringify(val);
+        };
+
+        const data = {
+            name: name || 'Nova Automação',
+            triggerKeywords: ensureString(triggerKeywords || '').replace(/[\[\]"]/g, ''), // Clean if it was an array
+            nodes: ensureString(nodes),
+            edges: ensureString(edges),
+            conditions: ensureString(conditions || []),
+            isActive: isActive !== undefined ? isActive : true,
+            triggerType: triggerType || 'message'
+        };
 
         if (id) {
-            // Update
-            const updated = await prisma.automation.update({
-                where: { id: parseInt(id) },
-                data: {
-                    name,
-                    triggerKeywords: triggerKeywords || '',
-                    nodes: JSON.stringify(nodes || []),
-                    edges: JSON.stringify(edges || []),
-                    isActive: isActive !== undefined ? isActive : true
-                }
+            // Check if automation belongs to user before updating
+            const existing = await prisma.automation.findUnique({
+                where: { id: parseInt(id) }
             });
-            return res.json(updated);
-        } else {
-            // Create
-            const created = await prisma.automation.create({
-                data: {
-                    userId,
-                    name: name || 'Nova Automação',
-                    triggerKeywords: triggerKeywords || '',
-                    nodes: JSON.stringify(nodes || []),
-                    edges: JSON.stringify(edges || []),
-                    isActive: true
-                }
-            });
-            return res.json(created);
+
+            if (existing && existing.userId === userId) {
+                const updated = await prisma.automation.update({
+                    where: { id: parseInt(id) },
+                    data
+                });
+                return res.json(updated);
+            }
+            // If ID doesn't exist or belongs to someone else, we fall through to Create
+            // but we omit the ID so Prisma generates a new one
         }
+
+        // Create new
+        console.log('[SAVE AUTOMATION] Creating new automation...');
+        const created = await prisma.automation.create({
+            data: {
+                ...data,
+                userId
+            }
+        });
+        console.log('[SAVE AUTOMATION] Successfully created:', created.id);
+        return res.json(created);
+
     } catch (err) {
         console.error('[SAVE AUTOMATION ERROR]', err);
-        res.status(500).json({ error: 'Erro ao salvar automação' });
+        res.status(500).json({ error: 'Erro ao salvar automação: ' + err.message });
     }
 });
 
@@ -836,17 +857,29 @@ async function processAutomations(userId, contactPhone, messageBody) {
                 isActive: true
             }
         });
+        console.log(`[AUTOMATION] Checking ${automations.length} active automations for user ${userId}`);
 
         for (const automation of automations) {
             let shouldTrigger = false;
-            const keywords = automation.triggerKeywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            const type = automation.triggerType || 'keyword';
 
-            if (keywords.length === 0) continue; // Skip if no keywords defined
+            console.log(`[AUTOMATION] Testing "${automation.name}" (Type: ${type})`);
 
-            for (const kw of keywords) {
-                if (messageBody.toLowerCase().includes(kw)) {
-                    shouldTrigger = true;
-                    break;
+            // NEW: If triggerType is 'message', it matches everything
+            if (type === 'message' || type === 'new_message') {
+                shouldTrigger = true;
+                console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
+            } else {
+                // Keyword matching logic
+                const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+                if (keywords.length === 0) continue;
+
+                for (const kw of keywords) {
+                    if (messageBody.toLowerCase().includes(kw)) {
+                        shouldTrigger = true;
+                        console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
+                        break;
+                    }
                 }
             }
 

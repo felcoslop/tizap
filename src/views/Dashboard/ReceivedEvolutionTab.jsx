@@ -115,7 +115,7 @@ export function ReceivedEvolutionTab({
         <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="received-container" style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 320px)' }}>
                 {/* Contact List Sidebar - Matched with ReceivedTab */}
-                <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid var(--ambev-blue)' }}>
+                <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #00a276' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3>Contatos</h3>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -131,7 +131,7 @@ export function ReceivedEvolutionTab({
                                 onClick={fetchMessages}
                                 title="Atualizar mensagens"
                                 disabled={isRefreshing}
-                                style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ambev-blue)' }}
+                                style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00a276' }}
                             >
                                 <RefreshCw size={18} />
                             </button>
@@ -172,8 +172,8 @@ export function ReceivedEvolutionTab({
                                         borderRadius: '8px',
                                         cursor: 'pointer',
                                         marginBottom: '8px',
-                                        border: isSelected ? '2px solid var(--ambev-blue)' : '1px solid #eee',
-                                        backgroundColor: isSelected ? '#f0f4ff' : 'white',
+                                        border: isSelected ? '2px solid #00a276' : '1px solid #eee',
+                                        backgroundColor: isSelected ? '#f0fff4' : 'white',
                                         width: '100%',
                                         boxSizing: 'border-box',
                                         display: 'flex',
@@ -181,6 +181,35 @@ export function ReceivedEvolutionTab({
                                         gap: '10px'
                                     }}
                                 >
+                                    <div
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: isSelected ? '#00a276' : '#e8f5e9',
+                                            color: isSelected ? 'white' : '#00a276',
+                                            fontWeight: 700,
+                                            flexShrink: 0,
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        {(() => {
+                                            const photo = lastMsg.profilePicUrl || contactMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
+                                            if (photo && photo.startsWith('http')) {
+                                                return <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                            }
+                                            const initials = contactName
+                                                .split(' ')
+                                                .map(n => n[0])
+                                                .join('')
+                                                .slice(0, 2)
+                                                .toUpperCase();
+                                            return initials || '?';
+                                        })()}
+                                    </div>
                                     {isDeleting && (
                                         <input
                                             type="checkbox"
@@ -194,7 +223,7 @@ export function ReceivedEvolutionTab({
                                         />
                                     )}
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ambev-blue)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? '#006d50' : '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {contactName}
                                         </div>
                                         <div style={{ fontSize: '0.75rem', color: '#999', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -202,7 +231,7 @@ export function ReceivedEvolutionTab({
                                             {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                     </div>
-                                    {hasUnread && <span className="unread-dot" style={{ backgroundColor: 'var(--ambev-blue)', width: '8px', height: '8px', borderRadius: '50%' }}></span>}
+                                    {hasUnread && <span className="unread-dot" style={{ backgroundColor: '#00a276', width: '8px', height: '8px', borderRadius: '50%' }}></span>}
                                 </div>
                             );
                         })}
@@ -223,16 +252,20 @@ export function ReceivedEvolutionTab({
                                         const name = nonMe?.pushName || nonMe?.contactName || activeContact;
                                         setShowProfileModal({ name, phone: activeContact });
                                     }}
-                                    style={{ cursor: 'pointer', marginRight: '12px' }}
+                                    style={{ cursor: 'pointer', marginRight: '12px', width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#00a276', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, overflow: 'hidden' }}
                                 >
-                                    <img
-                                        src={`/api/evolution/contact/${activeContact}/photo?name=${encodeURIComponent(activeContact)}`}
-                                        alt="Avatar"
-                                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                                    />
+                                    {(() => {
+                                        const cMsgs = groups[normalize(activeContact)] || [];
+                                        const withPhoto = cMsgs.find(m => m.profilePicUrl)?.profilePicUrl;
+                                        if (withPhoto && withPhoto.startsWith('http')) {
+                                            return <img src={withPhoto} alt="Avatar" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />;
+                                        }
+                                        const name = cMsgs.find(m => !m.isFromMe)?.pushName || activeContact;
+                                        return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                                    })()}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 700, color: 'var(--ambev-blue)' }}>
+                                    <div style={{ fontWeight: 700, color: '#00a276' }}>
                                         {(() => {
                                             const cMsgs = groups[normalize(activeContact)] || [];
                                             const nonMe = cMsgs.find(m => !m.isFromMe);
@@ -250,7 +283,7 @@ export function ReceivedEvolutionTab({
                                     .map(msg => (
                                         <div key={msg.id} style={{
                                             alignSelf: msg.isFromMe ? 'flex-end' : 'flex-start',
-                                            backgroundColor: msg.isFromMe ? 'var(--ambev-blue)' : 'white',
+                                            backgroundColor: msg.isFromMe ? '#00a276' : 'white',
                                             color: msg.isFromMe ? 'white' : '#333',
                                             padding: '10px 14px',
                                             borderRadius: '12px',
@@ -301,7 +334,7 @@ export function ReceivedEvolutionTab({
                                     placeholder="Digite sua mensagem via Evolution..."
                                     style={{ flex: 1, padding: '10px 16px', borderRadius: '24px', border: '1px solid #ddd', outline: 'none' }}
                                 />
-                                <button type="submit" style={{ backgroundColor: 'var(--ambev-blue)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <button type="submit" style={{ backgroundColor: '#00a276', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                     <Send size={20} />
                                 </button>
                             </form>
@@ -323,7 +356,10 @@ export function ReceivedEvolutionTab({
                             <X size={32} />
                         </button>
                         <img
-                            src={`/api/evolution/contact/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`}
+                            src={(() => {
+                                const cMsgs = groups[normalize(showProfileModal.phone)] || [];
+                                return cMsgs.find(m => m.profilePicUrl)?.profilePicUrl || `/api/evolution/contact/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`;
+                            })()}
                             alt="Profile"
                             style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '8px' }}
                         />
