@@ -385,21 +385,27 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
 
         if (mediaUrl) {
             // Send media message
-            const mediaEndpoint = mediaType === 'audio'
-                ? `/message/sendWhatsAppAudio/${config.evolutionInstanceName}`
-                : `/message/sendMedia/${config.evolutionInstanceName}`;
+            let payload = { number: remoteJid };
+            let mediaEndpoint;
+
+            if (mediaType === 'audio') {
+                mediaEndpoint = `/message/sendWhatsAppAudio/${config.evolutionInstanceName}`;
+                payload.audio = mediaUrl;
+                payload.delay = 1200;
+                payload.encoding = true;
+            } else {
+                mediaEndpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
+                payload.mediatype = mediaType || 'image';
+                payload.media = mediaUrl;
+                payload.caption = messageBody || '';
+            }
 
             messageData = await evolutionRequest(
                 config.evolutionApiUrl,
                 config.evolutionApiKey,
                 mediaEndpoint,
                 'POST',
-                {
-                    number: remoteJid,
-                    mediatype: mediaType || 'image',
-                    media: mediaUrl,
-                    caption: messageBody || ''
-                }
+                payload
             );
         } else {
             // Send text message
