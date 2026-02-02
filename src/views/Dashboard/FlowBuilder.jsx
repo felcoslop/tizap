@@ -1059,7 +1059,7 @@ export default function FlowBuilder({ user, addToast }) {
                             <h2 style={{ fontSize: '2rem', color: 'var(--ambev-blue)', marginBottom: '8px' }}>Seus Fluxos</h2>
                             <p className="subtitle">Gerencie seus fluxos de conversas automáticas</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -1067,10 +1067,18 @@ export default function FlowBuilder({ user, addToast }) {
                                 accept=".json"
                                 style={{ display: 'none' }}
                             />
-                            <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{ height: '48px', padding: '0 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
                                 <Upload size={18} /> Importar
                             </button>
-                            <button className="btn-primary" onClick={() => setEditingFlow('new')} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="btn-primary"
+                                onClick={() => setEditingFlow('new')}
+                                style={{ height: '48px', padding: '0 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
                                 <Plus size={18} /> Novo Fluxo
                             </button>
                         </div>
