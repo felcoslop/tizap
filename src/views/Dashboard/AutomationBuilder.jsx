@@ -58,7 +58,19 @@ const NODE_STYLES = `
     }
     .edit-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
     
-    .btn-small { padding: 6px 12px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-small { 
+        padding: 6px 12px; 
+        font-size: 12px; 
+        border: none; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px;
+        white-space: nowrap;
+        height: 32px;
+        justify-content: center;
+    }
     .btn-small.btn-primary { background: #280091; color: white; }
     
     .handles-row { display: flex; justify-content: center; padding-bottom: 8px; position: relative; min-height: 20px; }

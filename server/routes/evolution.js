@@ -547,20 +547,10 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
                     { phone: normalizedPhone }
                 );
 
-                try {
-                    const fs = await import('fs');
-                    fs.appendFileSync('photo_debug.txt', `[${new Date().toISOString()}] Phone: ${normalizedPhone} Response: ${JSON.stringify(profileData)}\n`);
-                } catch (err) { }
-
-                console.log(`[EVOLUTION DEBUG] Full response for ${normalizedPhone}:`, JSON.stringify(profileData));
-
-                const photoUrl = profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
+                const photoUrl = profileData.profilePictureUrl || profileData.pictureUrl || profileData.profile_picture_url || profileData.url;
 
                 if (photoUrl) {
-                    console.log(`[EVOLUTION DEBUG] Redirecting to photo: ${photoUrl}`);
                     return res.redirect(photoUrl);
-                } else {
-                    console.log(`[EVOLUTION DEBUG] No photo URL found in keys for ${normalizedPhone}`);
                 }
             } catch (e) {
                 console.log('[EVOLUTION DEBUG] Error fetching profile pic:', e.message);
