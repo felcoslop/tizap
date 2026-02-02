@@ -222,10 +222,8 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             {
                 enabled: true,
                 url: finalWebhookUrl,
-                webhookByEvents: true, // Use true when providing an explicit events list
-                webhook_by_events: true, // Compatibility for older versions
+                webhookByEvents: false, // For single URL
                 webhookBase64: true,
-                webhook_base_64: true, // Compatibility for older versions
                 events: [
                     'MESSAGES_UPSERT',
                     'MESSAGES_UPDATE',
@@ -362,7 +360,8 @@ router.post('/evolution/disconnect/:userId', authenticateToken, async (req, res)
 router.post('/evolution/send-message', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
-        const { phone, body, mediaUrl, mediaType } = req.body;
+        const { phone, body, message, mediaUrl, mediaType } = req.body;
+        const messageBody = body || message;
 
         const config = await prisma.userConfig.findUnique({ where: { userId } });
         if (!config || !config.evolutionApiUrl || !config.evolutionInstanceName) {
@@ -393,7 +392,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                     number: remoteJid,
                     mediatype: mediaType || 'image',
                     media: mediaUrl,
-                    caption: body || ''
+                    caption: messageBody || ''
                 }
             );
         } else {
@@ -405,7 +404,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 'POST',
                 {
                     number: remoteJid,
-                    text: body
+                    text: messageBody
                 }
             );
         }
@@ -417,7 +416,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 instanceName: config.evolutionInstanceName,
                 contactPhone: normalizedPhone,
                 contactName: 'Eu',
-                messageBody: body || `[${mediaType?.toUpperCase() || 'MEDIA'}]`,
+                messageBody: messageBody || `[${mediaType?.toUpperCase() || 'MEDIA'}]`,
                 isFromMe: true,
                 isRead: true,
                 mediaUrl,
@@ -719,6 +718,7 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 if (remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') continue;
 
                 const pushName = msgData.pushName || (isFromMe ? 'Eu' : 'Cliente');
+                console.log(`[EVOLUTION WEBHOOK] Msg from ${contactPhone} (${pushName}), isFromMe: ${isFromMe}`);
 
                 let messageBody = '';
                 let mediaUrl = null;
