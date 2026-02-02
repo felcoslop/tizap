@@ -218,8 +218,12 @@ export function ReceivedEvolutionTab({
                     <div style={{ flex: 1, overflowY: 'auto', marginTop: '1rem' }}>
                         {contactKeys.map(phoneKey => {
                             const contactMsgs = groups[phoneKey];
-                            const lastMsg = [...contactMsgs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-                            const contactName = lastMsg.pushName || lastMsg.contactName || phoneKey;
+                            const sortedMsgs = [...contactMsgs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                            const lastMsg = sortedMsgs[0];
+
+                            // Get name from the first non-me message we can find
+                            const nonMeMsg = sortedMsgs.find(m => !m.isFromMe);
+                            const contactName = nonMeMsg?.pushName || nonMeMsg?.contactName || lastMsg.pushName || lastMsg.contactName || phoneKey;
                             const hasUnread = contactMsgs.some(m => !m.isFromMe && !m.isRead);
                             const isSelected = normalize(activeContact) === phoneKey;
 

@@ -220,21 +220,23 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             `/webhook/set/${targetInstance}`,
             'POST',
             {
-                enabled: true,
-                url: finalWebhookUrl,
-                webhookByEvents: false, // For single URL
-                webhookBase64: true,
-                events: [
-                    'MESSAGES_UPSERT',
-                    'MESSAGES_UPDATE',
-                    'MESSAGES_DELETE',
-                    'SEND_MESSAGE',
-                    'CONNECTION_UPDATE',
-                    'QRCODE_UPDATED',
-                    'PRESENCE_UPDATE',
-                    'CONTACTS_UPSERT',
-                    'CHATS_UPSERT'
-                ]
+                webhook: {
+                    enabled: true,
+                    url: finalWebhookUrl,
+                    webhookByEvents: false,
+                    webhookBase64: true,
+                    events: [
+                        'MESSAGES_UPSERT',
+                        'MESSAGES_UPDATE',
+                        'MESSAGES_DELETE',
+                        'SEND_MESSAGE',
+                        'CONNECTION_UPDATE',
+                        'QRCODE_UPDATED',
+                        'PRESENCE_UPDATE',
+                        'CONTACTS_UPSERT',
+                        'CHATS_UPSERT'
+                    ]
+                }
             }
         );
 
