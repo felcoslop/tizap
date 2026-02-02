@@ -110,7 +110,7 @@ router.post('/evolution/instance', authenticateToken, async (req, res) => {
                 {
                     enabled: true,
                     url: webhookUrl,
-                    webhookByEvents: true,
+                    webhookByEvents: false,
                     webhookBase64: true,
                     events: [
                         'MESSAGES_UPSERT',
@@ -121,7 +121,7 @@ router.post('/evolution/instance', authenticateToken, async (req, res) => {
                         'PRESENCE_UPDATE',
                         'CONTACTS_UPSERT',
                         'CHATS_UPSERT',
-                        'GROUP_PARTICIPANTS_UPDATE'
+                        'SEND_MESSAGE'
                     ]
                 }
             );
@@ -180,11 +180,14 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
                 return res.status(400).json({ error: 'Token de webhook não encontrado para este usuário' });
             }
             const host = req.get('host');
-            const protocol = req.protocol;
-            finalWebhookUrl = `${protocol}://${host}/api/evolution/webhook/${config.evolutionWebhookToken}`;
+            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+            // Ensure no trailing slash on host and avoid double protocol
+            const cleanHost = host.replace(/\/+$/, '');
+            finalWebhookUrl = `${protocol}://${cleanHost}/api/evolution/webhook/${config.evolutionWebhookToken}`;
         }
 
-        console.log(`[EVOLUTION] Enabling robust webhook for ${targetInstance} at ${finalWebhookUrl}`);
+        console.log(`[EVOLUTION] Configuring robust webhook for ${targetInstance}`);
+        console.log(`[EVOLUTION] Target URL: ${finalWebhookUrl}`);
 
         const result = await evolutionRequest(
             baseUrl,
@@ -194,7 +197,7 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             {
                 enabled: true,
                 url: finalWebhookUrl,
-                webhookByEvents: true,
+                webhookByEvents: false,
                 webhookBase64: true,
                 events: [
                     "MESSAGES_UPSERT",
@@ -205,7 +208,7 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
                     "PRESENCE_UPDATE",
                     "CONTACTS_UPSERT",
                     "CHATS_UPSERT",
-                    "GROUP_PARTICIPANTS_UPDATE"
+                    "SEND_MESSAGE"
                 ]
             }
         );
@@ -215,8 +218,9 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             instance: targetInstance,
             webhookUrl: finalWebhookUrl,
             eventsEnabled: 9,
+            base64Enabled: true,
             evolutionResponse: result,
-            message: "✅ Webhook ativo! Recebe áudio/imagem/texto automágico"
+            message: "✅ Webhook corrigido! Recebe/envia texto+áudio+foto"
         });
 
     } catch (err) {
@@ -657,12 +661,17 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 const key = msgData.key || {};
                 const message = msgData.message || {};
 
-                // Skip if from me (we already save sent messages)
-                if (key.fromMe) continue;
+                // If it's a message from me, we still want to save it if it's new
+                // but we label it correctly
+                const isFromMe = !!key.fromMe;
 
                 const remoteJid = key.remoteJid || '';
                 const contactPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');
-                const pushName = msgData.pushName || 'Cliente';
+
+                // Skip status updates or group messages if not needed (currently focused on direct chat)
+                if (remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') continue;
+
+                const pushName = msgData.pushName || (isFromMe ? 'Eu' : 'Cliente');
 
                 let messageBody = '';
                 let mediaUrl = null;
@@ -676,22 +685,19 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 } else if (message.imageMessage) {
                     messageBody = message.imageMessage.caption || '[Imagem]';
                     mediaType = 'image';
-                    // Check for base64 data (if webhookBase64 is true)
-                    if (msgData.base64) {
-                        mediaUrl = `data:image/jpeg;base64,${msgData.base64}`;
-                    }
+                    if (msgData.base64) mediaUrl = `data:image/jpeg;base64,${msgData.base64}`;
                 } else if (message.audioMessage) {
                     messageBody = '[Áudio]';
                     mediaType = 'audio';
-                    if (msgData.base64) {
-                        mediaUrl = `data:audio/ogg;base64,${msgData.base64}`;
-                    }
+                    if (msgData.base64) mediaUrl = `data:audio/ogg;base64,${msgData.base64}`;
                 } else if (message.videoMessage) {
                     messageBody = message.videoMessage.caption || '[Vídeo]';
                     mediaType = 'video';
-                    if (msgData.base64) {
-                        mediaUrl = `data:video/mp4;base64,${msgData.base64}`;
-                    }
+                    if (msgData.base64) mediaUrl = `data:video/mp4;base64,${msgData.base64}`;
+                } else if (message.stickerMessage) {
+                    messageBody = '[Figurinha]';
+                    mediaType = 'image'; // Treat as image for simpler preview
+                    if (msgData.base64) mediaUrl = `data:image/webp;base64,${msgData.base64}`;
                 } else if (message.documentMessage) {
                     messageBody = message.documentMessage.fileName || '[Documento]';
                     mediaType = 'document';
@@ -701,17 +707,24 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                     }
                 }
 
+                // If we don't have a body but have media, use a placeholder
+                if (!messageBody && mediaType) {
+                    messageBody = `[${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}]`;
+                }
+
+                if (!messageBody && !mediaUrl) continue; // Nothing to save
+
                 // Save message to DB
                 const savedMsg = await prisma.evolutionMessage.create({
                     data: {
                         userId,
                         instanceName: config.evolutionInstanceName,
                         contactPhone,
-                        contactName: pushName,
+                        contactName: isFromMe ? 'Eu' : pushName,
                         pushName,
                         messageBody,
-                        isFromMe: false,
-                        isRead: false,
+                        isFromMe,
+                        isRead: isFromMe,
                         mediaUrl,
                         mediaType,
                         remoteJid,
@@ -725,9 +738,11 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                     broadcastMessage('evolution:message', savedMsg, userId);
                 }
 
-                // Process automations (trigger flows if conditions match)
-                await processAutomations(userId, contactPhone, messageBody);
-                await processEventAutomations(userId, 'messages_upsert', messageBody, contactPhone);
+                // Process automations ONLY for incoming messages
+                if (!isFromMe) {
+                    await processAutomations(userId, contactPhone, messageBody);
+                    await processEventAutomations(userId, 'messages_upsert', messageBody, contactPhone);
+                }
             }
         }
 

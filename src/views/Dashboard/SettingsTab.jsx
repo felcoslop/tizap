@@ -13,7 +13,8 @@ export function SettingsTab({
     generateWebhook,
     saveConfig,
     addToast,
-    onLogout
+    onLogout,
+    fetchUserData
 }) {
     const [showEvolutionQR, setShowEvolutionQR] = useState(false);
     const [evolutionQR, setEvolutionQR] = useState(null);
@@ -64,6 +65,7 @@ export function SettingsTab({
 
             const data = await res.json();
             if (res.ok) {
+                if (fetchUserData) fetchUserData();
                 addToast('Instância Evolution configurada!', 'success');
                 // Open QR Code modal
                 setShowEvolutionQR(true);

@@ -813,6 +813,7 @@ export function Dashboard({
                                 saveConfig={saveConfig}
                                 addToast={addToast}
                                 onLogout={onLogout}
+                                fetchUserData={fetchUserData}
                             />
                         )}
                     </>
