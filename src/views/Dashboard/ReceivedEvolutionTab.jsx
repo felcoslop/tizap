@@ -17,6 +17,107 @@ export function ReceivedEvolutionTab({
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const fileInputRef = useRef(null);
 
+    // Audio Recording State
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [audioStream, setAudioStream] = useState(null);
+    const recordingInterval = useRef(null);
+
+    // Cleanup interval on unmount
+    React.useEffect(() => {
+        return () => {
+            if (recordingInterval.current) clearInterval(recordingInterval.current);
+            if (audioStream) audioStream.getTracks().forEach(track => track.stop());
+        };
+    }, [audioStream]);
+
+    const startRecording = async () => {
+        try {
+            if (typeof window.MicRecorder === 'undefined') {
+                return addToast('Gravador não carregado. Recarregue a página.', 'error');
+            }
+
+            const recorder = new window.MicRecorder({ bitRate: 128 });
+
+            await recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingInterval.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (err) {
+            console.error('Mic Error:', err);
+            addToast('Erro ao acessar microfone.', 'error');
+        }
+    };
+
+    const stopRecording = () => {
+        if (!mediaRecorder) return;
+
+        mediaRecorder.stop().getMp3().then(async ([buffer, blob]) => {
+            const file = new File(buffer, `evorec-${Date.now()}.mp3`, { type: 'audio/mpeg' });
+
+            setIsUploadingMedia(true);
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const uploadRes = await fetch('/api/upload-media', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${user.token}` },
+                    body: formData
+                });
+
+                if (uploadRes.ok) {
+                    const data = await uploadRes.json();
+                    // Send via Evolution API
+                    await fetch('/api/evolution/send-message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
+                        body: JSON.stringify({
+                            phone: activeContact,
+                            mediaUrl: data.url,
+                            mediaType: 'audio'
+                        })
+                    });
+                    addToast('Áudio enviado via Evolution!', 'success');
+                    fetchMessages();
+                } else {
+                    addToast('Erro ao enviar áudio.', 'error');
+                }
+            } catch (err) {
+                console.error('Send Audio Error:', err);
+                addToast('Erro ao processar envio.', 'error');
+            } finally {
+                setIsUploadingMedia(false);
+            }
+        }).catch((e) => {
+            console.error('Stop Recording Error:', e);
+            addToast('Erro ao gravar áudio.', 'error');
+        });
+
+        clearInterval(recordingInterval.current);
+        setIsRecording(false);
+        setMediaRecorder(null);
+        setAudioStream(null);
+    };
+
+    const cancelRecording = () => {
+        if (mediaRecorder) {
+            mediaRecorder.stop();
+        }
+        clearInterval(recordingInterval.current);
+        setIsRecording(false);
+        setMediaRecorder(null);
+        setAudioStream(null);
+        setRecordingTime(0);
+        addToast('Gravação cancelada.', 'info');
+    };
+
     const normalize = p => {
         let s = String(p || '').replace(/\D/g, '');
         if (s.startsWith('55') && s.length === 12) {
@@ -326,17 +427,66 @@ export function ReceivedEvolutionTab({
                                 style={{ padding: '1rem', background: 'white', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}
                             >
                                 <input type="file" ref={fileInputRef} multiple style={{ display: 'none' }} onChange={handleMediaUpload} />
-                                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
-                                    {isUploadingMedia ? <RefreshCw className="animate-spin" size={20} /> : <Paperclip size={20} />}
-                                </button>
-                                <input
-                                    name="reply"
-                                    placeholder="Digite sua mensagem via Evolution..."
-                                    style={{ flex: 1, padding: '10px 16px', borderRadius: '24px', border: '1px solid #ddd', outline: 'none' }}
-                                />
-                                <button type="submit" style={{ backgroundColor: '#00a276', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <Send size={20} />
-                                </button>
+
+                                {!isRecording ? (
+                                    <>
+                                        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                                            {isUploadingMedia ? <RefreshCw className="animate-spin" size={20} /> : <Paperclip size={20} />}
+                                        </button>
+                                        <input
+                                            name="reply"
+                                            placeholder="Digite sua mensagem via Evolution..."
+                                            style={{ flex: 1, padding: '10px 16px', borderRadius: '24px', border: '1px solid #ddd', outline: 'none' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={startRecording}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', padding: '8px' }}
+                                        >
+                                            <Mic size={20} />
+                                        </button>
+                                        <button type="submit" style={{ backgroundColor: '#00a276', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                            <Send size={20} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '5px 15px', backgroundColor: '#f0f2f5', borderRadius: '24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e02424' }}>
+                                            <div className="pulse-red" style={{ width: '10px', height: '10px', backgroundColor: '#e02424', borderRadius: '50%' }}></div>
+                                            <span style={{ fontWeight: 600, minWidth: '40px' }}>
+                                                {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
+                                            </span>
+                                        </div>
+                                        <div style={{ flex: 1, color: '#666', fontSize: '0.9rem' }}>Gravando áudio...</div>
+                                        <button
+                                            type="button"
+                                            onClick={cancelRecording}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#666' }}
+                                            title="Cancelar"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={stopRecording}
+                                            style={{
+                                                backgroundColor: '#e02424',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                width: '32px',
+                                                height: '32px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Parar e Enviar"
+                                        >
+                                            <div style={{ width: '12px', height: '12px', backgroundColor: 'white', borderRadius: '2px' }}></div>
+                                        </button>
+                                    </div>
+                                )}
                             </form>
                         </>
                     ) : (

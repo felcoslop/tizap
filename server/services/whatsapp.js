@@ -2,9 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { UPLOAD_DIR } from '../config/constants.js';
+import prisma from '../db.js';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import pino from 'pino';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const logger = pino({ level: 'silent' });
 // Removed hardcoded uploadsDir - using UPLOAD_DIR from constants.js
 
 export const sendWhatsApp = async (phone, config, templateName, components) => {
@@ -180,61 +184,70 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
 
 export const downloadEvolutionMedia = async (msgData, config) => {
     try {
-        if (!msgData.key) return null;
+        if (!msgData || !msgData.message) return null;
 
-        // Try getBase64FromMediaMessage first (v2 default)
-        let response = await fetch(`${config.evolutionApiUrl}/chat/getBase64FromMediaMessage/${config.evolutionInstanceName}`, {
-            method: 'POST',
-            headers: {
-                'apikey': config.evolutionApiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                key: msgData.key
-            })
-        });
+        const messageContent = msgData.message;
+        const mediaType = Object.keys(messageContent).find(key =>
+            key === 'imageMessage' ||
+            key === 'audioMessage' ||
+            key === 'videoMessage' ||
+            key === 'documentMessage' ||
+            key === 'documentWithCaptionMessage' ||
+            key === 'stickerMessage'
+        );
 
-        // Fallback to /message/downloadMedia if ANY error
-        if (!response.ok) {
-            console.log(`[DOWNLOAD EVO MEDIA] getBase64 failed (${response.status}), trying fallback...`);
-            response = await fetch(`${config.evolutionApiUrl}/message/downloadMedia/${config.evolutionInstanceName}`, {
-                method: 'POST',
-                headers: {
-                    'apikey': config.evolutionApiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    key: msgData.key,
-                    message: msgData.message
-                })
-            });
-        }
+        if (!mediaType) return null;
 
-        if (!response.ok) {
-            console.error('[DOWNLOAD EVO MEDIA] Fallback also failed:', response.status);
-            return null;
-        }
+        // Ensure we have the correct structure for Baileys
+        // If it's a documentWithCaption, the real media info is nested
+        const messageToDownload = {
+            key: msgData.key,
+            message: messageContent
+        };
 
-        const data = await response.json();
-        const base64Content = data.base64 || data.data?.base64 || data.message?.base64;
+        console.log(`[DOWNLOAD MEDIA] Decrypting ${mediaType} locally via Baileys...`);
 
-        if (!base64Content) {
-            console.error('[DOWNLOAD EVO MEDIA] No base64 in response');
-            return null;
-        }
+        const buffer = await downloadMediaMessage(
+            messageToDownload,
+            'buffer',
+            {},
+            {
+                logger,
+                // We don't have the socket reuploadRequest, but it's mainly for re-sending. 
+                // For downloading, usually just keys are enough.
+            }
+        );
 
-        const buffer = Buffer.from(base64Content, 'base64');
-        const mimetype = data.mimetype || data.data?.mimetype || 'image/jpeg';
-        const ext = mimetype.split('/')[1].split(';')[0] || 'bin';
-        const filename = `evo_${msgData.key.id}.${ext}`;
-        const filepath = path.join(UPLOAD_DIR, filename);
+        if (!buffer) throw new Error('Empty buffer returned');
 
-        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-        fs.writeFileSync(filepath, buffer);
+        // Determine extension
+        let ext = 'bin';
+        const innerMsg = messageContent[mediaType] || messageContent.documentWithCaptionMessage?.message?.documentMessage;
+        const mime = innerMsg?.mimetype || '';
 
-        return `/uploads/${filename}`;
-    } catch (err) {
-        console.error('[DOWNLOAD EVO MEDIA ERROR]', err);
+        if (mime.includes('image/jpeg')) ext = 'jpg';
+        else if (mime.includes('image/png')) ext = 'png';
+        else if (mime.includes('audio/ogg')) ext = 'ogg';
+        else if (mime.includes('audio/active')) ext = 'mp3'; // WhatsApp PTT
+        else if (mime.includes('audio/mpeg')) ext = 'mp3';
+        else if (mime.includes('video/mp4')) ext = 'mp4';
+        else if (mime.includes('application/pdf')) ext = 'pdf';
+        else if (mediaType === 'stickerMessage') ext = 'webp';
+
+        const fileName = `${msgData.key.id}.${ext}`;
+        const relativePath = `/uploads/${fileName}`;
+        const uploadsDir = path.join(__dirname, '../../uploads');
+        const absolutePath = path.join(uploadsDir, fileName);
+
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+        fs.writeFileSync(absolutePath, buffer);
+        console.log(`[DOWNLOAD MEDIA] Saved to ${absolutePath}`);
+
+        return relativePath;
+
+    } catch (error) {
+        console.error('[DOWNLOAD MEDIA ERROR]', error.code || error.message);
         return null;
     }
 };
