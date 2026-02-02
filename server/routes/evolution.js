@@ -548,8 +548,8 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
                     { phone: normalizedPhone }
                 );
 
-                if (profileData && (profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url)) {
-                    const url = profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
+                if (profileData && (profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url)) {
+                    const url = profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
                     return res.redirect(url);
                 }
             } catch (e) {
