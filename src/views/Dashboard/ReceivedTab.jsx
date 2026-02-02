@@ -236,11 +236,11 @@ export function ReceivedTab({
                                                             </a>
                                                         )}
                                                         {msg.messageBody && msg.messageBody !== `[${msg.mediaType?.toUpperCase()}]` && (
-                                                            <div style={{ marginTop: '4px' }}>{msg.messageBody}</div>
+                                                            <div style={{ marginTop: '4px', whiteSpace: 'pre-wrap' }}>{msg.messageBody}</div>
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    msg.messageBody
+                                                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.messageBody}</div>
                                                 )}
                                                 <div style={{ fontSize: '0.65rem', opacity: 0.7, marginTop: '4px', textAlign: 'right' }}>
                                                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

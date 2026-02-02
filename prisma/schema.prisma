@@ -8,44 +8,43 @@ datasource db {
 }
 
 model User {
-  id                  Int         @id @default(autoincrement())
-  email               String      @unique
-  name                String?
-  password            String?
-  isVerified          Boolean     @default(false)
-  verificationToken   String?
-  verificationExpires DateTime?
-  googleId            String?     @unique
-  avatar              String?
-  resetPasswordToken   String?
+  id                   Int             @id @default(autoincrement())
+  email                String          @unique
+  name                 String?
+  password             String?
+  isVerified           Boolean         @default(false)
+  verificationToken    String?
+  verificationExpires  DateTime?
+  googleId             String?         @unique
+  avatar               String?
+  createdAt            DateTime        @default(now())
   resetPasswordExpires DateTime?
-  createdAt           DateTime    @default(now())
-  dispatches          Dispatch[]
-  config              UserConfig?
-  flows               Flow[]
-  emailTemplates      EmailTemplate[]
-  emailCampaigns      EmailCampaign[]
-  automations         Automation[]
+  resetPasswordToken   String?
+  automations          Automation[]
+  dispatches           Dispatch[]
+  emailCampaigns       EmailCampaign[]
+  emailTemplates       EmailTemplate[]
+  flows                Flow[]
+  config               UserConfig?
 }
 
 model UserConfig {
-  id           Int    @id @default(autoincrement())
-  userId       Int    @unique
-  token        String @default("")
-  phoneId      String @default("")
-  wabaId       String @default("")
-  templateName       String @default("")
-  mapping            String @default("{}")
-  webhookVerifyToken String @default("")
-  webhookToken       String @default("")
-  // Evolution API fields
-  evolutionApiUrl       String @default("")
-  evolutionApiKey       String @default("")
-  evolutionInstanceName String @default("")
-  evolutionWebhookToken String @default("")
+  id                    Int     @id @default(autoincrement())
+  userId                Int     @unique
+  token                 String  @default("")
+  phoneId               String  @default("")
+  wabaId                String  @default("")
+  templateName          String  @default("")
+  mapping               String  @default("{}")
+  webhookVerifyToken    String  @default("")
+  webhookToken          String  @default("")
+  evolutionApiUrl       String  @default("")
+  evolutionApiKey       String  @default("")
+  evolutionInstanceName String  @default("")
+  evolutionWebhookToken String  @default("")
   evolutionConnected    Boolean @default(false)
-  businessHours         String  @default("{}") // Store work hours JSON
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessHours         String  @default("{}")
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Dispatch {
@@ -62,9 +61,9 @@ model Dispatch {
   leadsData    String        @default("[]")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  dispatchType String        @default("template") // "template" or "flow"
+  dispatchType String        @default("template")
   flowId       Int?
-  variables    String?       @default("[]") // JSON array of variable values
+  variables    String?       @default("[]")
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs         DispatchLog[]
 }
@@ -87,18 +86,18 @@ model ReceivedMessage {
   messageBody     String
   isFromMe        Boolean  @default(false)
   isRead          Boolean  @default(false)
-  mediaUrl        String?
-  mediaType       String?  // image, audio, video, document
-  mediaId         String?
   createdAt       DateTime @default(now())
+  mediaId         String?
+  mediaType       String?
+  mediaUrl        String?
 }
 
 model Flow {
   id        Int           @id @default(autoincrement())
   userId    Int
   name      String
-  nodes     String        @default("[]") // JSON
-  edges     String        @default("[]") // JSON
+  nodes     String        @default("[]")
+  edges     String        @default("[]")
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -110,15 +109,15 @@ model FlowSession {
   flowId       Int?
   automationId Int?
   contactPhone String
-  currentStep  String? // Node ID
-  status       String           @default("active") // active, waiting_reply, completed, error
+  currentStep  String?
+  status       String           @default("active")
   variables    String           @default("{}")
-  platform     String           @default("meta") // meta, evolution
-  scheduledAt  DateTime?        // For business hours or delays
+  platform     String           @default("meta")
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  flow         Flow?            @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime?
   automation   Automation?      @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  flow         Flow?            @relation(fields: [flowId], references: [id], onDelete: Cascade)
   logs         FlowSessionLog[]
 }
 
@@ -127,8 +126,8 @@ model FlowSessionLog {
   sessionId Int
   nodeId    String?
   nodeName  String?
-  action    String // sent_message, waiting_reply, received_reply, completed, error
-  details   String? // JSON or text details
+  action    String
+  details   String?
   createdAt DateTime    @default(now())
   session   FlowSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
@@ -141,8 +140,8 @@ model EmailTemplate {
   html      String
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaigns EmailCampaign[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EmailCampaign {
@@ -151,16 +150,16 @@ model EmailCampaign {
   templateId   Int?
   name         String
   subject      String             @default("")
-  status       String             @default("idle") // idle, running, paused, stopped, completed, error
+  status       String             @default("idle")
   totalLeads   Int                @default(0)
   currentIndex Int                @default(0)
   successCount Int                @default(0)
   errorCount   Int                @default(0)
-  leadsData    String             @default("[]") // JSON
+  leadsData    String             @default("[]")
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+  template     EmailTemplate?     @relation(fields: [templateId], references: [id])
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template     EmailTemplate?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
   logs         EmailCampaignLog[]
 }
 
@@ -174,40 +173,37 @@ model EmailCampaignLog {
   campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
-// Evolution API Messages (received via Evolution webhooks)
 model EvolutionMessage {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  instanceName    String
-  contactPhone    String
-  contactName     String   @default("Cliente")
-  pushName        String?
-  messageBody     String
-  isFromMe        Boolean  @default(false)
-  isRead          Boolean  @default(false)
-  mediaUrl        String?
-  mediaType       String?  // image, audio, video, document
-  profilePicUrl   String?
-  remoteJid       String?  // WhatsApp JID format
-  messageId       String?  // Evolution message ID
-  createdAt       DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  instanceName  String
+  contactPhone  String
+  contactName   String   @default("Cliente")
+  pushName      String?
+  messageBody   String
+  isFromMe      Boolean  @default(false)
+  isRead        Boolean  @default(false)
+  mediaUrl      String?
+  mediaType     String?
+  profilePicUrl String?
+  remoteJid     String?
+  messageId     String?
+  createdAt     DateTime @default(now())
 }
 
-// Automations (trigger flows based on incoming messages)
 model Automation {
   id              Int           @id @default(autoincrement())
   userId          Int
   name            String
   isActive        Boolean       @default(true)
-  triggerType     String        @default("keyword") // new_message, keyword
-  triggerKeywords String        @default("") // Comma separated keywords
-  conditions      String        @default("[]") // JSON array of conditions
-  flowId          Int? // Flow to trigger when conditions match (optional if using canvas)
-  nodes           String        @default("[]") // JSON for visual canvas
-  edges           String        @default("[]") // JSON for visual canvas
+  triggerType     String        @default("keyword")
+  triggerKeywords String        @default("")
+  conditions      String        @default("[]")
+  flowId          Int?
+  nodes           String        @default("[]")
+  edges           String        @default("[]")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions        FlowSession[]
 }
-

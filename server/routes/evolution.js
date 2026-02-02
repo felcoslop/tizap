@@ -5,6 +5,9 @@ import { downloadEvolutionMedia } from '../services/whatsapp.js';
 
 const router = express.Router();
 
+// Track pending connection loss triggers to avoid false positives (2 min window)
+const disconnectionTimeouts = new Map();
+
 // Helper function to make Evolution API requests
 async function evolutionRequest(baseUrl, apiKey, endpoint, method = 'GET', body = null) {
     const url = `${baseUrl}${endpoint}`;
@@ -711,6 +714,13 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
             const state = body.data?.state || body.state;
             const isConnected = state === 'open';
 
+            // Clear any existing pending trigger for this user (they are back online or status changed)
+            if (disconnectionTimeouts.has(userId)) {
+                clearTimeout(disconnectionTimeouts.get(userId));
+                disconnectionTimeouts.delete(userId);
+                console.log(`[EVOLUTION CONNECT] Cancelled pending connection trigger for user ${userId} (Status restored to ${state})`);
+            }
+
             await prisma.userConfig.update({
                 where: { userId },
                 data: { evolutionConnected: isConnected }
@@ -722,9 +732,28 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 broadcastMessage('evolution:connection', { connected: isConnected }, userId);
             }
 
-            // Trigger connection automations
-            if (event === 'CONNECTION_UPDATE' || event === 'connection.update') {
+            // Trigger connection automations (with delay if connection fell)
+            if (isConnected) {
+                // If connected, we trigger immediately if needed
                 await processEventAutomations(userId, 'connection_update', `Status: ${state}`);
+            } else {
+                // Connection LOST - wait 2 minutes as requested to avoid instability triggers
+                console.log(`[EVOLUTION CONNECT] Connection lost for user ${userId}. Waiting 2 minutes before triggering automation...`);
+
+                const timeout = setTimeout(async () => {
+                    disconnectionTimeouts.delete(userId);
+
+                    // Verify if connection is still down before triggering
+                    const currentConfig = await prisma.userConfig.findUnique({ where: { userId } });
+                    if (currentConfig && !currentConfig.evolutionConnected) {
+                        console.log(`[EVOLUTION CONNECT] Connection still down after 2 minutes for user ${userId}. Triggering automation.`);
+                        await processEventAutomations(userId, 'connection_update', `Status: Offline (Persistent)`);
+                    } else {
+                        console.log(`[EVOLUTION CONNECT] Connection restored for user ${userId} within 2 minute window. Skipping automation.`);
+                    }
+                }, 120000); // 2 minutes
+
+                disconnectionTimeouts.set(userId, timeout);
             }
         }
 

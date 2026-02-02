@@ -439,11 +439,11 @@ export function ReceivedEvolutionTab({
                                                         </a>
                                                     )}
                                                     {msg.messageBody && msg.messageBody !== `[${msg.mediaType?.toUpperCase()}]` && (
-                                                        <div style={{ marginTop: '8px' }}>{msg.messageBody}</div>
+                                                        <div style={{ marginTop: '8px', whiteSpace: 'pre-wrap' }}>{msg.messageBody}</div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                msg.messageBody
+                                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.messageBody}</div>
                                             )}
                                             <div style={{ fontSize: '0.65rem', opacity: 0.6, textAlign: 'right', marginTop: '4px' }}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

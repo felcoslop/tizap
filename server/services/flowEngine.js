@@ -556,7 +556,10 @@ const FlowEngine = {
         // But since scheduledAt is compared with 'now' in processScheduledFlows, and that 'now' is local server time (UTC),
         // we should return the UTC equivalent of this GMT-3 time.
         const resumeUTC = new Date(next.getTime() + (3 * 60 * 60 * 1000));
-        console.log(`[FLOW ENGINE] Calculated Resume: GMT-3: ${next.toISOString()} | UTC: ${resumeUTC.toISOString()}`);
+        console.log(`[FLOW ENGINE] Calculate Next: 
+            Human Next (GMT-3): ${next.toLocaleString('pt-BR')} 
+            Stored Stamped (UTC): ${resumeUTC.toISOString()}
+            Current VM Time (UTC): ${new Date().toISOString()}`);
         return resumeUTC;
     },
 
@@ -573,27 +576,50 @@ const FlowEngine = {
         if (sessions.length > 0) {
             console.log(`[FLOW ENGINE] Found ${sessions.length} sessions waiting to resume at ${now.toISOString()}`);
         }
+
         for (const session of sessions) {
-            console.log(`[FLOW ENGINE] Resuming session ${session.id} (Step: ${session.currentStep})`);
-            const flow = session.flow || session.automation;
-            if (!flow) continue;
-            const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
-            if (!userConfig) continue;
+            try {
+                const scheduledTime = session.scheduledAt ? session.scheduledAt.toISOString() : 'N/A';
+                console.log(`[FLOW ENGINE] Resuming session ${session.id} (Current Step: ${session.currentStep}). Scheduled for: ${scheduledTime}`);
 
-            const nodes = JSON.parse(flow.nodes);
-            const edges = JSON.parse(flow.edges);
-            const outboundEdges = edges.filter(e => String(e.source) === String(session.currentStep));
-            const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray' || !e.sourceHandle);
+                const flow = session.flow || session.automation;
+                if (!flow) {
+                    console.error(`[FLOW ENGINE] Session ${session.id} has no flow or automation attached!`);
+                    await prisma.flowSession.update({ where: { id: session.id }, data: { status: 'error' } });
+                    continue;
+                }
 
-            if (nextEdge) {
-                const nextSession = await prisma.flowSession.update({
-                    where: { id: session.id },
-                    data: { currentStep: nextEdge.target, status: 'active', scheduledAt: null }
-                });
-                await this.executeStep(nextSession, flow, userConfig, session.platform);
+                const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
+                if (!userConfig) {
+                    console.error(`[FLOW ENGINE] User config not found for userId: ${flow.userId}`);
+                    continue;
+                }
+
+                const edges = JSON.parse(flow.edges || '[]');
+                const outboundEdges = edges.filter(e => String(e.source) === String(session.currentStep));
+
+                // Priority: gray handle or no handle (default path)
+                const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray') ||
+                    outboundEdges.find(e => !e.sourceHandle);
+
+                if (nextEdge) {
+                    console.log(`[FLOW ENGINE] Found next edge: ${session.currentStep} -> ${nextEdge.target}`);
+                    const nextSession = await prisma.flowSession.update({
+                        where: { id: session.id },
+                        data: { currentStep: nextEdge.target, status: 'active', scheduledAt: null }
+                    });
+
+                    await this.executeStep(nextSession, flow, userConfig, session.platform);
+                } else {
+                    console.warn(`[FLOW ENGINE] No outbound edge found for session ${session.id} at step ${session.currentStep}. Paths available: ${outboundEdges.map(e => e.sourceHandle).join(', ')}`);
+                    // If no edge, just complete it
+                    await prisma.flowSession.update({ where: { id: session.id }, data: { status: 'completed', scheduledAt: null } });
+                }
+            } catch (err) {
+                console.error(`[FLOW ENGINE] Error processing scheduled session ${session.id}:`, err);
             }
         }
-    }
+    },
 };
 
 export default FlowEngine;
