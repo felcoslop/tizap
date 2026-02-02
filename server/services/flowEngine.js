@@ -411,18 +411,18 @@ const FlowEngine = {
             }
         });
 
-        if (!session) return;
+        if (!session) return false;
 
         const flow = session.flow || session.automation;
-        if (!flow) return;
+        if (!flow) return false;
 
         const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
-        if (!userConfig) return;
+        if (!userConfig) return false;
 
         const nodes = JSON.parse(flow.nodes);
         const edges = JSON.parse(flow.edges);
         const currentNode = nodes.find(n => String(n.id) === String(session.currentStep));
-        if (!currentNode) return;
+        if (!currentNode) return false;
 
         const nodeName = currentNode.data?.label || currentNode.data?.templateName || `Nó ${currentNode.id}`;
         let nextNodeId = null;
@@ -465,7 +465,7 @@ const FlowEngine = {
                     await this.sendWhatsAppText(normalizedPhone, "Opção inválida. Por favor tente novamente.", userConfig);
                 }
             }
-            return;
+            return true;
         }
 
         if (nextNodeId) {
@@ -475,6 +475,7 @@ const FlowEngine = {
         } else {
             await this.endSession(session.id, 'Fluxo concluído');
         }
+        return true;
     },
 
     async endSession(sessionId, reason = 'Fluxo concluído') {

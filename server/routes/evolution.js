@@ -851,6 +851,17 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 // Process automations when a new message arrives
 async function processAutomations(userId, contactPhone, messageBody) {
     try {
+        // FIRST: Check if user is already in a flow/automation session (waiting for reply)
+        const FlowEngine = (await import('../services/flowEngine.js')).default;
+
+        // Try to process as a reply first
+        const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
+
+        if (sessionProcessed) {
+            console.log(`[AUTOMATION] Message handled by active session for ${contactPhone}`);
+            return; // Stop here, don't trigger new automations
+        }
+
         const automations = await prisma.automation.findMany({
             where: {
                 userId,
@@ -885,7 +896,6 @@ async function processAutomations(userId, contactPhone, messageBody) {
 
             if (shouldTrigger) {
                 // Import and trigger FlowEngine
-                const FlowEngine = (await import('../services/flowEngine.js')).default;
                 await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
                 console.log(`[AUTOMATION] Triggered automation ${automation.id} for ${contactPhone}`);
                 break; // Only trigger one automation per message to avoid loops
