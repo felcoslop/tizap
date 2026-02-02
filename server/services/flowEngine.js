@@ -179,14 +179,21 @@ const FlowEngine = {
             } else if (currentNode.type === 'emailNode') {
                 const templateId = currentNode.data.templateId;
                 const sessionVars = JSON.parse(session.variables || '{}');
-                const mapping = sessionVars._mapping || {};
-                const emailVarKey = `enode_${currentNode.id}_email`;
-                const emailMap = mapping[emailVarKey];
 
-                let recipientEmail = null;
-                if (emailMap) {
-                    recipientEmail = emailMap.type === 'column' ? sessionVars[emailMap.value] : emailMap.value;
+                // PRIORITY 1: Check for manually set recipient email in node data
+                let recipientEmail = currentNode.data.recipientEmail;
+
+                // PRIORITY 2: Check session variable mapping
+                if (!recipientEmail) {
+                    const mapping = sessionVars._mapping || {};
+                    const emailVarKey = `enode_${currentNode.id}_email`;
+                    const emailMap = mapping[emailVarKey];
+                    if (emailMap) {
+                        recipientEmail = emailMap.type === 'column' ? sessionVars[emailMap.value] : emailMap.value;
+                    }
                 }
+
+                // PRIORITY 3: Fallback to common email field names
                 if (!recipientEmail) {
                     recipientEmail = sessionVars['email'] || sessionVars['Email'] || sessionVars['E-mail'];
                 }
@@ -203,6 +210,8 @@ const FlowEngine = {
                     } catch (e) {
                         await this.logAction(session.id, currentNode.id, nodeName, 'error', `Falha ao enviar e-mail: ${e.message}`);
                     }
+                } else {
+                    await this.logAction(session.id, currentNode.id, nodeName, 'error', `E-mail não configurado ou template não selecionado`);
                 }
             } else if (currentNode.type === 'alertNode') {
                 const alertPhone = currentNode.data.phone;
@@ -240,6 +249,11 @@ const FlowEngine = {
                     return; // Stop execution here
                 }
                 await this.logAction(session.id, currentNode.id, nodeName, 'within_hours', 'Dentro do horário comercial');
+            } else if (currentNode.type === 'closeAutomationNode') {
+                // CLOSE AUTOMATION NODE - End session immediately
+                await this.logAction(session.id, currentNode.id, 'Fechar Automação', 'automation_closed', 'Sessão encerrada pelo nó de fechamento');
+                await this.endSession(session.id, 'Automação encerrada pelo nó de fechamento');
+                return; // Stop execution - no next node
             }
 
             const outboundEdges = edges.filter(e => String(e.source) === String(currentNode.id));

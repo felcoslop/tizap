@@ -851,56 +851,108 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 // Process automations when a new message arrives
 async function processAutomations(userId, contactPhone, messageBody) {
     try {
-        // FIRST: Check if user is already in a flow/automation session (waiting for reply)
         const FlowEngine = (await import('../services/flowEngine.js')).default;
 
-        // Try to process as a reply first
-        const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
+        // Normalize phone for consistent lookup
+        let normalizedPhone = String(contactPhone).replace(/\D/g, '');
+        if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
 
-        if (sessionProcessed) {
-            console.log(`[AUTOMATION] Message handled by active session for ${contactPhone}`);
-            return; // Stop here, don't trigger new automations
+        const possibleNumbers = [normalizedPhone, normalizedPhone.replace('55', '')];
+        if (normalizedPhone.length === 13 && normalizedPhone.startsWith('55')) {
+            const withoutNine = normalizedPhone.slice(0, 4) + normalizedPhone.slice(5);
+            possibleNumbers.push(withoutNine, withoutNine.replace('55', ''));
+        }
+        if (normalizedPhone.length === 12 && normalizedPhone.startsWith('55')) {
+            const withNine = normalizedPhone.slice(0, 4) + '9' + normalizedPhone.slice(4);
+            possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
-        const automations = await prisma.automation.findMany({
+        // Check for existing active session (waiting for reply)
+        const existingSession = await prisma.flowSession.findFirst({
             where: {
-                userId,
-                isActive: true
+                contactPhone: { in: possibleNumbers },
+                status: 'waiting_reply',
+                OR: [
+                    { flow: { userId } },
+                    { automation: { userId } }
+                ]
+            },
+            include: { automation: true }
+        });
+
+        // If session exists, check 24h window
+        if (existingSession) {
+            const sessionAge = Date.now() - new Date(existingSession.updatedAt).getTime();
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+
+            if (sessionAge > twentyFourHours) {
+                // Session expired - close it
+                console.log(`[AUTOMATION] Session ${existingSession.id} expired (${Math.round(sessionAge / 3600000)}h old)`);
+                await prisma.flowSession.update({
+                    where: { id: existingSession.id },
+                    data: { status: 'expired' }
+                });
+                // Continue to create new session below
+            } else {
+                // Session is valid, process the reply
+                const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
+                if (sessionProcessed) {
+                    console.log(`[AUTOMATION] Message handled by active session for ${contactPhone}`);
+                    return; // Stop here
+                }
             }
+        }
+
+        // Check if contact has any active session (not just waiting_reply)
+        const anyActiveSession = await prisma.flowSession.findFirst({
+            where: {
+                contactPhone: { in: possibleNumbers },
+                status: { in: ['active', 'waiting_reply'] },
+                OR: [
+                    { flow: { userId } },
+                    { automation: { userId } }
+                ]
+            }
+        });
+
+        if (anyActiveSession) {
+            console.log(`[AUTOMATION] Contact ${contactPhone} already in an active session, skipping new triggers`);
+            return;
+        }
+
+        // Fetch active automations
+        const automations = await prisma.automation.findMany({
+            where: { userId, isActive: true }
         });
         console.log(`[AUTOMATION] Checking ${automations.length} active automations for user ${userId}`);
 
-        for (const automation of automations) {
-            let shouldTrigger = false;
-            const type = automation.triggerType || 'keyword';
+        // Separate by type for priority handling
+        const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
+        const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
 
-            console.log(`[AUTOMATION] Testing "${automation.name}" (Type: ${type})`);
+        // PRIORITY 1: Check keyword automations first
+        for (const automation of keywordAutomations) {
+            const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            if (keywords.length === 0) continue;
 
-            // NEW: If triggerType is 'message', it matches everything
-            if (type === 'message' || type === 'new_message') {
-                shouldTrigger = true;
-                console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
-            } else {
-                // Keyword matching logic
-                const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-                if (keywords.length === 0) continue;
-
-                for (const kw of keywords) {
-                    if (messageBody.toLowerCase().includes(kw)) {
-                        shouldTrigger = true;
-                        console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
-                        break;
-                    }
+            for (const kw of keywords) {
+                if (messageBody.toLowerCase().includes(kw)) {
+                    console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
+                    await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
+                    console.log(`[AUTOMATION] Triggered keyword automation ${automation.id} for ${contactPhone}`);
+                    return; // Stop - keyword takes priority
                 }
             }
-
-            if (shouldTrigger) {
-                // Import and trigger FlowEngine
-                await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
-                console.log(`[AUTOMATION] Triggered automation ${automation.id} for ${contactPhone}`);
-                break; // Only trigger one automation per message to avoid loops
-            }
         }
+
+        // PRIORITY 2: If no keyword matched, check message automations
+        for (const automation of messageAutomations) {
+            console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
+            await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
+            console.log(`[AUTOMATION] Triggered message automation ${automation.id} for ${contactPhone}`);
+            return; // Only trigger one
+        }
+
     } catch (err) {
         console.error('[AUTOMATION PROCESS ERROR]', err);
     }
@@ -925,16 +977,66 @@ async function processEventAutomations(userId, triggerType, context = '', contac
     }
 }
 
-// Toggle automation status
+// Toggle automation status with exclusivity rules
 router.patch('/evolution/automations/:id/toggle', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.userId;
         const auto = await prisma.automation.findUnique({ where: { id: parseInt(id) } });
         if (!auto) return res.status(404).json({ error: 'Não encontrada' });
 
+        const newActiveState = !auto.isActive;
+
+        // If activating, enforce exclusivity rules
+        if (newActiveState) {
+            const triggerType = auto.triggerType;
+
+            // For qrcode_updated and connection_update: only 1 can be active
+            if (triggerType === 'qrcode_updated' || triggerType === 'connection_update') {
+                await prisma.automation.updateMany({
+                    where: {
+                        userId: auto.userId,
+                        triggerType: triggerType,
+                        isActive: true,
+                        id: { not: parseInt(id) }
+                    },
+                    data: { isActive: false }
+                });
+                console.log(`[AUTOMATION] Deactivated other ${triggerType} automations for user ${auto.userId}`);
+            }
+
+            // For message trigger: deactivate other message automations (keyword can coexist)
+            if (triggerType === 'message') {
+                await prisma.automation.updateMany({
+                    where: {
+                        userId: auto.userId,
+                        triggerType: 'message',
+                        isActive: true,
+                        id: { not: parseInt(id) }
+                    },
+                    data: { isActive: false }
+                });
+                console.log(`[AUTOMATION] Deactivated other message automations for user ${auto.userId}`);
+            }
+
+            // For keyword trigger: deactivate other keyword automations (message can coexist)
+            if (triggerType === 'keyword') {
+                await prisma.automation.updateMany({
+                    where: {
+                        userId: auto.userId,
+                        triggerType: 'keyword',
+                        isActive: true,
+                        id: { not: parseInt(id) }
+                    },
+                    data: { isActive: false }
+                });
+                console.log(`[AUTOMATION] Deactivated other keyword automations for user ${auto.userId}`);
+            }
+        }
+
         const updated = await prisma.automation.update({
             where: { id: parseInt(id) },
-            data: { isActive: !auto.isActive }
+            data: { isActive: newActiveState }
         });
         console.log(`[AUTOMATION] Toggled active status for #${id} to ${updated.isActive}`);
         res.json(updated);

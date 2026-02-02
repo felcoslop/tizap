@@ -198,37 +198,14 @@ export const downloadEvolutionMedia = async (msgData, config) => {
 
         if (!mediaType) return null;
 
-        // Ensure we have the correct structure for Baileys
-        // If it's a documentWithCaption, the real media info is nested
-        const messageToDownload = {
-            key: msgData.key,
-            message: messageContent
-        };
-
-        console.log(`[DOWNLOAD MEDIA] Decrypting ${mediaType} locally via Baileys...`);
-
-        const buffer = await downloadMediaMessage(
-            messageToDownload,
-            'buffer',
-            {},
-            {
-                logger,
-                // We don't have the socket reuploadRequest, but it's mainly for re-sending. 
-                // For downloading, usually just keys are enough.
-            }
-        );
-
-        if (!buffer) throw new Error('Empty buffer returned');
-
-        // Determine extension
-        let ext = 'bin';
         const innerMsg = messageContent[mediaType] || messageContent.documentWithCaptionMessage?.message?.documentMessage;
         const mime = innerMsg?.mimetype || '';
 
+        // Determine extension
+        let ext = 'bin';
         if (mime.includes('image/jpeg')) ext = 'jpg';
         else if (mime.includes('image/png')) ext = 'png';
         else if (mime.includes('audio/ogg')) ext = 'ogg';
-        else if (mime.includes('audio/active')) ext = 'mp3'; // WhatsApp PTT
         else if (mime.includes('audio/mpeg')) ext = 'mp3';
         else if (mime.includes('video/mp4')) ext = 'mp4';
         else if (mime.includes('application/pdf')) ext = 'pdf';
@@ -241,13 +218,87 @@ export const downloadEvolutionMedia = async (msgData, config) => {
 
         if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-        fs.writeFileSync(absolutePath, buffer);
-        console.log(`[DOWNLOAD MEDIA] Saved to ${absolutePath}`);
+        // Method 1: Try Evolution API getBase64FromMediaMessage
+        if (config?.evolutionApiUrl && config?.evolutionInstanceName) {
+            try {
+                console.log(`[DOWNLOAD MEDIA] Trying Evolution API for ${mediaType}...`);
+                const evoUrl = `${config.evolutionApiUrl}/chat/getBase64FromMediaMessage/${config.evolutionInstanceName}`;
+                const evoRes = await fetch(evoUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': config.evolutionApiKey || process.env.EVOLUTION_API_KEY
+                    },
+                    body: JSON.stringify({
+                        message: {
+                            key: msgData.key,
+                            message: messageContent
+                        },
+                        convertToMp4: true
+                    })
+                });
 
-        return relativePath;
+                if (evoRes.ok) {
+                    const evoData = await evoRes.json();
+                    if (evoData.base64) {
+                        const buffer = Buffer.from(evoData.base64, 'base64');
+                        fs.writeFileSync(absolutePath, buffer);
+                        console.log(`[DOWNLOAD MEDIA] Saved via Evolution API to ${absolutePath}`);
+                        return relativePath;
+                    }
+                }
+            } catch (evoErr) {
+                console.log('[DOWNLOAD MEDIA] Evolution API failed:', evoErr.message);
+            }
+        }
+
+        // Method 2: Try direct URL download if available
+        const directUrl = innerMsg?.url;
+        if (directUrl) {
+            try {
+                console.log(`[DOWNLOAD MEDIA] Trying direct URL download...`);
+                const urlRes = await fetch(directUrl);
+                if (urlRes.ok) {
+                    const buffer = Buffer.from(await urlRes.arrayBuffer());
+                    fs.writeFileSync(absolutePath, buffer);
+                    console.log(`[DOWNLOAD MEDIA] Saved via direct URL to ${absolutePath}`);
+                    return relativePath;
+                }
+            } catch (urlErr) {
+                console.log('[DOWNLOAD MEDIA] Direct URL failed:', urlErr.message);
+            }
+        }
+
+        // Method 3: Baileys decryption (last resort)
+        try {
+            console.log(`[DOWNLOAD MEDIA] Trying Baileys decryption for ${mediaType}...`);
+            const messageToDownload = {
+                key: msgData.key,
+                message: messageContent
+            };
+
+            const buffer = await downloadMediaMessage(
+                messageToDownload,
+                'buffer',
+                {},
+                { logger }
+            );
+
+            if (buffer) {
+                fs.writeFileSync(absolutePath, buffer);
+                console.log(`[DOWNLOAD MEDIA] Saved via Baileys to ${absolutePath}`);
+                return relativePath;
+            }
+        } catch (baileysErr) {
+            console.error('[DOWNLOAD MEDIA] Baileys failed:', baileysErr.code || baileysErr.message);
+        }
+
+        console.error('[DOWNLOAD MEDIA] All methods failed');
+        return null;
 
     } catch (error) {
         console.error('[DOWNLOAD MEDIA ERROR]', error.code || error.message);
         return null;
     }
 };
+

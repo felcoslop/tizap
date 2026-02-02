@@ -13,7 +13,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import {
     X, Plus, Trash2, Edit3, Play, Save, ArrowLeft, Image as ImageIcon,
-    MessageSquare, ListOrdered, Upload, Download, RefreshCw, Zap, Search, Clock, Bell, Info, AlertCircle
+    MessageSquare, ListOrdered, Upload, Download, RefreshCw, Zap, Search, Clock, Bell, Info, AlertCircle, XCircle, Mail
 } from 'lucide-react';
 
 const NODE_STYLES = `
@@ -46,6 +46,8 @@ const NODE_STYLES = `
     .image-header { background: linear-gradient(135deg, #e91e63, #f48fb1) !important; }
     .alert-header { background: linear-gradient(135deg, #ff9800, #ffb74d) !important; }
     .hours-header { background: linear-gradient(135deg, #1e88e5, #4dabf5) !important; }
+    .close-header { background: linear-gradient(135deg, #f44336, #ef5350) !important; }
+    .email-header-node { background: linear-gradient(135deg, #7c4dff, #b388ff) !important; }
     
     .node-content { padding: 12px; }
     .node-text { margin: 0; font-size: 13px; color: #333; white-space: pre-wrap; line-height: 1.4; }
@@ -331,12 +333,95 @@ function BusinessHoursNode({ data, id, selected }) {
     );
 }
 
+function CloseAutomationNode({ data, id, selected }) {
+    return (
+        <div className={`flow-node close-node ${selected ? 'selected' : ''}`}>
+            <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
+            <div className="node-header close-header">
+                <XCircle size={16} /> <span>Fechar Automação</span>
+                <div className="node-header-btns">
+                    <button className="node-delete-btn" onClick={() => data.onDelete(id)} title="Excluir"><Trash2 size={12} /></button>
+                </div>
+            </div>
+            <div className="node-content">
+                <p className="node-text">Esta ação encerra a sessão ativa do contato no fluxo.</p>
+            </div>
+        </div>
+    );
+}
+
+function EmailNode({ data, id, selected }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [recipientEmail, setRecipientEmail] = useState(data.recipientEmail || '');
+    const [templateId, setTemplateId] = useState(data.templateId || '');
+    const [templates, setTemplates] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isEditing) fetchTemplates();
+    }, [isEditing]);
+
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/email-templates/${data.userId}`, {
+                headers: { 'Authorization': `Bearer ${data.token}` }
+            });
+            if (res.ok) setTemplates(await res.json());
+        } catch (e) { console.error("Error templates:", e); }
+        finally { setLoading(false); }
+    };
+
+    const handleSave = () => {
+        const t = templates.find(x => String(x.id) === String(templateId));
+        data.onChange(id, { recipientEmail, templateId, templateName: t ? t.name : data.templateName });
+        setIsEditing(false);
+    };
+
+    return (
+        <div className={`flow-node email-node ${selected ? 'selected' : ''}`}>
+            <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
+            <div className="node-header email-header-node">
+                <Mail size={16} /> <span>Enviar E-mail</span>
+                <div className="node-header-btns">
+                    <button className="node-edit-btn" onClick={() => setIsEditing(!isEditing)}><Edit3 size={12} /></button>
+                    <button className="node-delete-btn" onClick={() => data.onDelete(id)}><Trash2 size={12} /></button>
+                </div>
+            </div>
+            <div className="node-content">
+                {isEditing ? (
+                    <div className="edit-mode">
+                        <label>Destinatário:</label>
+                        <input type="text" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@exemplo.com" />
+
+                        <label>Template:</label>
+                        <select value={templateId} onChange={e => setTemplateId(e.target.value)} style={{ width: '100%', marginBottom: '10px' }}>
+                            <option value="">Selecione...</option>
+                            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+
+                        <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="node-text">📧 <b>Para:</b> {data.recipientEmail || '(Váriavel do fluxo)'}</p>
+                        <p className="node-text" style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Template: {data.templateName || 'Não definido'}</p>
+                    </div>
+                )}
+            </div>
+            <Handle type="source" position={Position.Bottom} id="source-gray" style={{ background: '#6c757d', width: 14, height: 14, border: '2px solid #333' }} />
+        </div>
+    );
+}
+
 const nodeTypes = {
     messageNode: MessageNode,
     optionsNode: OptionsNode,
     imageNode: ImageNode,
     alertNode: AlertNode,
-    businessHoursNode: BusinessHoursNode
+    businessHoursNode: BusinessHoursNode,
+    closeAutomationNode: CloseAutomationNode,
+    emailNode: EmailNode
 };
 
 function AutomationEditor({ automation, onSave, onBack, userId, addToast, token }) {
@@ -400,6 +485,8 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token 
                 <button className="btn-small" onClick={() => addNode('imageNode')}><ImageIcon size={16} /> Imagem</button>
                 <button className="btn-small" onClick={() => addNode('alertNode')}><Bell size={16} /> Alerta</button>
                 <button className="btn-small" onClick={() => addNode('businessHoursNode')}><Clock size={16} /> Horário</button>
+                <button className="btn-small" onClick={() => addNode('emailNode')}><Mail size={16} /> E-mail</button>
+                <button className="btn-small" onClick={() => addNode('closeAutomationNode')} style={{ color: '#dc3545' }}><XCircle size={16} /> Fechar</button>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
                 <ReactFlow nodes={nodesWithHandlers} edges={edges} onNodesChange={(c) => setNodes(n => applyNodeChanges(c, n))} onEdgesChange={(c) => setEdges(e => applyEdgeChanges(c, e))} onConnect={(p) => setEdges(e => addEdge({ ...p, animated: true, markerEnd: { type: MarkerType.ArrowClosed } }, e))} nodeTypes={nodeTypes} fitView>

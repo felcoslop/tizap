@@ -57,7 +57,7 @@ export function ReceivedEvolutionTab({
         if (!mediaRecorder) return;
 
         mediaRecorder.stop().getMp3().then(async ([buffer, blob]) => {
-            const file = new File(buffer, `evorec-${Date.now()}.mp3`, { type: 'audio/mpeg' });
+            const file = new File([blob], `evorec-${Date.now()}.mp3`, { type: 'audio/mpeg' });
 
             setIsUploadingMedia(true);
             try {
