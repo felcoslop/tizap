@@ -544,7 +544,7 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
                     config.evolutionApiKey,
                     `/chat/fetchProfilePictureUrl/${config.evolutionInstanceName}`,
                     'POST',
-                    { phone: normalizedPhone }
+                    { number: normalizedPhone }
                 );
 
                 const photoUrl = profileData.profilePictureUrl || profileData.pictureUrl || profileData.profile_picture_url || profileData.url;
