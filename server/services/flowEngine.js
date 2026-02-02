@@ -529,8 +529,15 @@ const FlowEngine = {
         });
     },
 
-    isWithinHours(start, end) {
+    // Helper to get current time in GMT-3
+    getNowGMT3() {
         const now = new Date();
+        // UTC to GMT-3: subtract 3 hours
+        return new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    },
+
+    isWithinHours(start, end) {
+        const now = this.getNowGMT3();
         const [sh, sm] = start.split(':').map(Number);
         const [eh, em] = end.split(':').map(Number);
         const s = new Date(now); s.setHours(sh, sm, 0, 0);
@@ -539,11 +546,15 @@ const FlowEngine = {
     },
 
     getNextStartTime(start) {
-        const now = new Date();
+        const now = this.getNowGMT3();
         const [sh, sm] = start.split(':').map(Number);
         const next = new Date(now); next.setHours(sh, sm, 0, 0);
         if (next <= now) next.setDate(next.getDate() + 1);
-        return next;
+
+        // Convert the GMT-3 "next" back to UTC for scheduling if the system expects UTC
+        // But since scheduledAt is compared with 'now' in processScheduledFlows, and that 'now' is local server time (UTC),
+        // we should return the UTC equivalent of this GMT-3 time.
+        return new Date(next.getTime() + (3 * 60 * 60 * 1000));
     },
 
     async processScheduledFlows() {
