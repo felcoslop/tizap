@@ -1046,4 +1046,38 @@ router.patch('/evolution/automations/:id/toggle', authenticateToken, async (req,
     }
 });
 
+// Close all active automation sessions for a user
+router.post('/evolution/sessions/close-all', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        // Find all active sessions for this user's flows or automations
+        const sessions = await prisma.flowSession.findMany({
+            where: {
+                status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] },
+                OR: [
+                    { flow: { userId: userId } },
+                    { automation: { userId: userId } }
+                ]
+            },
+            select: { id: true }
+        });
+
+        const sessionIds = sessions.map(s => s.id);
+
+        if (sessionIds.length > 0) {
+            await prisma.flowSession.updateMany({
+                where: { id: { in: sessionIds } },
+                data: { status: 'completed' }
+            });
+        }
+
+        console.log(`[SESSION] Closed ${sessionIds.length} active sessions for user ${userId}`);
+        res.json({ success: true, count: sessionIds.length });
+    } catch (err) {
+        console.error('[CLOSE ALL SESSIONS ERROR]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;

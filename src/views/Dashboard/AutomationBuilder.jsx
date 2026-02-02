@@ -505,6 +505,8 @@ export function AutomationBuilder({ user, addToast }) {
     const [autoToDelete, setAutoToDelete] = useState(null);
     const [showDisableModal, setShowDisableModal] = useState(false);
     const [autoToDisable, setAutoToDisable] = useState(null);
+    const [showCloseAllModal, setShowCloseAllModal] = useState(false);
+    const [isClosingAll, setIsClosingAll] = useState(false);
     const fileInputRef = useRef(null);
 
     const fetchAutomations = useCallback(async () => {
@@ -550,6 +552,28 @@ export function AutomationBuilder({ user, addToast }) {
             console.error('Toggle error:', e);
             fetchAutomations();
             addToast('Erro ao alternar status', 'error');
+        }
+    };
+
+    const handleCloseAllSessions = async () => {
+        setIsClosingAll(true);
+        try {
+            const res = await fetch('/api/evolution/sessions/close-all', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                addToast(`${data.count} sessões encerradas com sucesso!`, 'success');
+            } else {
+                addToast('Erro ao encerrar sessões', 'error');
+            }
+        } catch (e) {
+            console.error('Close all error:', e);
+            addToast('Erro ao encerrar sessões', 'error');
+        } finally {
+            setIsClosingAll(false);
+            setShowCloseAllModal(false);
         }
     };
 
@@ -651,6 +675,28 @@ export function AutomationBuilder({ user, addToast }) {
                 </div>
             )}
 
+            {showCloseAllModal && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content alert" style={{ textAlign: 'center' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ background: '#fff0f0', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                <XCircle size={30} color="#ff4444" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)' }}>Encerrar Todas as Sessões?</h3>
+                            <p style={{ color: '#666', marginTop: '10px' }}>
+                                Isso irá finalizar imediatamente todos os fluxos de automação ativos para todos os seus contatos.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button className="btn-3d-blue" onClick={() => setShowCloseAllModal(false)} disabled={isClosingAll}>Cancelar</button>
+                            <button className="btn-3d-yellow" onClick={handleCloseAllSessions} disabled={isClosingAll} style={{ backgroundColor: '#ff4444' }}>
+                                {isClosingAll ? 'Encerrando...' : 'Encerrar Tudo'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {editingAutomation || editingAutomation === 'new' ? (
                 <ReactFlowProvider>
                     <AutomationEditor automation={editingAutomation === 'new' ? null : editingAutomation} onSave={() => { setEditingAutomation(null); fetchAutomations(); }} onBack={() => setEditingAutomation(null)} userId={user.id} token={user.token} addToast={addToast} />
@@ -663,6 +709,9 @@ export function AutomationBuilder({ user, addToast }) {
                             <p className="subtitle">Gerencie suas automações inteligentes</p>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
+                            <button className="btn-secondary" onClick={() => setShowCloseAllModal(true)} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #ff4444', color: '#ff4444' }}>
+                                <XCircle size={18} /> Encerrar Sessões
+                            </button>
                             <input type="file" ref={fileInputRef} onChange={handleImport} style={{ display: 'none' }} accept=".json" />
                             <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 24px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Upload size={18} /> Importar
