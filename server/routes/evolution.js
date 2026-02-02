@@ -162,22 +162,33 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
         const userId = req.userId;
         const { instanceName, webhookUrl } = req.body;
 
-        const evolutionApiUrl = process.env.EVOLUTION_API_URL;
-        const evolutionApiKey = process.env.EVOLUTION_API_KEY;
+        // Try to get from .env first, fallback to user config
+        let evolutionApiUrl = process.env.EVOLUTION_API_URL;
+        let evolutionApiKey = process.env.EVOLUTION_API_KEY;
+
+        const config = await prisma.userConfig.findUnique({ where: { userId } });
+
+        if (!evolutionApiUrl && config?.evolutionApiUrl) {
+            evolutionApiUrl = config.evolutionApiUrl;
+        }
+        if (!evolutionApiKey && config?.evolutionApiKey) {
+            evolutionApiKey = config.evolutionApiKey;
+        }
 
         if (!evolutionApiUrl || !evolutionApiKey) {
-            return res.status(500).json({ error: 'Configuração da Evolution API ausente no servidor' });
+            console.error('[EVOLUTION WEBHOOK] Missing credentials for user:', userId);
+            return res.status(500).json({ error: 'Configuração da Evolution API ausente no servidor. Verifique os Ajustes.' });
         }
 
         const baseUrl = evolutionApiUrl.replace(/\/+$/, '');
-        const targetInstance = instanceName || `user_${userId}_instance`;
+        const targetInstance = instanceName || config?.evolutionInstanceName || `user_${userId}_instance`;
 
         // If webhookUrl is not provided, generate the standard one
         let finalWebhookUrl = webhookUrl;
         if (!finalWebhookUrl) {
-            const config = await prisma.userConfig.findUnique({ where: { userId } });
             if (!config?.evolutionWebhookToken) {
-                return res.status(400).json({ error: 'Token de webhook não encontrado para este usuário' });
+                console.error('[EVOLUTION WEBHOOK] Missing webhook token for user:', userId);
+                return res.status(400).json({ error: 'Token de webhook não encontrado para este usuário. Tente "Conectar via QR Code" primeiro.' });
             }
             const host = req.get('host');
             const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -197,8 +208,8 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
             {
                 enabled: true,
                 url: finalWebhookUrl,
-                webhookByEvents: false,
-                webhookBase64: true,
+                webhookByEvents: false, // Set to false for a single URL
+                webhookBase64: true,    // Enable base64 for media
                 events: [
                     "MESSAGES_UPSERT",
                     "MESSAGES_UPDATE",
@@ -208,7 +219,7 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
                     "PRESENCE_UPDATE",
                     "CONTACTS_UPSERT",
                     "CHATS_UPSERT",
-                    "SEND_MESSAGE"
+                    "SEND_MESSAGE" // Important for tracking outgoing messages
                 ]
             }
         );
@@ -225,7 +236,10 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
 
     } catch (err) {
         console.error('[EVOLUTION WEBHOOK ENABLE ERROR]', err);
-        res.status(500).json({ error: err.message || 'Erro ao habilitar webhook' });
+        res.status(500).json({
+            error: err.message || 'Erro ao habilitar webhook',
+            details: err.stack?.split('\n')[0]
+        });
     }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, RefreshCw, Clock, Download, Paperclip, Mic, Send, AlertCircle, X, Image as ImageIcon } from 'lucide-react';
+import { Trash2, RefreshCw, Clock, Download, Paperclip, Mic, Send, AlertCircle, X, Image as ImageIcon, Radio } from 'lucide-react';
 
 export function ReceivedEvolutionTab({
     user,
