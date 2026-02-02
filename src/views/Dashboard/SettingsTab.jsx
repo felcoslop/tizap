@@ -1,4 +1,5 @@
-import { Eye, EyeOff, RefreshCw, Copy, LogOut } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, Copy, LogOut, Radio, Wifi, WifiOff, X, QrCode } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 export function SettingsTab({
     user,
@@ -14,11 +15,221 @@ export function SettingsTab({
     addToast,
     onLogout
 }) {
+    const [showEvolutionQR, setShowEvolutionQR] = useState(false);
+    const [evolutionQR, setEvolutionQR] = useState(null);
+    const [evolutionStatus, setEvolutionStatus] = useState('unknown');
+    const [evolutionLoading, setEvolutionLoading] = useState(false);
+    const [showEvolutionKey, setShowEvolutionKey] = useState(false);
+    const qrPollRef = useRef(null);
+
+    // Check Evolution connection status on mount and when config changes
+    useEffect(() => {
+        if (config.evolutionApiUrl && config.evolutionInstanceName) {
+            checkEvolutionStatus();
+        }
+    }, [config.evolutionApiUrl, config.evolutionInstanceName]);
+
+    // Cleanup QR polling on unmount
+    useEffect(() => {
+        return () => {
+            if (qrPollRef.current) clearInterval(qrPollRef.current);
+        };
+    }, []);
+
+    const checkEvolutionStatus = async () => {
+        try {
+            const res = await fetch(`/api/evolution/status/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setEvolutionStatus(data.connected ? 'connected' : 'disconnected');
+            }
+        } catch (err) {
+            console.error('Error checking Evolution status:', err);
+            setEvolutionStatus('error');
+        }
+    };
+
+    const handleSetupEvolution = async () => {
+        setEvolutionLoading(true);
+        try {
+            const res = await fetch('/api/evolution/instance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                }
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                addToast('Instância Evolution configurada!', 'success');
+                // Open QR Code modal
+                setShowEvolutionQR(true);
+                fetchEvolutionQR();
+            } else {
+                addToast(data.error || 'Erro ao configurar Evolution', 'error');
+            }
+        } catch (err) {
+            console.error('Evolution setup error:', err);
+            addToast('Erro de conexão com Evolution', 'error');
+        } finally {
+            setEvolutionLoading(false);
+        }
+    };
+
+    const fetchEvolutionQR = async () => {
+        try {
+            const res = await fetch(`/api/evolution/qr/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const data = await res.json();
+
+            if (data.status === 'open') {
+                // Already connected!
+                setShowEvolutionQR(false);
+                setEvolutionStatus('connected');
+                addToast('Evolution conectada com sucesso!', 'success');
+                if (qrPollRef.current) clearInterval(qrPollRef.current);
+                return;
+            }
+
+            if (data.qrcode) {
+                setEvolutionQR(data.qrcode);
+            }
+
+            // Start polling for connection status
+            if (!qrPollRef.current) {
+                qrPollRef.current = setInterval(async () => {
+                    const statusRes = await fetch(`/api/evolution/status/${user.id}`, {
+                        headers: { 'Authorization': `Bearer ${user.token}` }
+                    });
+                    const statusData = await statusRes.json();
+
+                    if (statusData.connected) {
+                        setShowEvolutionQR(false);
+                        setEvolutionStatus('connected');
+                        addToast('Evolution conectada com sucesso!', 'success');
+                        clearInterval(qrPollRef.current);
+                        qrPollRef.current = null;
+                    }
+                }, 3000);
+            }
+        } catch (err) {
+            console.error('Error fetching QR:', err);
+        }
+    };
+
+    const handleDisconnectEvolution = async () => {
+        try {
+            const res = await fetch(`/api/evolution/disconnect/${user.id}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (res.ok) {
+                setEvolutionStatus('disconnected');
+                addToast('Evolution desconectada', 'info');
+            }
+        } catch (err) {
+            addToast('Erro ao desconectar', 'error');
+        }
+    };
+
+    const handleEnableWebhook = async () => {
+        setEvolutionLoading(true);
+        try {
+            const res = await fetch('/api/evolution/webhook/enable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({
+                    instanceName: config.evolutionInstanceName
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                addToast(data.message || 'Webhook configurado com sucesso!', 'success');
+            } else {
+                addToast(data.error || 'Erro ao configurar webhook', 'error');
+            }
+        } catch (err) {
+            console.error('Webhook enable error:', err);
+            addToast('Erro de conexão ao configurar webhook', 'error');
+        } finally {
+            setEvolutionLoading(false);
+        }
+    };
+
+    const closeQRModal = () => {
+        setShowEvolutionQR(false);
+        if (qrPollRef.current) {
+            clearInterval(qrPollRef.current);
+            qrPollRef.current = null;
+        }
+    };
+
     return (
         <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
-            <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box' }}>
+            {/* Evolution QR Code Modal */}
+            {showEvolutionQR && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content" style={{ textAlign: 'center', maxWidth: '400px', padding: '2rem' }}>
+                        <button
+                            onClick={closeQRModal}
+                            style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                            <X size={24} color="#666" />
+                        </button>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <Radio size={48} color="#00a276" style={{ marginBottom: '10px' }} />
+                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)', marginBottom: '10px' }}>
+                                Conectar Evolution
+                            </h3>
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                                Escaneie o QR Code com seu WhatsApp
+                            </p>
+                        </div>
+
+                        {evolutionQR ? (
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+                                <img
+                                    src={evolutionQR.startsWith('data:') ? evolutionQR : `data:image/png;base64,${evolutionQR}`}
+                                    alt="Evolution QR Code"
+                                    style={{ width: '250px', height: '250px' }}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ padding: '60px', color: '#999' }}>
+                                <RefreshCw size={32} className="animate-spin" />
+                                <p style={{ marginTop: '10px' }}>Carregando QR Code...</p>
+                            </div>
+                        )}
+
+                        <p style={{ marginTop: '20px', fontSize: '0.85rem', color: '#888' }}>
+                            Aguardando conexão...
+                        </p>
+
+                        <button
+                            className="btn-secondary"
+                            onClick={fetchEvolutionQR}
+                            style={{ marginTop: '15px' }}
+                        >
+                            <RefreshCw size={16} style={{ marginRight: '8px' }} />
+                            Atualizar QR Code
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Meta WhatsApp Credentials Section */}
+            <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <h3 style={{ margin: 0 }}>Credenciais</h3>
+                    <h3 style={{ margin: 0 }}>Credenciais WhatsApp Meta</h3>
                     <button className="btn-secondary" onClick={() => setIsEditing(!isEditing)}>{isEditing ? 'Cancelar' : 'Editar'}</button>
                 </div>
                 <div className="input-grid mt-4">
@@ -112,29 +323,146 @@ export function SettingsTab({
                             <button className="btn-primary w-full mt-6" onClick={saveConfig}>Salvar Configurações</button>
                         </div>
                     )}
+                </div>
+            </div>
 
-                    <div className="mobile-only-logout" style={{ gridColumn: 'span 2', marginTop: '2rem' }}>
-                        <hr style={{ border: 'none', borderTop: '1px solid #eee', marginBottom: '2rem' }} />
-                        <button
-                            className="btn-secondary w-full"
-                            onClick={onLogout}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px',
-                                color: '#d32f2f',
-                                border: '1px solid #ffcdd2',
-                                backgroundColor: '#fff5f5'
-                            }}
-                        >
-                            <LogOut size={18} /> Sair da Conta
-                        </button>
+            {/* Evolution API Section */}
+            <div className="card" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', border: '2px solid #00a276', borderRadius: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Radio size={24} color="#00a276" />
+                        <div>
+                            <h3 style={{ margin: 0, color: '#00a276' }}>Evolution API</h3>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#666' }}>Conexão via QR Code (Baileys)</p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {evolutionStatus === 'connected' ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e8f5e9', color: '#2e7d32', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                <Wifi size={16} /> Conectado
+                            </span>
+                        ) : (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff3e0', color: '#e65100', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                <WifiOff size={16} /> Desconectado
+                            </span>
+                        )}
                     </div>
                 </div>
+
+                <div className="input-grid">
+                    <div style={{ gridColumn: 'span 2', background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #eee', marginBottom: '10px' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+                            <strong>Configuração Servidor:</strong> A URL e API Key estão configuradas globalmente.
+                            Cada usuário terá uma instância exclusiva criada automaticamente.
+                        </p>
+                    </div>
+
+                    {config.evolutionWebhookToken && (
+                        <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Webhook Evolution (gerado automaticamente)</label>
+                            <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    value={`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`}
+                                    readOnly
+                                    style={{ flex: 1, fontSize: '0.85rem' }}
+                                />
+                                <button
+                                    className="btn-icon"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`);
+                                        addToast('Webhook URL copiada!', 'info');
+                                    }}
+                                    title="Copiar URL"
+                                >
+                                    <Copy size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '1rem' }}>
+                        {evolutionStatus === 'connected' ? (
+                            <>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => { setShowEvolutionQR(true); fetchEvolutionQR(); }}
+                                    style={{ flex: 1 }}
+                                >
+                                    <QrCode size={18} style={{ marginRight: '8px' }} />
+                                    Ver QR Code
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={handleEnableWebhook}
+                                    disabled={evolutionLoading || !config.evolutionInstanceName}
+                                    style={{ flex: 1 }}
+                                    title="Sincroniza os eventos de áudio, imagem e texto"
+                                >
+                                    <Wifi size={18} style={{ marginRight: '8px' }} />
+                                    Corrigir Webhook
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={handleDisconnectEvolution}
+                                    style={{ color: '#d32f2f', borderColor: '#ffcdd2', background: '#fff5f5' }}
+                                >
+                                    <WifiOff size={18} style={{ marginRight: '8px' }} />
+                                    Desconectar
+                                </button>
+                            </>
+                        ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleSetupEvolution}
+                                    disabled={evolutionLoading}
+                                    style={{ flex: 2, background: '#00a276', minWidth: '200px' }}
+                                >
+                                    {evolutionLoading ? (
+                                        <><RefreshCw size={18} className="animate-spin" style={{ marginRight: '8px' }} /> Configurando...</>
+                                    ) : (
+                                        <><QrCode size={18} style={{ marginRight: '8px' }} /> Conectar via QR Code</>
+                                    )}
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={handleEnableWebhook}
+                                    disabled={evolutionLoading || !config.evolutionInstanceName}
+                                    style={{ flex: 1, minWidth: '150px' }}
+                                    title="Configura os eventos de áudio, imagem e texto na Evolution"
+                                >
+                                    <Wifi size={18} style={{ marginRight: '8px' }} />
+                                    Corrigir Webhook
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Logout Section */}
+            <div className="mobile-only-logout" style={{ marginTop: '2rem' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid #eee', marginBottom: '2rem' }} />
+                <button
+                    className="btn-secondary w-full"
+                    onClick={onLogout}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        color: '#d32f2f',
+                        border: '1px solid #ffcdd2',
+                        backgroundColor: '#fff5f5'
+                    }}
+                >
+                    <LogOut size={18} /> Sair da Conta
+                </button>
             </div>
         </div>
     );
 }
 
 export default SettingsTab;
+

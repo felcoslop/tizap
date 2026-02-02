@@ -25,6 +25,7 @@ model User {
   flows               Flow[]
   emailTemplates      EmailTemplate[]
   emailCampaigns      EmailCampaign[]
+  automations         Automation[]
 }
 
 model UserConfig {
@@ -37,6 +38,13 @@ model UserConfig {
   mapping            String @default("{}")
   webhookVerifyToken String @default("")
   webhookToken       String @default("")
+  // Evolution API fields
+  evolutionApiUrl       String @default("")
+  evolutionApiKey       String @default("")
+  evolutionInstanceName String @default("")
+  evolutionWebhookToken String @default("")
+  evolutionConnected    Boolean @default(false)
+  businessHours         String  @default("{}") // Store work hours JSON
   user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -99,14 +107,18 @@ model Flow {
 
 model FlowSession {
   id           Int              @id @default(autoincrement())
-  flowId       Int
+  flowId       Int?
+  automationId Int?
   contactPhone String
   currentStep  String? // Node ID
   status       String           @default("active") // active, waiting_reply, completed, error
   variables    String           @default("{}")
+  platform     String           @default("meta") // meta, evolution
+  scheduledAt  DateTime?        // For business hours or delays
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  flow         Flow             @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flow         Flow?            @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  automation   Automation?      @relation(fields: [automationId], references: [id], onDelete: Cascade)
   logs         FlowSessionLog[]
 }
 
@@ -161,3 +173,41 @@ model EmailCampaignLog {
   createdAt  DateTime      @default(now())
   campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
+
+// Evolution API Messages (received via Evolution webhooks)
+model EvolutionMessage {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  instanceName    String
+  contactPhone    String
+  contactName     String   @default("Cliente")
+  pushName        String?
+  messageBody     String
+  isFromMe        Boolean  @default(false)
+  isRead          Boolean  @default(false)
+  mediaUrl        String?
+  mediaType       String?  // image, audio, video, document
+  profilePicUrl   String?
+  remoteJid       String?  // WhatsApp JID format
+  messageId       String?  // Evolution message ID
+  createdAt       DateTime @default(now())
+}
+
+// Automations (trigger flows based on incoming messages)
+model Automation {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  name            String
+  isActive        Boolean       @default(true)
+  triggerType     String        @default("keyword") // new_message, keyword
+  triggerKeywords String        @default("") // Comma separated keywords
+  conditions      String        @default("[]") // JSON array of conditions
+  flowId          Int? // Flow to trigger when conditions match (optional if using canvas)
+  nodes           String        @default("[]") // JSON for visual canvas
+  edges           String        @default("[]") // JSON for visual canvas
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions        FlowSession[]
+}
+

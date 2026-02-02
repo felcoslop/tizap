@@ -28,16 +28,56 @@ const FlowEngine = {
         return nodes[0]?.id;
     },
 
-    async executeStep(session, flow, configInput) {
+    async startFlow(flowId, contactPhone, userId, platform = 'meta', automationId = null) {
         try {
-            const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
+            let flow;
+            if (automationId) {
+                flow = await prisma.automation.findUnique({ where: { id: automationId } });
+            } else {
+                flow = await prisma.flow.findUnique({ where: { id: flowId } });
+            }
 
-            if (!userConfig || !userConfig.token || !userConfig.phoneId) {
-                await this.logAction(session.id, session.currentStep, null, 'error', 'Configurações de WhatsApp não encontradas');
+            if (!flow) throw new Error('Fluxo não encontrado');
+
+            const nodes = JSON.parse(flow.nodes);
+            const edges = JSON.parse(flow.edges);
+            const startNodeId = this.findStartNode(nodes, edges);
+
+            if (!startNodeId) throw new Error('Nó inicial não encontrado');
+
+            // Create session
+            const session = await prisma.flowSession.create({
+                data: {
+                    flowId: flowId || null,
+                    automationId: automationId || null,
+                    contactPhone,
+                    currentStep: String(startNodeId),
+                    status: 'active',
+                    platform: platform // Add platform field to session if it exists, or handle it via logic
+                }
+            });
+
+            await this.logAction(session.id, startNodeId, 'Início', 'flow_started', `Iniciado via ${platform}`);
+
+            // Execute first step
+            // We need to fetch config for the user
+            const userConfig = await prisma.userConfig.findUnique({ where: { userId } });
+            await this.executeStep(session, flow, userConfig, platform);
+
+            return session;
+        } catch (err) {
+            console.error('[START FLOW ERROR]', err);
+            throw err;
+        }
+    },
+
+    async executeStep(session, flow, userConfig, platform = 'meta') {
+        try {
+            if (!userConfig) {
+                await this.logAction(session.id, session.currentStep, null, 'error', 'Configurações do usuário não encontradas');
                 return;
             }
 
-            const config = userConfig;
             const nodes = JSON.parse(flow.nodes);
             const edges = JSON.parse(flow.edges);
             const currentNode = nodes.find(n => String(n.id) === String(session.currentStep));
@@ -51,123 +91,110 @@ const FlowEngine = {
             const nodeName = currentNode.data?.label || currentNode.data?.templateName || `Nó ${currentNode.id}`;
 
             if (currentNode.type === 'templateNode') {
-                const templateName = currentNode.data.templateName;
-                if (templateName) {
-                    const sessionVars = JSON.parse(session.variables || '{}');
-                    const mapping = sessionVars._mapping || {};
-                    const headerParams = [];
-                    const bodyParams = [];
+                if (platform === 'evolution') {
+                    await this.logAction(session.id, currentNode.id, nodeName, 'error', 'Template Node não suportado na Evolution API');
+                    // Skip or handle as text?
+                } else {
+                    const templateName = currentNode.data.templateName;
+                    if (templateName) {
+                        const sessionVars = JSON.parse(session.variables || '{}');
+                        const mapping = sessionVars._mapping || {};
+                        const headerParams = [];
+                        const bodyParams = [];
+                        const nodeVarKeys = Object.keys(mapping).filter(k => k.startsWith(`fnode_${currentNode.id}_`));
 
-                    // Identify variables for this specific node from the mapping
-                    const nodeVarKeys = Object.keys(mapping).filter(k => k.startsWith(`fnode_${currentNode.id}_`));
+                        if (nodeVarKeys.length > 0) {
+                            const nodeVars = nodeVarKeys.map(k => ({ key: k, ...mapping[k] }))
+                                .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-                    if (nodeVarKeys.length > 0) {
-                        const nodeVars = nodeVarKeys.map(k => ({ key: k, ...mapping[k] }))
-                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+                            nodeVars.forEach(v => {
+                                let resolvedValue = v.value || '';
+                                if (v.type === 'column' && v.value) {
+                                    resolvedValue = String(sessionVars[v.value] || '').substring(0, 100);
+                                }
+                                const paramObj = { name: v.index, value: resolvedValue };
+                                v.component === 'HEADER' ? headerParams.push(paramObj) : bodyParams.push(paramObj);
+                            });
+                        }
 
-                        nodeVars.forEach(v => {
-                            let resolvedValue = v.value || '';
-                            if (v.type === 'column' && v.value) {
-                                resolvedValue = String(sessionVars[v.value] || '').substring(0, 100);
-                            }
+                        const finalComponents = (headerParams.length > 0 || bodyParams.length > 0)
+                            ? { header: headerParams, body: bodyParams }
+                            : (currentNode.data.params || { header: [], body: [] });
 
-                            const paramObj = { name: v.index, value: resolvedValue };
-                            v.component === 'HEADER' ? headerParams.push(paramObj) : bodyParams.push(paramObj);
-                        });
-                    }
+                        const res = await sendWhatsApp(session.contactPhone, userConfig, templateName, finalComponents);
 
-                    const finalComponents = (headerParams.length > 0 || bodyParams.length > 0)
-                        ? { header: headerParams, body: bodyParams }
-                        : (currentNode.data.params || { header: [], body: [] });
-
-                    const res = await sendWhatsApp(session.contactPhone, config, templateName, finalComponents);
-
-                    if (res.success) {
-                        await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Template: ${templateName}`);
-
-                        await prisma.receivedMessage.create({
-                            data: {
-                                whatsappPhoneId: String(config.phoneId),
-                                contactPhone: String(session.contactPhone).replace(/\D/g, ''),
-                                contactName: 'Eu',
-                                messageBody: `[Fluxo] Template: ${templateName}`,
-                                isFromMe: true,
-                                isRead: true
-                            }
-                        });
-                    } else {
-                        // Handle Template Error
-                        const errorMsg = res.error || 'Erro desconhecido ao enviar template';
-                        await this.logAction(session.id, currentNode.id, nodeName, 'error', errorMsg);
-
-                        // If it's a template error (like #132001), mark session as error and stop
-                        await prisma.flowSession.update({
-                            where: { id: session.id },
-                            data: { status: 'error' }
-                        });
-                        return; // Stop flow execution
+                        if (res.success) {
+                            await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Template: ${templateName}`);
+                            await this.saveHistory(session.contactPhone, `[Meta] Template: ${templateName}`, true, userConfig.phoneId, 'meta', userConfig.userId);
+                        } else {
+                            await this.logAction(session.id, currentNode.id, nodeName, 'error', res.error || 'Erro ao enviar template');
+                            await prisma.flowSession.update({ where: { id: session.id }, data: { status: 'error' } });
+                            return;
+                        }
                     }
                 }
             } else if (currentNode.type === 'imageNode') {
                 const images = currentNode.data.imageUrls || (currentNode.data.imageUrl ? [currentNode.data.imageUrl] : []);
                 for (const url of images) {
-                    await this.sendWhatsAppImage(session.contactPhone, url.trim(), config);
+                    if (platform === 'evolution') {
+                        await this.sendEvolutionMessage(session.contactPhone, null, url.trim(), 'image', userConfig);
+                    } else {
+                        await this.sendWhatsAppImage(session.contactPhone, url.trim(), userConfig);
+                    }
                     await sleep(500);
                 }
                 await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Enviada(s) ${images.length} imagem(ns)`);
+                await this.saveHistory(session.contactPhone, `[${platform.toUpperCase()}] Enviou ${images.length} imagem(ns)`, true, userConfig.phoneId, platform, userConfig.userId);
             } else if (currentNode.type === 'optionsNode') {
                 const messageText = currentNode.data.label || currentNode.data.message || 'Escolha uma opção:';
                 const options = currentNode.data.options || [];
-                if (options.length > 0) {
-                    await this.sendWhatsAppInteractive(session.contactPhone, messageText, options, config);
-                    await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Interativo: ${messageText}`);
+                let fullSentText = messageText;
+
+                if (platform === 'evolution') {
+                    const optionsText = options.map((opt, i) => `*${i + 1}.* ${opt}`).join('\n');
+                    fullSentText = `${messageText}\n\n${optionsText}`;
+                    await this.sendEvolutionMessage(session.contactPhone, fullSentText, null, null, userConfig);
+                    await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Opções (Evolution): ${messageText}`);
                 } else {
-                    await this.sendWhatsAppText(session.contactPhone, messageText, config);
-                    await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', messageText);
+                    if (options.length > 0) {
+                        await this.sendWhatsAppInteractive(session.contactPhone, messageText, options, userConfig);
+                        await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Interativo: ${messageText}`);
+                    } else {
+                        await this.sendWhatsAppText(session.contactPhone, messageText, userConfig);
+                        await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', messageText);
+                    }
                 }
+                await this.saveHistory(session.contactPhone, `[${platform.toUpperCase()}] ${fullSentText}`, true, userConfig.phoneId, platform, userConfig.userId);
             } else if (currentNode.type === 'messageNode' || !currentNode.type) {
                 const messageText = currentNode.data.label || currentNode.data.message || '';
                 if (messageText) {
-                    await this.sendWhatsAppText(session.contactPhone, messageText, config);
+                    if (platform === 'evolution') {
+                        await this.sendEvolutionMessage(session.contactPhone, messageText, null, null, userConfig);
+                    } else {
+                        await this.sendWhatsAppText(session.contactPhone, messageText, userConfig);
+                    }
                     await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', messageText.substring(0, 100));
-                    await prisma.receivedMessage.create({
-                        data: {
-                            whatsappPhoneId: String(config.phoneId),
-                            contactPhone: String(session.contactPhone).replace(/\D/g, ''),
-                            contactName: 'Eu',
-                            messageBody: `[Fluxo] ${messageText}`,
-                            isFromMe: true,
-                            isRead: true
-                        }
-                    });
+                    await this.saveHistory(session.contactPhone, `[${platform.toUpperCase()}] ${messageText}`, true, userConfig.phoneId, platform, userConfig.userId);
                 }
             } else if (currentNode.type === 'emailNode') {
                 const templateId = currentNode.data.templateId;
                 const sessionVars = JSON.parse(session.variables || '{}');
                 const mapping = sessionVars._mapping || {};
-
-                // Find the mapping for this email node
                 const emailVarKey = `enode_${currentNode.id}_email`;
                 const emailMap = mapping[emailVarKey];
 
                 let recipientEmail = null;
                 if (emailMap) {
-                    if (emailMap.type === 'column' && emailMap.value) {
-                        recipientEmail = sessionVars[emailMap.value];
-                    } else {
-                        recipientEmail = emailMap.value;
-                    }
+                    recipientEmail = emailMap.type === 'column' ? sessionVars[emailMap.value] : emailMap.value;
                 }
-
-                // Fallback to default columns if no mapping found
                 if (!recipientEmail) {
-                    recipientEmail = sessionVars['email'] || sessionVars['Email'] || sessionVars['E-mail'] || sessionVars['TELEFONE'] || sessionVars['Tel. Promax'];
+                    recipientEmail = sessionVars['email'] || sessionVars['Email'] || sessionVars['E-mail'];
                 }
 
                 if (templateId && recipientEmail) {
                     try {
                         await sendSingleEmail({
-                            userId: flow.userId,
+                            userId: userConfig.userId,
                             to: recipientEmail,
                             templateId: templateId,
                             leadData: sessionVars
@@ -177,6 +204,42 @@ const FlowEngine = {
                         await this.logAction(session.id, currentNode.id, nodeName, 'error', `Falha ao enviar e-mail: ${e.message}`);
                     }
                 }
+            } else if (currentNode.type === 'alertNode') {
+                const alertPhone = currentNode.data.phone;
+                const alertText = currentNode.data.text || 'Alerta do sistema';
+                if (alertPhone) {
+                    if (platform === 'evolution') {
+                        await this.sendEvolutionMessage(alertPhone, alertText, null, null, userConfig);
+                    } else {
+                        await this.sendWhatsAppText(alertPhone, alertText, userConfig);
+                    }
+                    await this.logAction(session.id, currentNode.id, nodeName, 'alert_sent', `Alerta enviado para ${alertPhone}`);
+                }
+            } else if (currentNode.type === 'businessHoursNode') {
+                const { start, end, fallback } = currentNode.data;
+                const isWithin = this.isWithinHours(start || '08:00', end || '18:00');
+
+                if (!isWithin) {
+                    // Send fallback message
+                    if (platform === 'evolution') {
+                        await this.sendEvolutionMessage(session.contactPhone, fallback, null, null, userConfig);
+                    } else {
+                        await this.sendWhatsAppText(session.contactPhone, fallback, userConfig);
+                    }
+
+                    const resumeTime = this.getNextStartTime(start || '08:00');
+                    await prisma.flowSession.update({
+                        where: { id: session.id },
+                        data: {
+                            status: 'waiting_business_hours',
+                            scheduledAt: resumeTime
+                        }
+                    });
+
+                    await this.logAction(session.id, currentNode.id, nodeName, 'waiting_business_hours', `Fora do horário. Agendado para ${resumeTime.toLocaleString()}`);
+                    return; // Stop execution here
+                }
+                await this.logAction(session.id, currentNode.id, nodeName, 'within_hours', 'Dentro do horário comercial');
             }
 
             const outboundEdges = edges.filter(e => String(e.source) === String(currentNode.id));
@@ -191,11 +254,11 @@ const FlowEngine = {
             } else {
                 const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray' || !e.sourceHandle);
                 if (nextEdge) {
-                    await prisma.flowSession.update({
+                    const nextSession = await prisma.flowSession.update({
                         where: { id: session.id },
-                        data: { currentStep: nextEdge.target }
+                        data: { currentStep: nextEdge.target, status: 'active' }
                     });
-                    setTimeout(() => this.executeStep({ ...session, currentStep: nextEdge.target }, flow, config), 1000);
+                    setTimeout(() => this.executeStep(nextSession, flow, userConfig, platform), 1000);
                 } else {
                     await this.endSession(session.id, 'Fluxo concluído');
                 }
@@ -204,6 +267,69 @@ const FlowEngine = {
             console.error('[FLOW EXECUTION ERROR]', err);
             await this.logAction(session.id, session.currentStep, null, 'error', err.message);
         }
+    },
+
+    async saveHistory(phone, body, isFromMe, phoneId, platform = 'meta', userId = null) {
+        try {
+            const normalizedPhone = String(phone).replace(/\D/g, '');
+            if (platform === 'evolution' && userId) {
+                await prisma.evolutionMessage.create({
+                    data: {
+                        userId: parseInt(userId),
+                        contactPhone: normalizedPhone,
+                        contactName: 'Eu',
+                        messageBody: body,
+                        isFromMe,
+                        isRead: true,
+                        instanceName: 'automated'
+                    }
+                });
+            } else {
+                await prisma.receivedMessage.create({
+                    data: {
+                        whatsappPhoneId: String(phoneId),
+                        contactPhone: normalizedPhone,
+                        contactName: 'Eu',
+                        messageBody: body,
+                        isFromMe,
+                        isRead: true
+                    }
+                });
+            }
+        } catch (e) { console.error('[SAVE HISTORY ERROR]', e); }
+    },
+
+    // Evolution Send Helper
+    async sendEvolutionMessage(phone, body, mediaUrl, mediaType, config) {
+        try {
+            const baseUrl = process.env.EVOLUTION_API_URL || config.evolutionApiUrl;
+            const apiKey = process.env.EVOLUTION_API_KEY || config.evolutionApiKey;
+            const instance = config.evolutionInstanceName;
+
+            let normalizedPhone = String(phone).replace(/\D/g, '');
+            if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
+            const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+
+            let endpoint = `/message/sendText/${instance}`;
+            let payload = { number: remoteJid, text: body };
+
+            if (mediaUrl) {
+                endpoint = mediaType === 'audio' ? `/message/sendWhatsAppAudio/${instance}` : `/message/sendMedia/${instance}`;
+                payload = {
+                    number: remoteJid,
+                    mediatype: mediaType || 'image',
+                    media: mediaUrl,
+                    caption: body || ''
+                };
+            }
+
+            const res = await fetch(`${baseUrl}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+                body: JSON.stringify(payload)
+            });
+            return await res.json();
+        } catch (e) { console.error('[EVOLUTION SEND ERROR]', e); }
     },
 
     async sendWhatsAppImage(phone, imageUrl, config) {
@@ -254,7 +380,7 @@ const FlowEngine = {
         });
     },
 
-    async processMessage(contactPhone, messageBody, contextStart, targetUserId) {
+    async processMessage(contactPhone, messageBody, contextStart, targetUserId, platform = 'meta') {
         let normalizedPhone = String(contactPhone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
 
@@ -268,24 +394,31 @@ const FlowEngine = {
             possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
-        console.log('[DEBUG FLOW] Processing message from:', contactPhone, 'Normalized:', possibleNumbers);
         const sessionWhere = { contactPhone: { in: possibleNumbers }, status: 'waiting_reply' };
-        if (targetUserId) sessionWhere.flow = { userId: targetUserId };
-        console.log('[DEBUG FLOW] Session Where:', JSON.stringify(sessionWhere));
+        if (targetUserId) {
+            // Check both flow and automation sessions
+            sessionWhere.OR = [
+                { flow: { userId: targetUserId } },
+                { automation: { userId: targetUserId } }
+            ];
+        }
 
         const session = await prisma.flowSession.findFirst({
             where: sessionWhere,
-            include: { flow: { include: { user: { include: { config: true } } } } }
+            include: {
+                flow: true,
+                automation: true
+            }
         });
 
-        console.log('[DEBUG FLOW] Session Found:', session ? session.id : 'NONE');
         if (!session) return;
 
-        const flow = session.flow;
-        const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
-        if (!userConfig || !userConfig.token || !userConfig.phoneId) return;
+        const flow = session.flow || session.automation;
+        if (!flow) return;
 
-        const config = userConfig;
+        const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
+        if (!userConfig) return;
+
         const nodes = JSON.parse(flow.nodes);
         const edges = JSON.parse(flow.edges);
         const currentNode = nodes.find(n => String(n.id) === String(session.currentStep));
@@ -298,7 +431,6 @@ const FlowEngine = {
 
         if (currentNode.type === 'optionsNode') {
             const body = messageBody.trim().toLowerCase();
-            console.log('[DEBUG FLOW] Options Node - Body:', body);
             if (body.startsWith('source-')) {
                 const choice = body.split('-')[1];
                 const edge = outboundEdges.find(e => e.sourceHandle === `source-${choice}`);
@@ -323,19 +455,23 @@ const FlowEngine = {
         if (!isValid) {
             const redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
             if (redEdge) {
-                await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: redEdge.target, status: 'active' } });
+                const nextSession = await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: redEdge.target, status: 'active' } });
                 await this.logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Resposta inválida: ${messageBody}`);
-                await this.executeStep({ ...session, currentStep: redEdge.target }, flow, config);
+                await this.executeStep(nextSession, flow, userConfig, platform);
             } else {
-                await this.sendWhatsAppText(normalizedPhone, "Opção inválida. Por favor tente novamente.", config);
+                if (platform === 'evolution') {
+                    await this.sendEvolutionMessage(normalizedPhone, "Opção inválida. Por favor tente novamente.", null, null, userConfig);
+                } else {
+                    await this.sendWhatsAppText(normalizedPhone, "Opção inválida. Por favor tente novamente.", userConfig);
+                }
             }
             return;
         }
 
         if (nextNodeId) {
             await this.logAction(session.id, currentNode.id, nodeName, 'received_reply', `Resposta recebida: "${messageBody}"`);
-            await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: String(nextNodeId), status: 'active' } });
-            await this.executeStep({ ...session, currentStep: String(nextNodeId) }, flow, config);
+            const nextSession = await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: String(nextNodeId), status: 'active' } });
+            await this.executeStep(nextSession, flow, userConfig, platform);
         } else {
             await this.endSession(session.id, 'Fluxo concluído');
         }
@@ -352,7 +488,56 @@ const FlowEngine = {
             headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: phone, type: "text", text: { body: text } })
         });
+    },
+
+    isWithinHours(start, end) {
+        const now = new Date();
+        const [sh, sm] = start.split(':').map(Number);
+        const [eh, em] = end.split(':').map(Number);
+        const s = new Date(now); s.setHours(sh, sm, 0, 0);
+        const e = new Date(now); e.setHours(eh, em, 0, 0);
+        return now >= s && now <= e;
+    },
+
+    getNextStartTime(start) {
+        const now = new Date();
+        const [sh, sm] = start.split(':').map(Number);
+        const next = new Date(now); next.setHours(sh, sm, 0, 0);
+        if (next <= now) next.setDate(next.getDate() + 1);
+        return next;
+    },
+
+    async processScheduledFlows() {
+        const now = new Date();
+        const sessions = await prisma.flowSession.findMany({
+            where: {
+                status: 'waiting_business_hours',
+                scheduledAt: { lte: now }
+            },
+            include: { flow: true, automation: true }
+        });
+
+        for (const session of sessions) {
+            const flow = session.flow || session.automation;
+            if (!flow) continue;
+            const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
+            if (!userConfig) continue;
+
+            const nodes = JSON.parse(flow.nodes);
+            const edges = JSON.parse(flow.edges);
+            const outboundEdges = edges.filter(e => String(e.source) === String(session.currentStep));
+            const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray' || !e.sourceHandle);
+
+            if (nextEdge) {
+                const nextSession = await prisma.flowSession.update({
+                    where: { id: session.id },
+                    data: { currentStep: nextEdge.target, status: 'active', scheduledAt: null }
+                });
+                await this.executeStep(nextSession, flow, userConfig, session.platform);
+            }
+        }
     }
 };
 
 export default FlowEngine;
+

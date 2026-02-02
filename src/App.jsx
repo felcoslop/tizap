@@ -136,6 +136,8 @@ function AppContent() {
         if (location.pathname === '/settings') return 'ajustes';
         if (location.pathname === '/flows') return 'fluxos';
         if (location.pathname === '/email') return 'email';
+        if (location.pathname === '/automacoes') return 'automacoes';
+        if (location.pathname === '/received-evolution') return 'recebidas-evolution';
         return 'disparos';
     }, [location.pathname]);
 
@@ -455,7 +457,17 @@ function AppContent() {
         setTemplatePreview,
         dates,
         setDates,
-        setActiveTab: (tab) => navigate(`/${tab === 'disparos' ? 'home' : tab === 'historico' ? 'history' : tab === 'recebidas' ? 'received' : tab === 'fluxos' ? 'flows' : tab === 'email' ? 'email' : 'settings'}`),
+        setActiveTab: (tab) => {
+            const path = tab === 'disparos' ? 'home' :
+                tab === 'historico' ? 'history' :
+                    tab === 'recebidas' ? 'received' :
+                        tab === 'fluxos' ? 'flows' :
+                            tab === 'email' ? 'email' :
+                                tab === 'automacoes' ? 'automacoes' :
+                                    tab === 'recebidas-evolution' ? 'received-evolution' :
+                                        'settings';
+            navigate(`/${path}`);
+        },
         isRefreshing,
         fetchMessages,
         activeContact,
@@ -496,6 +508,8 @@ function AppContent() {
                 <Route path="/received" element={user ? <Dashboard {...commonProps} activeTab="recebidas" /> : <Navigate to="/login" />} />
                 <Route path="/flows" element={user ? <Dashboard {...commonProps} activeTab="fluxos" /> : <Navigate to="/login" />} />
                 <Route path="/email" element={user ? <Dashboard {...commonProps} activeTab="email" /> : <Navigate to="/login" />} />
+                <Route path="/automacoes" element={user ? <Dashboard {...commonProps} activeTab="automacoes" /> : <Navigate to="/login" />} />
+                <Route path="/received-evolution" element={user ? <Dashboard {...commonProps} activeTab="recebidas-evolution" /> : <Navigate to="/login" />} />
                 <Route path="/settings" element={user ? <Dashboard {...commonProps} activeTab="ajustes" /> : <Navigate to="/login" />} />
                 <Route path="*" element={<Navigate to={user ? "/home" : "/login"} />} />
             </Routes>

@@ -3,7 +3,8 @@ import {
     Send, GitBranch, History, MessageSquare, Settings,
     LogOut, Upload, CheckCircle2, RefreshCw, List,
     Pause, Play, RotateCcw, Download, Eye, EyeOff,
-    Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X, Mail
+    Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X, Mail,
+    Zap, Radio
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -14,7 +15,9 @@ import HistoryTab from './HistoryTab';
 import ReceivedTab from './ReceivedTab';
 import EmailTab from './EmailTab';
 import SettingsTab from './SettingsTab';
-import FlowBuilder from './FlowBuilder'; // Assuming it's in the same dir or will be moved
+import FlowBuilder from './FlowBuilder';
+import AutomationBuilder from './AutomationBuilder';
+import ReceivedEvolutionTab from './ReceivedEvolutionTab';
 import LogModal from '../../components/Modals/LogModal';
 import MediaPreviewModal from '../../components/Modals/MediaPreviewModal';
 import FlowConcurrencyModal from '../../components/Modals/FlowConcurrencyModal';
@@ -96,8 +99,10 @@ export function Dashboard({
     const navItems = [
         { id: 'disparos', label: 'Disparos', icon: Send },
         { id: 'fluxos', label: 'Fluxos', icon: GitBranch },
+        { id: 'automacoes', label: 'Automações', icon: Zap },
         { id: 'historico', label: 'Histórico', icon: History },
         { id: 'recebidas', label: 'Recebidas', icon: MessageSquare },
+        { id: 'recebidas-evolution', label: 'Recebidas Evolution', icon: Radio },
         { id: 'email', label: 'E-mail', icon: Mail },
         { id: 'ajustes', label: 'Ajustes', icon: Settings }
     ];
@@ -671,8 +676,12 @@ export function Dashboard({
             </aside>
 
             <main className="content">
-                {activeTab === 'fluxos' ? (
-                    <FlowBuilder user={user} addToast={addToast} />
+                {activeTab === 'fluxos' || activeTab === 'automacoes' ? (
+                    activeTab === 'fluxos' ? (
+                        <FlowBuilder user={user} addToast={addToast} />
+                    ) : (
+                        <AutomationBuilder user={user} addToast={addToast} />
+                    )
                 ) : (
                     <>
                         <header className="content-header">
@@ -680,7 +689,8 @@ export function Dashboard({
                                 {activeTab === 'disparos' ? 'Automação de Notificações' :
                                     activeTab === 'historico' ? 'Histórico' :
                                         activeTab === 'recebidas' ? 'Mensagens Recebidas' :
-                                            activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
+                                            activeTab === 'recebidas-evolution' ? 'Recebidas Evolution' :
+                                                activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
                             </h1>
                             {activeTab === 'disparos' && activeDispatch?.status === 'running' && <div className="badge-live">Live</div>}
                         </header>
@@ -774,6 +784,18 @@ export function Dashboard({
                                 setSelectedLogDispatch={setSelectedLogDispatch}
                                 retryFailed={retryFailed}
                                 addToast={addToast}
+                            />
+                        )}
+
+
+
+                        {activeTab === 'recebidas-evolution' && (
+                            <ReceivedEvolutionTab
+                                user={user}
+                                config={config}
+                                fetchMessages={fetchMessages}
+                                addToast={addToast}
+                                isRefreshing={isRefreshing}
                             />
                         )}
 

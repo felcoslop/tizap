@@ -20,7 +20,14 @@ import webhookRoutes from './routes/webhooks.js';
 import metaRoutes from './routes/meta.js';
 import uploadRoutes from './routes/uploads.js';
 import emailRoutes from './routes/emails.js';
+import evolutionRoutes from './routes/evolution.js';
 import { startDispatch, stopDispatch } from './services/dispatchEngine.js';
+import FlowEngine from './services/flowEngine.js';
+
+// Background Job for Scheduled Flows (Business Hours, Delays)
+setInterval(() => {
+    FlowEngine.processScheduledFlows().catch(err => console.error('[BG FLOW JOB ERROR]', err));
+}, 60000); // Every 1 minute
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +90,7 @@ app.use('/api', dispatchRoutes);
 app.use('/api', metaRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', emailRoutes);
+app.use('/api', evolutionRoutes);
 app.use('/', webhookRoutes);
 
 // Special Action Routes (that need broadcast)
