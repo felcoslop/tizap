@@ -416,7 +416,12 @@ export function ReceivedEvolutionTab({
                                             {msg.mediaUrl ? (
                                                 <div style={{ marginBottom: '4px' }}>
                                                     {msg.mediaType === 'image' ? (
-                                                        <img src={msg.mediaUrl} alt="" style={{ maxWidth: '100%', borderRadius: '8px', display: 'block', cursor: 'pointer' }} onClick={() => window.open(msg.mediaUrl, '_blank')} />
+                                                        <img
+                                                            src={msg.mediaUrl}
+                                                            alt=""
+                                                            style={{ width: '240px', height: '240px', objectFit: 'cover', borderRadius: '8px', display: 'block', cursor: 'pointer' }}
+                                                            onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                                        />
                                                     ) : msg.mediaType === 'audio' ? (
                                                         <audio controls src={msg.mediaUrl} style={{ maxWidth: '100%' }} />
                                                     ) : msg.mediaType === 'video' ? (
