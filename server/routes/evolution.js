@@ -547,6 +547,11 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
                     { phone: normalizedPhone }
                 );
 
+                try {
+                    const fs = await import('fs');
+                    fs.appendFileSync('photo_debug.txt', `[${new Date().toISOString()}] Phone: ${normalizedPhone} Response: ${JSON.stringify(profileData)}\n`);
+                } catch (err) { }
+
                 console.log(`[EVOLUTION DEBUG] Full response for ${normalizedPhone}:`, JSON.stringify(profileData));
 
                 const photoUrl = profileData.pictureUrl || profileData.profilePictureUrl || profileData.profile_picture_url || profileData.url;
