@@ -224,7 +224,10 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
                     enabled: true,
                     url: finalWebhookUrl,
                     webhookByEvents: false,
+                    webhook_by_events: false, // Compatibility
                     webhookBase64: true,
+                    webhook_base_64: true,    // Compatibility
+                    base64: true,             // Compatibility
                     events: [
                         'MESSAGES_UPSERT',
                         'MESSAGES_UPDATE',

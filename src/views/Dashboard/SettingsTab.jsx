@@ -402,7 +402,7 @@ export function SettingsTab({
                                     title="Sincroniza os eventos de áudio, imagem e texto"
                                 >
                                     <Wifi size={18} style={{ marginRight: '8px' }} />
-                                    Corrigir Webhook
+                                    Ativar Webhook
                                 </button>
                                 <button
                                     className="btn-secondary"
