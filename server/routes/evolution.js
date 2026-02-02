@@ -19,15 +19,29 @@ async function evolutionRequest(baseUrl, apiKey, endpoint, method = 'GET', body 
     }
 
     console.log(`[EVOLUTION API] ${method} ${url}`);
-    const response = await fetch(url, options);
-    const data = await response.json();
 
-    if (!response.ok) {
-        console.error('[EVOLUTION API ERROR]', data);
-        throw new Error(data.message || data.error || 'Evolution API Error');
+    try {
+        const response = await fetch(url, options);
+        let data;
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { message: text.slice(0, 100) };
+        }
+
+        if (!response.ok) {
+            console.error('[EVOLUTION API ERROR]', data);
+            throw new Error(data.message || data.error || `Erro da Evolution API: ${response.status}`);
+        }
+
+        return data;
+    } catch (err) {
+        console.error(`[EVOLUTION FETCH ERROR] ${url}:`, err);
+        throw err;
     }
-
-    return data;
 }
 
 // Create or fetch Evolution instance for user

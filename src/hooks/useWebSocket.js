@@ -8,7 +8,7 @@ export function useWebSocket(userId, onMessage) {
         if (!userId) return;
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}`;
+        const wsUrl = `${protocol}//${window.location.host}?userId=${userId}`;
 
         wsRef.current = new WebSocket(wsUrl);
 

@@ -160,7 +160,7 @@ function AppContent() {
         } catch (err) {
             console.error('Failed to fetch user data:', err);
         }
-    }, [user?.id, user.token]);
+    }, [user?.id, user?.token]);
 
     const fetchDispatches = useCallback(async () => {
         if (!user?.id) return;
@@ -184,7 +184,7 @@ function AppContent() {
         } catch (err) {
             console.error('Failed to fetch dispatches:', err);
         }
-    }, [user?.id, user.token]);
+    }, [user?.id, user?.token]);
 
     const fetchMessages = useCallback(async () => {
         if (!config.phoneId || !config.token) return;
