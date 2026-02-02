@@ -176,4 +176,46 @@ export const uploadMediaToMeta = async (fileUrl, type, config) => {
         console.error('[UPLOAD META EXCEPTION]', err);
         return null;
     }
-}
+};
+
+export const downloadEvolutionMedia = async (msgData, config) => {
+    try {
+        if (!msgData.key || !msgData.message) return null;
+
+        const response = await fetch(`${config.evolutionApiUrl}/message/downloadMedia/${config.evolutionInstanceName}`, {
+            method: 'POST',
+            headers: {
+                'apikey': config.evolutionApiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                key: msgData.key,
+                message: msgData.message
+            })
+        });
+
+        if (!response.ok) {
+            console.error('[DOWNLOAD EVO MEDIA] Failed:', response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        if (!data.base64) {
+            console.error('[DOWNLOAD EVO MEDIA] No base64 in response');
+            return null;
+        }
+
+        const buffer = Buffer.from(data.base64, 'base64');
+        const ext = data.mimetype ? data.mimetype.split('/')[1].split(';')[0] : 'bin';
+        const filename = `evo_${msgData.key.id}.${ext}`;
+        const filepath = path.join(UPLOAD_DIR, filename);
+
+        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        fs.writeFileSync(filepath, buffer);
+
+        return `/uploads/${filename}`;
+    } catch (err) {
+        console.error('[DOWNLOAD EVO MEDIA ERROR]', err);
+        return null;
+    }
+};

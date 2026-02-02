@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/index.js';
+import { downloadEvolutionMedia } from '../services/whatsapp.js';
 
 const router = express.Router();
 
@@ -765,6 +766,15 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 }
 
                 if (!messageBody && !mediaUrl) continue; // Nothing to save
+
+                // If mediaUrl is missing or base64, try to download as a real file for better reliability
+                if (mediaType && (!mediaUrl || mediaUrl.startsWith('data:'))) {
+                    console.log(`[EVOLUTION WEBHOOK] Attempting to download media for ${key.id}`);
+                    const localMediaUrl = await downloadEvolutionMedia(msgData, config);
+                    if (localMediaUrl) {
+                        mediaUrl = localMediaUrl;
+                    }
+                }
 
                 // Save message to DB
                 const savedMsg = await prisma.evolutionMessage.create({

@@ -327,9 +327,11 @@ export function ReceivedEvolutionTab({
                                                         <img src={msg.mediaUrl} alt="" style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }} onClick={() => window.open(msg.mediaUrl, '_blank')} />
                                                     ) : msg.mediaType === 'audio' ? (
                                                         <audio controls src={msg.mediaUrl} style={{ maxWidth: '100%' }} />
+                                                    ) : msg.mediaType === 'video' ? (
+                                                        <video controls src={msg.mediaUrl} style={{ maxWidth: '100%', borderRadius: '8px' }} />
                                                     ) : (
-                                                        <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                            <Download size={16} /> {msg.mediaType || 'Arquivo'}
+                                                        <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" download style={{ color: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <Download size={16} /> {msg.mediaType === 'document' ? 'Documento (PDF)' : (msg.mediaType || 'Arquivo')}
                                                         </a>
                                                     )}
                                                     {msg.messageBody && msg.messageBody !== `[${msg.mediaType?.toUpperCase()}]` && (
