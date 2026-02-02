@@ -245,7 +245,8 @@ const FlowEngine = {
                         }
                     });
 
-                    await this.logAction(session.id, currentNode.id, nodeName, 'waiting_business_hours', `Fora do horário. Agendado para ${resumeTime.toLocaleString()}`);
+                    await this.logAction(session.id, currentNode.id, nodeName, 'waiting_business_hours', `Fora do horário. Agendado para ${resumeTime.toISOString()} (UTC)`);
+                    console.log(`[FLOW ENGINE] Session ${session.id} scheduled for ${resumeTime.toISOString()} (UTC)`);
                     return; // Stop execution here
                 }
                 await this.logAction(session.id, currentNode.id, nodeName, 'within_hours', 'Dentro do horário comercial');
@@ -554,7 +555,9 @@ const FlowEngine = {
         // Convert the GMT-3 "next" back to UTC for scheduling if the system expects UTC
         // But since scheduledAt is compared with 'now' in processScheduledFlows, and that 'now' is local server time (UTC),
         // we should return the UTC equivalent of this GMT-3 time.
-        return new Date(next.getTime() + (3 * 60 * 60 * 1000));
+        const resumeUTC = new Date(next.getTime() + (3 * 60 * 60 * 1000));
+        console.log(`[FLOW ENGINE] Calculated Resume: GMT-3: ${next.toISOString()} | UTC: ${resumeUTC.toISOString()}`);
+        return resumeUTC;
     },
 
     async processScheduledFlows() {
@@ -567,7 +570,11 @@ const FlowEngine = {
             include: { flow: true, automation: true }
         });
 
+        if (sessions.length > 0) {
+            console.log(`[FLOW ENGINE] Found ${sessions.length} sessions waiting to resume at ${now.toISOString()}`);
+        }
         for (const session of sessions) {
+            console.log(`[FLOW ENGINE] Resuming session ${session.id} (Step: ${session.currentStep})`);
             const flow = session.flow || session.automation;
             if (!flow) continue;
             const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
