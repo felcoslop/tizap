@@ -128,9 +128,17 @@ const NODE_STYLES = `
     .btn-delete-flow:hover { background: #ff5555 !important; color: white !important; }
 
     .upload-section { margin-bottom: 8px; }
+    .btn-upload {
+        padding: 8px 16px; background: #e91e63; color: white; border: none;
+        border-radius: 6px; cursor: pointer; font-size: 12px; width: 100%;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; }
+    
     .previews-grid { margin-top: 8px; }
     .preview-item { position: relative; }
     .preview-item img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+    .remove-img-btn:hover { transform: scale(1.1); background: #ff0000; }
 
     /* Modern Toggle Switch */
     .switch {
