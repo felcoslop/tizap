@@ -109,6 +109,7 @@ function AppContent() {
     const [dispatches, setDispatches] = useState([]);
     const [activeDispatch, setActiveDispatch] = useState(null);
     const [receivedMessages, setReceivedMessages] = useState([]);
+    const [evolutionMessages, setEvolutionMessages] = useState([]);
 
     // UI State
     const [campaignData, setCampaignData] = useState(null);
@@ -159,7 +160,7 @@ function AppContent() {
         } catch (err) {
             console.error('Failed to fetch user data:', err);
         }
-    }, [user?.id]);
+    }, [user?.id, user.token]);
 
     const fetchDispatches = useCallback(async () => {
         if (!user?.id) return;
@@ -183,7 +184,7 @@ function AppContent() {
         } catch (err) {
             console.error('Failed to fetch dispatches:', err);
         }
-    }, [user?.id]);
+    }, [user?.id, user.token]);
 
     const fetchMessages = useCallback(async () => {
         if (!config.phoneId || !config.token) return;
@@ -201,7 +202,22 @@ function AppContent() {
         } finally {
             setIsRefreshing(false);
         }
-    }, [config.phoneId, config.token]);
+    }, [config.phoneId, config.token, user?.id]);
+
+    const fetchEvolutionMessages = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const res = await fetch(`/api/evolution/messages/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setEvolutionMessages(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch evolution messages:', err);
+        }
+    }, [user?.id]);
 
     // WebSocket message handler
     const handleWsMessage = useCallback((data) => {
@@ -270,8 +286,10 @@ function AppContent() {
             console.log('[WS] Email progress:', payload);
         } else if (event === 'message:received') {
             fetchMessages();
+        } else if (event === 'evolution:message') {
+            fetchEvolutionMessages();
         }
-    }, [addToast, fetchMessages, fetchDispatches]);
+    }, [addToast, fetchMessages, fetchDispatches, fetchEvolutionMessages]);
 
     // Connect WebSocket
     useWebSocket(user?.id, handleWsMessage);
@@ -279,7 +297,7 @@ function AppContent() {
     // Load data on mount/login
     useEffect(() => {
         if (user?.id) {
-            Promise.all([fetchUserData(), fetchDispatches(), fetchMessages()])
+            Promise.all([fetchUserData(), fetchDispatches(), fetchMessages(), fetchEvolutionMessages()])
                 .finally(() => setIsLoading(false));
         } else {
             setIsLoading(false);
@@ -470,6 +488,8 @@ function AppContent() {
         },
         isRefreshing,
         fetchMessages,
+        evolutionMessages,
+        fetchEvolutionMessages,
         activeContact,
         setActiveContact,
         showToken,

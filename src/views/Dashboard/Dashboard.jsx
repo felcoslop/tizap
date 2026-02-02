@@ -68,7 +68,9 @@ export function Dashboard({
     setTemplateVariables,
     isLoadingTemplate,
     setIsLoadingTemplate,
-    fetchUserData
+    fetchUserData,
+    evolutionMessages,
+    fetchEvolutionMessages
 }) {
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -793,9 +795,10 @@ export function Dashboard({
                             <ReceivedEvolutionTab
                                 user={user}
                                 config={config}
-                                fetchMessages={fetchMessages}
                                 addToast={addToast}
                                 isRefreshing={isRefreshing}
+                                messages={evolutionMessages}
+                                fetchMessages={fetchEvolutionMessages}
                             />
                         )}
 

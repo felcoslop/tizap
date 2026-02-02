@@ -381,7 +381,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
         }
 
         // Save sent message to DB
-        await prisma.evolutionMessage.create({
+        const savedMsg = await prisma.evolutionMessage.create({
             data: {
                 userId,
                 instanceName: config.evolutionInstanceName,
@@ -394,6 +394,12 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 mediaType
             }
         });
+
+        // Broadcast via WebSocket
+        const broadcastMessage = req.app.get('broadcastMessage');
+        if (broadcastMessage) {
+            broadcastMessage('evolution:message', savedMsg, userId);
+        }
 
         res.json({ success: true, message: messageData });
 
@@ -424,17 +430,28 @@ router.get('/evolution/messages/:userId', authenticateToken, async (req, res) =>
 // Mark Evolution messages as read
 router.post('/evolution/messages/mark-read', authenticateToken, async (req, res) => {
     try {
-        const { phones, userId } = req.body;
-        if (!phones || !phones.length) return res.json({ success: true });
+        const { phones, phone } = req.body;
+        const userId = req.userId;
+
+        const targetPhones = phones || [phone];
+        if (!targetPhones || !targetPhones.length || !targetPhones[0]) {
+            return res.json({ success: true });
+        }
 
         await prisma.evolutionMessage.updateMany({
             where: {
-                userId: parseInt(userId),
-                contactPhone: { in: phones },
+                userId,
+                contactPhone: { in: targetPhones },
                 isRead: false
             },
             data: { isRead: true }
         });
+
+        // Broadcast via WebSocket
+        const broadcastMessage = req.app.get('broadcastMessage');
+        if (broadcastMessage) {
+            broadcastMessage('evolution:message', { action: 'mark-read', phones: targetPhones }, userId);
+        }
 
         res.json({ success: true });
     } catch (err) {

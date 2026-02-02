@@ -5,9 +5,17 @@ export function ReceivedEvolutionTab({
     user,
     config,
     addToast,
-    isRefreshing: parentIsRefreshing
+    isRefreshing: parentIsRefreshing,
+    messages: globalMessages,
+    fetchMessages: globalFetchMessages
 }) {
-    const [messages, setMessages] = useState([]);
+    // Sync with global messages if provided, otherwise fallback to local fetch
+    const [messages, setMessages] = useState(globalMessages || []);
+
+    useEffect(() => {
+        if (globalMessages) setMessages(globalMessages);
+    }, [globalMessages]);
+
     const [activeContact, setActiveContact] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -21,6 +29,10 @@ export function ReceivedEvolutionTab({
     const [mediaRecorder, setMediaRecorder] = useState(null);
 
     const fetchMessages = async () => {
+        if (globalFetchMessages) {
+            return globalFetchMessages();
+        }
+        // Fallback local fetch
         setIsRefreshing(true);
         try {
             const res = await fetch(`/api/evolution/messages/${user.id}`, {
@@ -165,7 +177,20 @@ export function ReceivedEvolutionTab({
                 {/* Contact List */}
                 <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #00a276' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ color: '#00a276' }}>Evolution</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ color: '#00a276', margin: 0 }}>Evolution</h3>
+                            {config?.evolutionWebhookToken && (
+                                <div style={{ fontSize: '10px', color: '#999', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`);
+                                        addToast('URL do Webhook copiada!', 'success');
+                                    }}
+                                    title="URL única deste usuário"
+                                >
+                                    <Radio size={10} color="#00a276" /> Webhook: {config.evolutionWebhookToken.slice(0, 8)}...
+                                </div>
+                            )}
+                        </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                                 onClick={() => {
