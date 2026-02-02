@@ -733,7 +733,14 @@ export function AutomationBuilder({ user, addToast }) {
                             </button>
                         </div>
                     </div>
-                    {loading ? <div style={{ textAlign: 'center' }}><RefreshCw className="animate-spin" size={32} /></div> : (
+                    {loading ? (
+                        <div style={{ textAlign: 'center' }}><RefreshCw className="animate-spin" size={32} /></div>
+                    ) : automations.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '60px', color: '#999', backgroundColor: '#f9fbfd', borderRadius: '16px', border: '2px dashed #e1e8ed' }}>
+                            <Zap size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+                            <p>Nenhuma automação criada. Comece criando uma nova automação.</p>
+                        </div>
+                    ) : (
                         <div className="flows-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
                             {automations.map(auto => (
                                 <div key={auto.id} className="flow-card">
