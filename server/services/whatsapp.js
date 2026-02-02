@@ -225,10 +225,9 @@ export const downloadEvolutionMedia = async (msgData, config) => {
 
         const fileName = `${msgData.key.id}.${ext}`;
         const relativePath = `/uploads/${fileName}`;
-        const uploadsDir = path.join(__dirname, '../../uploads');
-        const absolutePath = path.join(uploadsDir, fileName);
+        const absolutePath = path.join(UPLOAD_DIR, fileName);
 
-        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
         // Method 1: Try Evolution API getBase64FromMediaMessage
         if (config?.evolutionApiUrl && config?.evolutionInstanceName) {
