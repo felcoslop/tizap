@@ -783,12 +783,18 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                     if (b64) mediaUrl = `data:image/webp;base64,${b64}`;
                 } else if (content.documentMessage || content.documentWithCaptionMessage) {
                     const doc = content.documentMessage || content.documentWithCaptionMessage?.message?.documentMessage;
+                    const mime = doc?.mimetype || '';
                     messageBody = doc?.fileName || doc?.caption || '[Documento]';
-                    mediaType = 'document';
+
+                    if (mime.includes('image/')) mediaType = 'image';
+                    else if (mime.includes('audio/')) mediaType = 'audio';
+                    else if (mime.includes('video/')) mediaType = 'video';
+                    else mediaType = 'document';
+
                     const b64 = msgData.base64 || doc?.base64;
                     if (b64) {
-                        const mime = doc?.mimetype || 'application/octet-stream';
-                        mediaUrl = `data:${mime};base64,${b64}`;
+                        const finalMime = mime || 'application/octet-stream';
+                        mediaUrl = `data:${finalMime};base64,${b64}`;
                     }
                 }
 

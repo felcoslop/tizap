@@ -200,16 +200,28 @@ export const downloadEvolutionMedia = async (msgData, config) => {
 
         const innerMsg = messageContent[mediaType] || messageContent.documentWithCaptionMessage?.message?.documentMessage;
         const mime = innerMsg?.mimetype || '';
+        const fileNameOriginal = innerMsg?.fileName || '';
+
+        console.log(`[DOWNLOAD MEDIA] Detected mediaType: ${mediaType}, mime: ${mime}, fileName: ${fileNameOriginal}`);
 
         // Determine extension
         let ext = 'bin';
         if (mime.includes('image/jpeg')) ext = 'jpg';
         else if (mime.includes('image/png')) ext = 'png';
+        else if (mime.includes('image/webp')) ext = 'webp';
         else if (mime.includes('audio/ogg')) ext = 'ogg';
         else if (mime.includes('audio/mpeg')) ext = 'mp3';
         else if (mime.includes('video/mp4')) ext = 'mp4';
         else if (mime.includes('application/pdf')) ext = 'pdf';
         else if (mediaType === 'stickerMessage') ext = 'webp';
+
+        if (fileNameOriginal.includes('.')) {
+            const parts = fileNameOriginal.split('.');
+            const suggestedExt = parts[parts.length - 1].toLowerCase();
+            if (suggestedExt.length >= 2 && suggestedExt.length <= 4) {
+                ext = suggestedExt;
+            }
+        }
 
         const fileName = `${msgData.key.id}.${ext}`;
         const relativePath = `/uploads/${fileName}`;
