@@ -454,11 +454,10 @@ function BusinessHoursNode({ data, id, selected }) {
                             <strong>Aberto:</strong> {start} - {end}<br />
                             <span style={{ fontSize: 11, color: '#666' }}>Se fechado: {fallback || '(Sem msg)'}</span>
                         </p>
-                        <Handle type="source" position={Position.Right} id="source-true" style={{ background: '#44b700', width: 14, height: 14, border: '2px solid #333', top: '30%' }} title="Dentro do Horário" />
-                        <Handle type="source" position={Position.Right} id="source-false" style={{ background: '#dc3545', width: 14, height: 14, border: '2px solid #333', top: '70%' }} title="Fora do Horário" />
                     </div>
                 )}
             </div>
+            <Handle type="source" position={Position.Bottom} id="source-gray" style={{ background: '#6c757d', width: 14, height: 14, border: '2px solid #333' }} />
         </div>
     );
 }
