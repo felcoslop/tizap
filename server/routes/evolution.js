@@ -1024,12 +1024,15 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                 }
                 console.log(`[AUTOMATION DEBUG] Found stuck active session ${protectionSession.id} (> 5 mins). Allowing restart.`);
             } else if (protectionSession.status === 'completed') {
-                // Completed session protection (Anti-Loop) - 24 hours
-                if (sessionAge < 24 * 60 * 60 * 1000) {
-                    console.log(`[AUTOMATION DEBUG] Session ${protectionSession.id} completed recently (< 24h). Ignoring trigger to prevent loop.`);
+                // Completed session protection (Anti-Loop) - Configurable (Default 24h)
+                const delayMinutes = userConfig?.automationDelay || 1440; // Default to 1440 minutes (24 hours)
+                const delayMs = delayMinutes * 60 * 1000;
+
+                if (sessionAge < delayMs) {
+                    console.log(`[AUTOMATION DEBUG] Session ${protectionSession.id} completed recently (< ${delayMinutes}min). Ignoring trigger to prevent loop.`);
                     return;
                 }
-                console.log(`[AUTOMATION DEBUG] Completed session ${protectionSession.id} is old (> 24h). Allowing restart.`);
+                console.log(`[AUTOMATION DEBUG] Completed session ${protectionSession.id} is old (> ${delayMinutes}min). Allowing restart.`);
             }
         }
 

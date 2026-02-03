@@ -21,6 +21,8 @@ import metaRoutes from './routes/meta.js';
 import uploadRoutes from './routes/uploads.js';
 import emailRoutes from './routes/emails.js';
 import evolutionRoutes from './routes/evolution.js';
+import adminRoutes from './routes/admin.js';
+import paymentRoutes from './routes/payment.js';
 import { startDispatch, stopDispatch } from './services/dispatchEngine.js';
 import FlowEngine from './services/flowEngine.js';
 import CleanupService from './services/cleanupService.js';
@@ -95,13 +97,17 @@ app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, '../logo.pn
 app.use('/', authRoutes); // To allow /auth/google top-level
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
+app.use('/api', userRoutes);
 app.use('/api', flowRoutes);
 app.use('/api', messageRoutes);
 app.use('/api', dispatchRoutes);
+app.use('/api', webhookRoutes);
 app.use('/api', metaRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', emailRoutes);
 app.use('/api', evolutionRoutes);
+app.use('/api', adminRoutes);
+app.use('/api', paymentRoutes);
 app.use('/', webhookRoutes);
 
 // Special Action Routes (that need broadcast)

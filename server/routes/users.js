@@ -56,8 +56,8 @@ router.post('/user-config/:userId', authenticateToken, async (req, res) => {
 
         await prisma.userConfig.upsert({
             where: { userId },
-            update: { token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken },
-            create: { userId, token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken }
+            update: { token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken, automationDelay: req.body.automationDelay ? parseInt(req.body.automationDelay) : undefined },
+            create: { userId, token: token ? token.trim() : token, phoneId, wabaId, templateName, mapping: JSON.stringify(mapping), webhookVerifyToken, webhookToken, automationDelay: req.body.automationDelay ? parseInt(req.body.automationDelay) : 1440 }
         });
 
         res.json({ success: true });

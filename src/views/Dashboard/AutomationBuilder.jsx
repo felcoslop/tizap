@@ -444,17 +444,25 @@ function BusinessHoursNode({ data, id, selected }) {
             <div className="node-content">
                 {isEditing ? (
                     <div className="edit-mode nodrag">
-                        <input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
                         <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
                         <textarea value={fallback} onChange={(e) => setFallback(e.target.value)} rows={2} placeholder="Fora do horário" />
                         <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
                     </div>
-                ) : <p className="node-text">⏰ {data.start} às {data.end}</p>}
+                ) : (
+                    <div className="nodrag">
+                        <p className="node-text">
+                            <strong>Aberto:</strong> {start} - {end}<br />
+                            <span style={{ fontSize: 11, color: '#666' }}>Se fechado: {fallback || '(Sem msg)'}</span>
+                        </p>
+                        <Handle type="source" position={Position.Right} id="source-true" style={{ background: '#44b700', width: 14, height: 14, border: '2px solid #333', top: '30%' }} title="Dentro do Horário" />
+                        <Handle type="source" position={Position.Right} id="source-false" style={{ background: '#dc3545', width: 14, height: 14, border: '2px solid #333', top: '70%' }} title="Fora do Horário" />
+                    </div>
+                )}
             </div>
-            <Handle type="source" position={Position.Bottom} id="source-green" style={{ background: '#00a276', width: 14, height: 14, border: '2px solid #333' }} />
         </div>
     );
 }
+
 
 function CloseAutomationNode({ data, id, selected }) {
     return (
@@ -547,7 +555,7 @@ const nodeTypes = {
     emailNode: EmailNode
 };
 
-function AutomationEditor({ automation, onSave, onBack, userId, addToast, token }) {
+function AutomationEditor({ automation, onSave, onBack, userId, addToast, token, config, setConfig, user }) {
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
     const [name, setName] = useState(automation?.name || 'Nova Automação');
@@ -555,6 +563,36 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token 
     const [triggerKeywords, setTriggerKeywords] = useState(automation?.triggerKeywords || '');
     const [loading, setLoading] = useState(false);
     const [reactFlowInstance, setReactFlowInstance] = useState(null);
+
+    // Settings Modal State
+    const [showDelayModal, setShowDelayModal] = useState(false);
+    const [automationDelay, setAutomationDelay] = useState(1440); // Default 24h
+
+    // Load initial config
+    useEffect(() => {
+        if (config?.automationDelay !== undefined) {
+            setAutomationDelay(config.automationDelay);
+        }
+    }, [config]);
+
+    const saveDelayConfig = async () => {
+        try {
+            if (!user?.id) return;
+
+            await fetch(`/api/user-config/${user.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ ...config, mapping: config?.mapping || {}, automationDelay: parseInt(automationDelay) })
+            });
+
+            setShowDelayModal(false);
+            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay) });
+            addToast('Configuração salva!', 'success');
+        } catch (err) {
+            console.error(err);
+            addToast('Erro ao salvar configuração.', 'error');
+        }
+    };
 
     useEffect(() => {
         if (automation && automation !== 'new') {
@@ -838,7 +876,17 @@ export function AutomationBuilder({ user, addToast }) {
 
             {editingAutomation || editingAutomation === 'new' ? (
                 <ReactFlowProvider>
-                    <AutomationEditor automation={editingAutomation === 'new' ? null : editingAutomation} onSave={() => { setEditingAutomation(null); fetchAutomations(); }} onBack={() => setEditingAutomation(null)} userId={user.id} token={user.token} addToast={addToast} />
+                    <AutomationEditor
+                        automation={editingAutomation === 'new' ? null : editingAutomation}
+                        onSave={() => { setEditingAutomation(null); fetchAutomations(); }}
+                        onBack={() => setEditingAutomation(null)}
+                        userId={user.id}
+                        token={user.token}
+                        addToast={addToast}
+                        config={config} // Pass config
+                        setConfig={setConfig} // Pass setConfig
+                        user={user} // Pass full user object
+                    />
                 </ReactFlowProvider>
             ) : (
                 <div className="flow-builder-list fade-in" style={{ padding: '2.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>

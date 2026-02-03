@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-    Send, GitBranch, History, MessageSquare, Settings,
+    Send, GitBranch, History, MessageSquare, Settings, Users,
     LogOut, Upload, CheckCircle2, RefreshCw, List,
     Pause, Play, RotateCcw, Download, Eye, EyeOff,
     Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X, Mail,
@@ -17,16 +17,22 @@ import EmailTab from './EmailTab';
 import SettingsTab from './SettingsTab';
 import FlowBuilder from './FlowBuilder';
 import AutomationBuilder from './AutomationBuilder';
+import AutomationBuilder from './AutomationBuilder';
 import ReceivedEvolutionTab from './ReceivedEvolutionTab';
+import SystemUsersTab from './SystemUsersTab'; // NEW
+import SubscriptionLockScreen from './SubscriptionLockScreen'; // NEW
 import LogModal from '../../components/Modals/LogModal';
 import MediaPreviewModal from '../../components/Modals/MediaPreviewModal';
 import FlowConcurrencyModal from '../../components/Modals/FlowConcurrencyModal';
 
 const REQUIRED_COLUMNS = [
-    { id: 'client_code', label: 'Cód. Cliente' },
-    { id: 'fantasy_name', label: 'Nome Fantasia' },
-    { id: 'phone', label: 'Telefone' },
     { id: 'order_number', label: 'Nº do Pedido' }
+];
+
+const MASTERS = [
+    'felipecostalopes44@gmail.com',
+    'felipevibelink@gmail.com',
+    'xmitox@live.com'
 ];
 
 export function Dashboard({
@@ -72,6 +78,25 @@ export function Dashboard({
     evolutionMessages,
     fetchEvolutionMessages
 }) {
+    // Subscription Check
+    const isMaster = user && MASTERS.includes(user.email);
+    const isSubscriptionValid = useMemo(() => {
+        if (!user || isMaster) return true;
+        if (user.planType === 'free') return true;
+
+        // Paid Check
+        if (user.subscriptionStatus === 'active') return true;
+
+        // Trial Check
+        if (user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) return true;
+
+        return false;
+    }, [user, isMaster]);
+
+    if (!isSubscriptionValid && user) {
+        return <SubscriptionLockScreen user={user} onLogout={onLogout} />;
+    }
+
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedContacts, setSelectedContacts] = useState([]);
@@ -106,7 +131,8 @@ export function Dashboard({
         { id: 'recebidas', label: 'Recebidas', icon: MessageSquare },
         { id: 'recebidas-evolution', label: 'Recebidas Evolution', icon: Radio },
         { id: 'email', label: 'E-mail', icon: Mail },
-        { id: 'ajustes', label: 'Ajustes', icon: Settings }
+        { id: 'ajustes', label: 'Ajustes', icon: Settings },
+        ...(isMaster ? [{ id: 'users', icon: Users, label: 'Usuários do Sistema' }] : []), // Added Users tab
     ];
 
     useEffect(() => {
@@ -208,7 +234,7 @@ export function Dashboard({
                 setTemplateVariables({});
             }
         }
-    }, [selectedFlowId, dispatchMode, availableFlows, user?.id]);
+    }, [selectedFlowId, dispatchMode, availableFlows, user?.id, user?.token, addToast, setIsLoadingTemplate, setTemplateVariables]);
 
     const handleMediaUpload = async (e) => {
         const files = Array.from(e.target.files);
@@ -579,74 +605,11 @@ export function Dashboard({
                 addToast('Campanha iniciada!', 'success');
                 setActiveDispatch({ id: data.dispatchId, status: 'running', currentIndex: 0, totalLeads: leads.length, successCount: 0, errorCount: 0 });
                 fetchDispatches();
+                setActiveTab('disparos');
             } else {
                 addToast(data.error || 'Erro ao iniciar.', 'error');
             }
         } catch (err) { addToast('Erro ao iniciar.', 'error'); }
-    };
-
-    const controlDispatch = async (action, dispatchId = null) => {
-        const id = dispatchId || activeDispatch?.id;
-        if (!id) return;
-        try {
-            const res = await fetch(`/api/dispatch/${id}/control`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${user.token}`
-                },
-                body: JSON.stringify({ action })
-            });
-            if (res.ok) {
-                addToast(`Ação ${action} realizada.`, 'info');
-                fetchDispatches();
-            } else {
-                const data = await res.json();
-                addToast(data.error || 'Erro ao controlar.', 'error');
-            }
-        } catch (err) { addToast('Erro de conexão.', 'error'); }
-    };
-
-    const retryFailed = async (dispatchId) => {
-        try {
-            const res = await fetch(`/api/dispatch/${dispatchId}/retry`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${user.token}` }
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                addToast(data.message, 'success');
-                fetchDispatches();
-                setActiveTab('disparos');
-            } else {
-                addToast(data.error || 'Erro ao reintentar.', 'error');
-            }
-        } catch (err) { addToast('Erro de conexão.', 'error'); }
-    };
-
-    const saveConfig = async () => {
-        try {
-            const res = await fetch(`/api/user-config/${user.id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${user.token}`
-                },
-                body: JSON.stringify({ ...tempConfig, templateName, mapping })
-            });
-            if (res.ok) {
-                setConfig({ ...tempConfig, templateName, mapping });
-                setLastSyncConfig({ ...tempConfig, templateName, mapping });
-                setIsEditing(false);
-                addToast('Configurações salvas!', 'success');
-                await fetchUserData();
-            } else {
-                const errorData = await res.json();
-                addToast(errorData.error || 'Erro ao salvar.', 'error');
-            }
-        } catch (err) {
-            addToast('Erro de conexão ao salvar.', 'error');
-        }
     };
 
     return (
@@ -682,7 +645,7 @@ export function Dashboard({
                     activeTab === 'fluxos' ? (
                         <FlowBuilder user={user} addToast={addToast} />
                     ) : (
-                        <AutomationBuilder user={user} addToast={addToast} />
+                        <AutomationBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
                     )
                 ) : (
                     <>
@@ -690,9 +653,10 @@ export function Dashboard({
                             <h1>
                                 {activeTab === 'disparos' ? 'Automação de Notificações' :
                                     activeTab === 'historico' ? 'Histórico' :
-                                        activeTab === 'recebidas' ? 'Mensagens Recebidas' :
-                                            activeTab === 'recebidas-evolution' ? 'Recebidas Evolution' :
-                                                activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
+                                        activeTab === 'users' ? 'Usuários do Sistema' :
+                                            activeTab === 'recebidas' ? 'Mensagens Recebidas' :
+                                                activeTab === 'recebidas-evolution' ? 'Recebidas Evolution' :
+                                                    activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
                             </h1>
                             {activeTab === 'disparos' && activeDispatch?.status === 'running' && <div className="badge-live">Live</div>}
                         </header>
@@ -741,41 +705,7 @@ export function Dashboard({
                             />
                         )}
 
-                        {activeTab === 'recebidas' && (
-                            <ReceivedTab
-                                user={user}
-                                config={config}
-                                receivedMessages={receivedMessages}
-                                setReceivedMessages={setReceivedMessages}
-                                activeContact={activeContact}
-                                setActiveContact={setActiveContact}
-                                fetchMessages={fetchMessages}
-                                isRefreshing={isRefreshing}
-                                isDeleting={isDeleting}
-                                setIsDeleting={setIsDeleting}
-                                selectedContacts={selectedContacts}
-                                setSelectedContacts={setSelectedContacts}
-                                showDeleteConfirm={showDeleteConfirm}
-                                setShowDeleteConfirm={setShowDeleteConfirm}
-                                setShowProfileModal={setShowProfileModal}
-                                fileInputRef={fileInputRef}
-                                handleMediaUpload={handleMediaUpload}
-                                isUploadingMedia={isUploadingMedia}
-                                addToast={addToast}
-                                isRecording={isRecording}
-                                recordingTime={recordingTime}
-                                startRecording={startRecording}
-                                stopRecording={stopRecording}
-                                cancelRecording={cancelRecording}
-                            />
-                        )}
-
-                        {activeTab === 'email' && (
-                            <EmailTab
-                                user={user}
-                                addToast={addToast}
-                            />
-                        )}
+                        {activeTab === 'users' && isMaster && <SystemUsersTab user={user} addToast={addToast} />}
 
                         {activeTab === 'historico' && (
                             <HistoryTab
@@ -789,36 +719,6 @@ export function Dashboard({
                             />
                         )}
 
-
-
-                        {activeTab === 'recebidas-evolution' && (
-                            <ReceivedEvolutionTab
-                                user={user}
-                                config={config}
-                                addToast={addToast}
-                                isRefreshing={isRefreshing}
-                                messages={evolutionMessages}
-                                fetchMessages={fetchEvolutionMessages}
-                            />
-                        )}
-
-                        {activeTab === 'ajustes' && (
-                            <SettingsTab
-                                user={user}
-                                config={config}
-                                tempConfig={tempConfig}
-                                setTempConfig={setTempConfig}
-                                isEditing={isEditing}
-                                setIsEditing={setIsEditing}
-                                showToken={showToken}
-                                setShowToken={setShowToken}
-                                generateWebhook={generateWebhook}
-                                saveConfig={saveConfig}
-                                addToast={addToast}
-                                onLogout={onLogout}
-                                fetchUserData={fetchUserData}
-                            />
-                        )}
                     </>
                 )}
             </main>
@@ -841,80 +741,88 @@ export function Dashboard({
                 </button>
             </div>
 
-            {selectedLogDispatch && (
-                <LogModal
-                    dispatch={selectedLogDispatch}
-                    user={user}
-                    addToast={addToast}
-                    onClose={() => setSelectedLogDispatch(null)}
-                />
-            )}
+            {
+                selectedLogDispatch && (
+                    <LogModal
+                        dispatch={selectedLogDispatch}
+                        user={user}
+                        addToast={addToast}
+                        onClose={() => setSelectedLogDispatch(null)}
+                    />
+                )
+            }
 
-            {showProfileModal && (
-                <div className="profile-modal-overlay" onClick={() => setShowProfileModal(null)}>
-                    <div className="profile-modal-content" onClick={e => e.stopPropagation()}>
-                        <button className="profile-modal-close" onClick={() => setShowProfileModal(null)}><X size={20} /></button>
-                        <img src={`/api/contacts/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`} alt="Profile" />
-                    </div>
-                </div>
-            )}
-
-            {showDeleteConfirm && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div className="card fade-in" style={{ width: '400px', padding: '24px', backgroundColor: 'white', borderRadius: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#e02424' }}><Trash2 size={28} /><h3 style={{ margin: 0, fontSize: '1.25rem' }}>Excluir Conversas</h3></div>
-                        <p style={{ color: '#666', marginBottom: '24px' }}>Tem certeza que deseja excluir <strong>{selectedContacts.length}</strong> conversa(s)? Essa ação não pode ser desfeita.</p>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)} style={{ padding: '8px 16px' }}>Cancelar</button>
-                            <button className="btn-primary" style={{ backgroundColor: '#e02424', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '6px' }} onClick={async () => {
-                                const normalize = p => {
-                                    let s = String(p).replace(/\D/g, '');
-                                    if (s.startsWith('55') && s.length === 12) return s.slice(0, 4) + '9' + s.slice(4);
-                                    return s;
-                                };
-                                const uniquePhones = [...new Set(receivedMessages.filter(m => selectedContacts.includes(normalize(m.contactPhone))).map(m => m.contactPhone))];
-                                try {
-                                    const res = await fetch('/api/messages/delete', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'Authorization': `Bearer ${user.token}`
-                                        },
-                                        body: JSON.stringify({ phones: uniquePhones, phoneId: config.phoneId, token: config.token })
-                                    });
-
-                                    if (res.ok) {
-                                        addToast('Conversas excluídas.', 'success');
-                                        if (activeContact && uniquePhones.some(p => normalize(p) === normalize(activeContact))) setActiveContact(null);
-                                        setIsDeleting(false); setSelectedContacts([]); setShowDeleteConfirm(false);
-                                        await fetchMessages();
-                                    } else {
-                                        const error = await res.text();
-                                        console.error('Delete error:', error);
-                                        addToast('Erro ao excluir conversas.', 'error');
-                                    }
-                                } catch (e) {
-                                    console.error('Delete exception:', e);
-                                    addToast('Falha ao excluir.', 'error');
-                                }
-                            }}>Excluir</button>
+            {
+                showProfileModal && (
+                    <div className="profile-modal-overlay" onClick={() => setShowProfileModal(null)}>
+                        <div className="profile-modal-content" onClick={e => e.stopPropagation()}>
+                            <button className="profile-modal-close" onClick={() => setShowProfileModal(null)}><X size={20} /></button>
+                            <img src={`/api/contacts/${showProfileModal.phone}/photo?name=${encodeURIComponent(showProfileModal.name)}`} alt="Profile" />
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {showMediaModal && (
-                <MediaPreviewModal
-                    stagedMedia={stagedMedia}
-                    setStagedMedia={setStagedMedia}
-                    onSend={sendStagedMedia}
-                    onClose={() => { stagedMedia.forEach(item => URL.revokeObjectURL(item.previewUrl)); setStagedMedia([]); setShowMediaModal(false); }}
-                    onAddMore={() => fileInputRef.current?.click()}
-                />
-            )}
+            {
+                showDeleteConfirm && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                        <div className="card fade-in" style={{ width: '400px', padding: '24px', backgroundColor: 'white', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#e02424' }}><Trash2 size={28} /><h3 style={{ margin: 0, fontSize: '1.25rem' }}>Excluir Conversas</h3></div>
+                            <p style={{ color: '#666', marginBottom: '24px' }}>Tem certeza que deseja excluir <strong>{selectedContacts.length}</strong> conversa(s)? Essa ação não pode ser desfeita.</p>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)} style={{ padding: '8px 16px' }}>Cancelar</button>
+                                <button className="btn-primary" style={{ backgroundColor: '#e02424', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '6px' }} onClick={async () => {
+                                    const normalize = p => {
+                                        let s = String(p).replace(/\D/g, '');
+                                        if (s.startsWith('55') && s.length === 12) return s.slice(0, 4) + '9' + s.slice(4);
+                                        return s;
+                                    };
+                                    const uniquePhones = [...new Set(receivedMessages.filter(m => selectedContacts.includes(normalize(m.contactPhone))).map(m => m.contactPhone))];
+                                    try {
+                                        const res = await fetch('/api/messages/delete', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${user.token}`
+                                            },
+                                            body: JSON.stringify({ phones: uniquePhones, phoneId: config.phoneId, token: config.token })
+                                        });
+
+                                        if (res.ok) {
+                                            addToast('Conversas excluídas.', 'success');
+                                            if (activeContact && uniquePhones.some(p => normalize(p) === normalize(activeContact))) setActiveContact(null);
+                                            setIsDeleting(false); setSelectedContacts([]); setShowDeleteConfirm(false);
+                                            await fetchMessages();
+                                        } else {
+                                            const error = await res.text();
+                                            console.error('Delete error:', error);
+                                            addToast('Erro ao excluir conversas.', 'error');
+                                        }
+                                    } catch (e) {
+                                        console.error('Delete exception:', e);
+                                        addToast('Falha ao excluir.', 'error');
+                                    }
+                                }}>Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                showMediaModal && (
+                    <MediaPreviewModal
+                        stagedMedia={stagedMedia}
+                        setStagedMedia={setStagedMedia}
+                        onSend={sendStagedMedia}
+                        onClose={() => { stagedMedia.forEach(item => URL.revokeObjectURL(item.previewUrl)); setStagedMedia([]); setShowMediaModal(false); }}
+                        onAddMore={() => fileInputRef.current?.click()}
+                    />
+                )
+            }
 
             {busyData && <FlowConcurrencyModal busyData={busyData} onCancel={() => setBusyData(null)} />}
-        </div>
+        </div >
     );
 }
 

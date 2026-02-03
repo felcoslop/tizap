@@ -20,6 +20,12 @@ model User {
   createdAt            DateTime        @default(now())
   resetPasswordExpires DateTime?
   resetPasswordToken   String?
+  // Subscription Fields
+  planType             String          @default("free") // 'free', 'paid'
+  trialExpiresAt       DateTime?
+  subscriptionStatus   String          @default("active") // 'active', 'expired'
+  lastPaymentId        String?
+  
   automations          Automation[]
   dispatches           Dispatch[]
   emailCampaigns       EmailCampaign[]
@@ -44,6 +50,7 @@ model UserConfig {
   evolutionWebhookToken String  @default("")
   evolutionConnected    Boolean @default(false)
   businessHours         String  @default("{}")
+  automationDelay       Int     @default(1440) // Delay in minutes for re-entry protection
   user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
