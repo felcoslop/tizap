@@ -273,6 +273,7 @@ const FlowEngine = {
             } else if (currentNode.type === 'businessHoursNode') {
                 const { start, end, fallback } = currentNode.data;
                 const isWithin = this.isWithinHours(start || '08:00', end || '18:00');
+                console.log(`[FLOW ENGINE] Business Hours Check: ${start}-${end}. Current: ${new Date().toISOString()}. IsWithin: ${isWithin}`);
 
                 if (!isWithin) {
                     // Send fallback message
@@ -313,7 +314,14 @@ const FlowEngine = {
                 });
                 await this.logAction(session.id, currentNode.id, nodeName, 'waiting_reply', 'Aguardando resposta');
             } else {
-                const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray' || !e.sourceHandle);
+                // Allow broader range of success handles
+                const nextEdge = outboundEdges.find(e =>
+                    !e.sourceHandle ||
+                    ['source-gray', 'source-green', 'source-true', 'source-default'].includes(e.sourceHandle)
+                );
+
+                console.log(`[FLOW ENGINE] Finding Next Edge. Outbound count: ${outboundEdges.length}. NextEdge found: ${!!nextEdge}`);
+
                 if (nextEdge) {
                     const nextSession = await prisma.flowSession.update({
                         where: { id: session.id },
