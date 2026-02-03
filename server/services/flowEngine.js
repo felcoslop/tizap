@@ -522,12 +522,20 @@ const FlowEngine = {
             if (!nextNodeId) {
                 const simpleMatch = body.match(/^\d+/) || body.match(/\d+/);
                 let choice = simpleMatch ? simpleMatch[0] : null;
+                console.log(`[FLOW DEBUG] Body: "${body}", Choice (Regex): ${choice}`);
+
                 if (!choice) {
                     const optIdx = (currentNode.data?.options || []).findIndex(opt => opt.toLowerCase() === body);
                     if (optIdx !== -1) choice = String(optIdx + 1);
+                    console.log(`[FLOW DEBUG] Choice (Text Match): ${choice}`);
                 }
                 const edge = outboundEdges.find(e => e.sourceHandle === `source-${choice}`);
-                if (edge) nextNodeId = edge.target; else isValid = false;
+                if (edge) {
+                    nextNodeId = edge.target;
+                } else {
+                    isValid = false;
+                    console.log(`[FLOW DEBUG] Invalid Choice. IsValid set to FALSE. Choice was: ${choice}`);
+                }
             }
         } else {
             const edge = outboundEdges.find(e => ['source-green', 'source-gray'].includes(e.sourceHandle)) || outboundEdges.find(e => !['source-red', 'source-invalid'].includes(e.sourceHandle));
@@ -536,19 +544,34 @@ const FlowEngine = {
 
         if (!isValid) {
             const redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+            console.log(`[FLOW DEBUG] Validation Failed. RedEdge: ${!!redEdge}, Node Type: ${currentNode.type}`);
 
             if (currentNode.type === 'optionsNode' && !redEdge) {
-                // Dynamic validation message
-                const optionsCount = (currentNode.data?.options || []).length;
-                if (optionsCount > 0) {
-                    const numbers = Array.from({ length: optionsCount }, (_, i) => i + 1);
+                // Dynamic validation: Derive valid options from EDGES or Data
+                let validNumbers = [];
+
+                // 1. Try to get from edges first (source-truth)
+                const sourceHandles = outboundEdges
+                    .map(e => e.sourceHandle)
+                    .filter(h => h && h.startsWith('source-') && !['source-red', 'source-invalid', 'source-green', 'source-gray'].includes(h));
+
+                validNumbers = sourceHandles.map(h => parseInt(h.replace('source-', ''), 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+
+                // 2. Fallback to data.options count if edges are weird/missing but options exist
+                if (validNumbers.length === 0 && currentNode.data?.options?.length > 0) {
+                    validNumbers = Array.from({ length: currentNode.data.options.length }, (_, i) => i + 1);
+                }
+
+                console.log(`[FLOW DEBUG] Dynamic Validation. Valid Numbers: ${validNumbers.join(', ')}`);
+
+                if (validNumbers.length > 0) {
                     let validMsg = "";
-                    if (numbers.length === 1) validMsg = "1";
+                    if (validNumbers.length === 1) validMsg = String(validNumbers[0]);
                     else {
-                        const last = numbers.pop();
-                        validMsg = `${numbers.join(', ')} ou ${last}`;
+                        const last = validNumbers.pop();
+                        validMsg = `${validNumbers.join(', ')} ou ${last}`;
                     }
-                    const errorMsg = `por favor, responda apenas com ${validMsg}`;
+                    const errorMsg = `Por favor, responda apenas com ${validMsg}`;
 
                     if (platform === 'evolution') {
                         await this.sendEvolutionMessage(normalizedPhone, errorMsg, null, null, userConfig);
