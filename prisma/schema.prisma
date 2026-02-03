@@ -24,6 +24,7 @@ model User {
   planType             String          @default("free") // 'free', 'paid'
   trialExpiresAt       DateTime?
   subscriptionStatus   String          @default("active") // 'active', 'expired'
+  subscriptionExpiresAt DateTime?
   lastPaymentId        String?
   
   automations          Automation[]

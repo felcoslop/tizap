@@ -23,13 +23,19 @@ passport.use(new GoogleStrategy({
         });
 
         if (!user) {
+            const trialExpiry = new Date();
+            trialExpiry.setDate(trialExpiry.getDate() + 7);
+
             user = await prisma.user.create({
                 data: {
                     email,
                     name: profile.displayName,
                     avatar: profile.photos[0]?.value,
                     isVerified: true,
-                    googleId: profile.id
+                    googleId: profile.id,
+                    planType: 'paid', // Initial state is paid with trial
+                    trialExpiresAt: trialExpiry,
+                    subscriptionStatus: 'active'
                 }
             });
             await prisma.userConfig.create({ data: { userId: user.id } });
@@ -138,6 +144,9 @@ router.post('/register', async (req, res) => {
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+        const trialExpiry = new Date();
+        trialExpiry.setDate(trialExpiry.getDate() + 7);
+
         const user = await prisma.user.create({
             data: {
                 email: normalizedEmail,
@@ -145,7 +154,10 @@ router.post('/register', async (req, res) => {
                 password: hashedPassword,
                 isVerified: true, // TEMPORARY BYPASS: Auto-verify
                 verificationToken: token,
-                verificationExpires: expiresAt
+                verificationExpires: expiresAt,
+                planType: 'paid',
+                trialExpiresAt: trialExpiry,
+                subscriptionStatus: 'active'
             }
         });
 

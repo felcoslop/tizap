@@ -71,16 +71,17 @@ export default function SubscriptionLockScreen({ user, onLogout }) {
                         className="btn-primary"
                         onClick={handleSubscribe}
                         disabled={loading}
-                        style={{ width: '100%', height: '56px', fontSize: '1.2rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                        style={{ width: '100%', height: '56px', fontSize: '1.2rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: 'none' }}
                     >
                         {loading ? 'Processando...' : <><CreditCard size={24} /> Pagar Agora</>}
                     </button>
 
                     <button
+                        className="btn-secondary"
                         onClick={onLogout}
-                        style={{ background: 'none', border: 'none', color: '#999', marginTop: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ width: '100%', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
                     >
-                        <LogOut size={16} /> Sair da conta
+                        <LogOut size={18} /> Sair da conta
                     </button>
                 </div>
             </div>

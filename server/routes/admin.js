@@ -31,6 +31,7 @@ router.get('/admin/users', async (req, res) => {
             email: u.email,
             planType: u.planType,
             subscriptionStatus: u.subscriptionStatus,
+            subscriptionExpiresAt: u.subscriptionExpiresAt,
             trialExpiresAt: u.trialExpiresAt,
             createdAt: u.createdAt,
             metrics: {
@@ -55,9 +56,17 @@ router.post('/admin/users/:id/plan', async (req, res) => {
 
         const data = {};
         if (planType) data.planType = planType;
-        if (subscriptionStatus) data.subscriptionStatus = subscriptionStatus;
+        if (subscriptionStatus) {
+            data.subscriptionStatus = subscriptionStatus;
+            // If master manually activates, set a default 30 days if not set
+            if (subscriptionStatus === 'active') {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 30);
+                data.subscriptionExpiresAt = expiry;
+            }
+        }
 
-        if (trialDays !== undefined) {
+        if (trialDays !== undefined && trialDays !== '') {
             const expiry = new Date();
             expiry.setDate(expiry.getDate() + parseInt(trialDays));
             data.trialExpiresAt = expiry;

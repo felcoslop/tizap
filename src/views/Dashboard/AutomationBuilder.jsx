@@ -655,7 +655,39 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                 <button className="btn-small" onClick={() => addNode('businessHoursNode')}><Clock size={16} /> Horário</button>
                 <button className="btn-small" onClick={() => addNode('emailNode')}><Mail size={16} /> E-mail</button>
                 <button className="btn-small" onClick={() => addNode('closeAutomationNode')} style={{ color: '#dc3545' }}><XCircle size={16} /> Fechar</button>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                    <button className="btn-small btn-secondary" onClick={() => setShowDelayModal(true)}>
+                        <Clock size={16} /> Janela de Reentrada
+                    </button>
+                </div>
             </div>
+
+            {showDelayModal && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content" style={{ maxWidth: '400px' }}>
+                        <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>Reentrada Protection</h3>
+                        <p style={{ fontSize: '12px', color: '#666', margin: '15px 0' }}>
+                            Define por quanto tempo (em minutos) um contato que já iniciou uma automação ficará impedido de iniciá-la novamente.
+                        </p>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Tempo de Reentrada (minutos):</label>
+                            <input
+                                type="number"
+                                value={automationDelay}
+                                onChange={(e) => setAutomationDelay(e.target.value)}
+                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            />
+                            <p style={{ fontSize: '11px', color: '#888', marginTop: '5px' }}>
+                                Sugestão: 1440 para 24 horas.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button className="btn-secondary" onClick={() => setShowDelayModal(false)}>Cancelar</button>
+                            <button className="btn-primary" onClick={saveDelayConfig}>Salvar Configuração</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div style={{ flex: 1, position: 'relative' }}>
                 <ReactFlow
                     nodes={nodesWithHandlers}
@@ -674,7 +706,7 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     );
 }
 
-export function AutomationBuilder({ user, addToast }) {
+export function AutomationBuilder({ user, addToast, config, setConfig }) {
     const [automations, setAutomations] = useState([]);
     const [editingAutomation, setEditingAutomation] = useState(null);
     const [loading, setLoading] = useState(true);

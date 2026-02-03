@@ -28,9 +28,12 @@ export const checkSubscription = async (req, res, next) => {
 
         // 3. PAID Tier Check
         if (user.planType === 'paid') {
-            // Check Subscription Status
+            // Check Subscription Status & Expiry
             if (user.subscriptionStatus === 'active') {
-                return next();
+                if (!user.subscriptionExpiresAt || new Date() < new Date(user.subscriptionExpiresAt)) {
+                    return next();
+                }
+                // If expired, we could automatically update the status here too
             }
 
             // Check Trial

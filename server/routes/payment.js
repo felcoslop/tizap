@@ -64,19 +64,33 @@ router.post('/payment/webhook', async (req, res) => {
         const { type, data } = req.body;
 
         if (type === 'payment') {
-            // Here we would ideally verify the payment status with MP API using data.id
-            // For simplicity/MVP, if we trust the webhook (validation needed in prod):
-            // We need to fetch the payment to get external_reference (userId)
-
             const client = getClient();
             if (client) {
-                // Logic to fetch payment details would go here.
-                // For now, we assume we receive enough info or we'd implement the lookup.
-                // Since I can't easily implement the full lookup without the SDK types/docs handy for response structure,
-                // I will mock this part or just log it.
-                // REAL IMPLEMENTATION:
-                // const payment = await new Payment(client).get({ id: data.id });
-                // if (payment.status === 'approved') { update user... }
+                const preference = new Preference(client);
+                // Fetch payment details to get external_reference
+                const paymentRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+                    headers: { 'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` }
+                });
+
+                if (paymentRes.ok) {
+                    const payment = await paymentRes.json();
+                    if (payment.status === 'approved' && payment.external_reference) {
+                        const userId = parseInt(payment.external_reference);
+                        const expiry = new Date();
+                        expiry.setDate(expiry.getDate() + 30); // 30 days subscription
+
+                        await prisma.user.update({
+                            where: { id: userId },
+                            data: {
+                                planType: 'paid',
+                                subscriptionStatus: 'active',
+                                subscriptionExpiresAt: expiry,
+                                lastPaymentId: String(data.id)
+                            }
+                        });
+                        console.log(`[PAYMENT] User ${userId} subscription activated for 30 days.`);
+                    }
+                }
             }
         }
 
