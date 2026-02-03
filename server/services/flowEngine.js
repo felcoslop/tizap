@@ -45,6 +45,24 @@ const FlowEngine = {
 
             if (!startNodeId) throw new Error('Nó inicial não encontrado');
 
+            // Force cleanup of any existing ACTIVE session for this contact to prevent "double message" need failures
+            // If we are starting a flow here, we mean business and want to restart.
+            await prisma.flowSession.updateMany({
+                where: {
+                    contactPhone,
+                    status: { in: ['active', 'waiting_reply'] },
+                    // Make sure we only close sessions for relevant context if needed, but here we want to clear the path for the contact
+                    // OR: matches flowId or automationId logic?
+                    // Actually, if a contact is starting a NEW flow, they shouldn't be in another one.
+                    OR: [
+                        { flow: { userId } },
+                        { automation: { userId } }
+                    ]
+                },
+                data: { status: 'expired' }
+            });
+            console.log(`[FLOW ENGINE] Cleared existing sessions for ${contactPhone} before starting new flow.`);
+
             // Create session
             const session = await prisma.flowSession.create({
                 data: {
