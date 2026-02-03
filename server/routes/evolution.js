@@ -1002,6 +1002,27 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             console.log(`[AUTOMATION DEBUG] No waiting_reply session found for ${contactPhone}.`);
         }
 
+        // PROTECTION: Check if there is a RUNNING session (status='active') that is NOT waiting for reply.
+        // This happens during typing delays or multi-message sequences. We should IGNORE new triggers here to avoid restarting the flow.
+        const runningSession = await prisma.flowSession.findFirst({
+            where: {
+                contactPhone: { in: possibleNumbers },
+                status: 'active',
+                OR: [{ flow: { userId } }, { automation: { userId } }]
+            }
+        });
+
+        if (runningSession) {
+            const sessionAge = Date.now() - new Date(runningSession.updatedAt).getTime();
+            // If it's active and seemingly stuck (> 5 minutes), we let it fall through to restart.
+            // But if it's recent (< 5 mins), we assume it's typing/processing.
+            if (sessionAge < 5 * 60 * 1000) {
+                console.log(`[AUTOMATION DEBUG] Found RUNNING session ${runningSession.id} (Active, not waiting). Ignoring new trigger to prevent interruption.`);
+                return;
+            }
+            console.log(`[AUTOMATION DEBUG] Found stuck active session ${runningSession.id} (> 5 mins). Allowing restart.`);
+        }
+
         // PRIORITY 2: If no keyword matched, check message automations
         // Prevent loop: Do NOT trigger "global message" automation if it's from me
         if (!isFromMe) {
