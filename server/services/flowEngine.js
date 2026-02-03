@@ -549,38 +549,30 @@ if (hasOptions || currentNode.data?.waitForReply) {
         console.log(`[FLOW DEBUG] Validation Failed. RedEdge: ${!!redEdge}, Node Type: ${currentNode.type}`);
 
         if (currentNode.type === 'optionsNode' && !redEdge) {
-            // Dynamic validation: Derive valid options from EDGES or Data
-            let validNumbers = [];
+            // Dynamic validation: STRICTLY use the options array length defined by the user
+            const definedOptions = currentNode.data?.options || [];
+            const optionsCount = definedOptions.length;
 
-            // 1. Try to get from edges first (source-truth)
-            const sourceHandles = outboundEdges
-                .map(e => e.sourceHandle)
-                .filter(h => h && h.startsWith('source-') && !['source-red', 'source-invalid', 'source-green', 'source-gray'].includes(h));
+            console.log(`[FLOW DEBUG] Dynamic Validation. Defined Options: ${optionsCount} (${definedOptions.join(', ')})`);
 
-            validNumbers = sourceHandles.map(h => parseInt(h.replace('source-', ''), 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
-
-            // 2. Fallback to data.options count if edges are weird/missing but options exist
-            if (validNumbers.length === 0 && currentNode.data?.options?.length > 0) {
-                validNumbers = Array.from({ length: currentNode.data.options.length }, (_, i) => i + 1);
-            }
-
-            console.log(`[FLOW DEBUG] Dynamic Validation. Valid Numbers: ${validNumbers.join(', ')}`);
-
-            if (validNumbers.length > 0) {
+            if (optionsCount > 0) {
+                const numbers = Array.from({ length: optionsCount }, (_, i) => i + 1);
                 let validMsg = "";
-                if (validNumbers.length === 1) validMsg = String(validNumbers[0]);
+                if (numbers.length === 1) validMsg = "1";
                 else {
-                    const last = validNumbers.pop();
-                    validMsg = `${validNumbers.join(', ')} ou ${last}`;
+                    const last = numbers.pop();
+                    validMsg = `${numbers.join(', ')} ou ${last}`; // e.g. "1, 2 ou 3"
                 }
                 const errorMsg = `Por favor, responda apenas com ${validMsg}`;
+                console.log(`[FLOW DEBUG] Validation Message Generated: "${errorMsg}"`);
 
                 if (platform === 'evolution') {
                     await this.sendEvolutionMessage(normalizedPhone, errorMsg, null, null, userConfig);
                 } else {
                     await this.sendWhatsAppText(normalizedPhone, errorMsg, userConfig);
                 }
-                await this.logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Validação: ${messageBody}`);
+
+                await this.logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Validação enviada: ${errorMsg}`);
                 return true; // Keep waiting for reply on same node
             }
         }
