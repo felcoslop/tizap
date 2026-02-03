@@ -1002,25 +1002,35 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             console.log(`[AUTOMATION DEBUG] No waiting_reply session found for ${contactPhone}.`);
         }
 
-        // PROTECTION: Check if there is a RUNNING session (status='active') that is NOT waiting for reply.
-        // This happens during typing delays or multi-message sequences. We should IGNORE new triggers here to avoid restarting the flow.
-        const runningSession = await prisma.flowSession.findFirst({
+        // PROTECTION: Check if there is a RUNNING ('active') or RECENTLY COMPLETED ('completed') session.
+        // - Active: Protects during typing/logic (5 mins).
+        // - Completed: Protects against restart loops after flow ends (24 hours).
+        const protectionSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
-                status: 'active',
+                status: { in: ['active', 'completed'] },
                 OR: [{ flow: { userId } }, { automation: { userId } }]
             }
         });
 
-        if (runningSession) {
-            const sessionAge = Date.now() - new Date(runningSession.updatedAt).getTime();
-            // If it's active and seemingly stuck (> 5 minutes), we let it fall through to restart.
-            // But if it's recent (< 5 mins), we assume it's typing/processing.
-            if (sessionAge < 5 * 60 * 1000) {
-                console.log(`[AUTOMATION DEBUG] Found RUNNING session ${runningSession.id} (Active, not waiting). Ignoring new trigger to prevent interruption.`);
-                return;
+        if (protectionSession) {
+            const sessionAge = Date.now() - new Date(protectionSession.updatedAt).getTime();
+
+            if (protectionSession.status === 'active') {
+                // Active session protection (Typing/Logic) - 5 minutes
+                if (sessionAge < 5 * 60 * 1000) {
+                    console.log(`[AUTOMATION DEBUG] Found RUNNING session ${protectionSession.id} (Active). Ignoring trigger (protection 5m).`);
+                    return;
+                }
+                console.log(`[AUTOMATION DEBUG] Found stuck active session ${protectionSession.id} (> 5 mins). Allowing restart.`);
+            } else if (protectionSession.status === 'completed') {
+                // Completed session protection (Anti-Loop) - 24 hours
+                if (sessionAge < 24 * 60 * 60 * 1000) {
+                    console.log(`[AUTOMATION DEBUG] Session ${protectionSession.id} completed recently (< 24h). Ignoring trigger to prevent loop.`);
+                    return;
+                }
+                console.log(`[AUTOMATION DEBUG] Completed session ${protectionSession.id} is old (> 24h). Allowing restart.`);
             }
-            console.log(`[AUTOMATION DEBUG] Found stuck active session ${runningSession.id} (> 5 mins). Allowing restart.`);
         }
 
         // PRIORITY 2: If no keyword matched, check message automations
