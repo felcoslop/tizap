@@ -611,6 +611,70 @@ export function Dashboard({
         } catch (err) { addToast('Erro ao iniciar.', 'error'); }
     };
 
+    const controlDispatch = async (action, dispatchId = null) => {
+        const id = dispatchId || activeDispatch?.id;
+        if (!id) return;
+        try {
+            const res = await fetch(`/api/dispatch/${id}/control`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({ action })
+            });
+            if (res.ok) {
+                addToast(`Ação ${action} realizada.`, 'info');
+                fetchDispatches();
+            } else {
+                const data = await res.json();
+                addToast(data.error || 'Erro ao controlar.', 'error');
+            }
+        } catch (err) { addToast('Erro de conexão.', 'error'); }
+    };
+
+    const retryFailed = async (dispatchId) => {
+        try {
+            const res = await fetch(`/api/dispatch/${dispatchId}/retry`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                addToast(data.message, 'success');
+                fetchDispatches();
+                setActiveTab('disparos');
+            } else {
+                addToast(data.error || 'Erro ao reintentar.', 'error');
+            }
+        } catch (err) { addToast('Erro de conexão.', 'error'); }
+    };
+
+    const saveConfig = async () => {
+        try {
+            const res = await fetch(`/api/user-config/${user.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({ ...tempConfig, templateName, mapping })
+            });
+            if (res.ok) {
+                setConfig({ ...tempConfig, templateName, mapping });
+                setLastSyncConfig({ ...tempConfig, templateName, mapping });
+                setIsEditing(false);
+                addToast('Configurações salvas!', 'success');
+                await fetchUserData();
+            } else {
+                const errorData = await res.json();
+                addToast(errorData.error || 'Erro ao salvar.', 'error');
+            }
+        } catch (err) {
+            addToast('Erro de conexão ao salvar.', 'error');
+        }
+    };
+
     return (
         <div className="dashboard-container">
             <aside className="sidebar">
@@ -701,6 +765,52 @@ export function Dashboard({
                                 renderTemplatePreview={renderTemplatePreview}
                                 getDateLogic={getDateLogic}
                                 handleFileUpload={handleFileUpload}
+                            />
+                        )}
+
+                        {activeTab === 'recebidas' && (
+                            <ReceivedTab
+                                user={user}
+                                config={config}
+                                receivedMessages={receivedMessages}
+                                setReceivedMessages={setReceivedMessages}
+                                activeContact={activeContact}
+                                setActiveContact={setActiveContact}
+                                fetchMessages={fetchMessages}
+                                isRefreshing={isRefreshing}
+                                addToast={addToast}
+                                selectedContacts={selectedContacts}
+                                setSelectedContacts={setSelectedContacts}
+                                isDeleting={isDeleting}
+                                setIsDeleting={setIsDeleting}
+                                setShowDeleteConfirm={setShowDeleteConfirm}
+                                setShowProfileModal={setShowProfileModal}
+                            />
+                        )}
+
+                        {activeTab === 'recebidas-evolution' && (
+                            <ReceivedEvolutionTab
+                                user={user}
+                                evolutionMessages={evolutionMessages}
+                                fetchEvolutionMessages={fetchEvolutionMessages}
+                                addToast={addToast}
+                            />
+                        )}
+
+                        {activeTab === 'email' && <EmailTab user={user} addToast={addToast} />}
+
+                        {activeTab === 'ajustes' && (
+                            <SettingsTab
+                                user={user}
+                                tempConfig={tempConfig}
+                                setTempConfig={setTempConfig}
+                                isEditing={isEditing}
+                                setIsEditing={setIsEditing}
+                                saveConfig={saveConfig}
+                                generateWebhook={generateWebhook}
+                                showToken={showToken}
+                                setShowToken={setShowToken}
+                                addToast={addToast}
                             />
                         )}
 
