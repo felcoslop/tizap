@@ -737,8 +737,8 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 // If connected, we trigger immediately if needed
                 await processEventAutomations(userId, 'connection_update', `Status: ${state}`);
             } else {
-                // Connection LOST - wait 2 minutes as requested to avoid instability triggers
-                console.log(`[EVOLUTION CONNECT] Connection lost for user ${userId}. Waiting 2 minutes before triggering automation...`);
+                // Connection LOST - wait 30 minutes as requested to avoid instability triggers
+                console.log(`[EVOLUTION CONNECT] Connection lost for user ${userId}. Waiting 30 minutes before triggering automation...`);
 
                 const timeout = setTimeout(async () => {
                     disconnectionTimeouts.delete(userId);
@@ -746,12 +746,12 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                     // Verify if connection is still down before triggering
                     const currentConfig = await prisma.userConfig.findUnique({ where: { userId } });
                     if (currentConfig && !currentConfig.evolutionConnected) {
-                        console.log(`[EVOLUTION CONNECT] Connection still down after 2 minutes for user ${userId}. Triggering automation.`);
+                        console.log(`[EVOLUTION CONNECT] Connection still down after 30 minutes for user ${userId}. Triggering automation.`);
                         await processEventAutomations(userId, 'connection_update', `Status: Offline (Persistent)`);
                     } else {
-                        console.log(`[EVOLUTION CONNECT] Connection restored for user ${userId} within 2 minute window. Skipping automation.`);
+                        console.log(`[EVOLUTION CONNECT] Connection restored for user ${userId} within 30 minute window. Skipping automation.`);
                     }
-                }, 120000); // 2 minutes
+                }, 1800000); // 30 minutes
 
                 disconnectionTimeouts.set(userId, timeout);
             }
