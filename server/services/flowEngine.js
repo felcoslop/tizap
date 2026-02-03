@@ -305,9 +305,13 @@ const FlowEngine = {
             }
 
             const outboundEdges = edges.filter(e => String(e.source) === String(currentNode.id));
-            const hasOptions = outboundEdges.some(e => e.sourceHandle?.startsWith('source-') && e.sourceHandle !== 'source-gray');
 
-            if (hasOptions || currentNode.data?.waitForReply) {
+            // Fix: Logic nodes (Business Hours, Condition) use 'source-' handles but are NOT interactive.
+            // Only strictly interactive nodes should wait for reply.
+            const isInteractiveNode = ['optionsNode', 'buttonNode', 'listNode'].includes(currentNode.type);
+            const explicitWait = currentNode.data?.waitForReply;
+
+            if (isInteractiveNode || explicitWait) {
                 await prisma.flowSession.update({
                     where: { id: session.id },
                     data: { status: 'waiting_reply' }
