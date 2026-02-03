@@ -440,7 +440,7 @@ function TemplateNode({ data, id, selected }) {
 
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <input
                             type="text"
                             value={templateName}
@@ -548,7 +548,7 @@ function ImageNode({ data, id, selected }) {
 
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <div className="upload-section">
                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" multiple style={{ display: 'none' }} />
                             <button className="btn-upload" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
@@ -655,7 +655,7 @@ function EmailNode({ data, id, selected }) {
 
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px', display: 'block' }}>Template:</label>
                         <select
                             value={data.templateId || ''}

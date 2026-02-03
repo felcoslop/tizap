@@ -176,7 +176,7 @@ function MessageNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <textarea value={tempLabel} onChange={(e) => setTempLabel(e.target.value)} rows={4} />
                         <div className="edit-actions">
                             <label><input type="checkbox" checked={data.waitForReply} onChange={(e) => data.onChange(id, { waitForReply: e.target.checked })} /> Aguardar resposta</label>
@@ -214,7 +214,7 @@ function OptionsNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <textarea value={tempLabel} onChange={(e) => setTempLabel(e.target.value)} rows={2} />
                         {options.map((opt, i) => (
                             <div key={i} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
@@ -317,7 +317,7 @@ function ImageNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <div className="upload-section">
                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" multiple style={{ display: 'none' }} />
                             <button className="btn-upload" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
@@ -391,7 +391,7 @@ function AlertNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" />
                         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Texto" />
                         <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
@@ -421,7 +421,7 @@ function BusinessHoursNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
                         <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
                         <textarea value={fallback} onChange={(e) => setFallback(e.target.value)} rows={2} placeholder="Fora do horário" />
@@ -491,7 +491,7 @@ function EmailNode({ data, id, selected }) {
             </div>
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <label>Destinatário:</label>
                         <input type="text" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@exemplo.com" />
 
@@ -563,6 +563,13 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token 
 
     const nodesWithHandlers = useMemo(() => nodes.map(n => ({ ...n, data: { ...n.data, onChange: handleNodeDataChange, onDelete: handleDeleteNode, userId, token } })), [nodes, userId, token]);
 
+    const onConnect = useCallback((params) => {
+        setEdges((eds) => {
+            const filteredEdges = eds.filter(e => !(e.source === params.source && e.sourceHandle === params.sourceHandle));
+            return addEdge({ ...params, animated: true, markerEnd: { type: MarkerType.ArrowClosed } }, filteredEdges);
+        });
+    }, []);
+
     return (
         <div className="flow-editor-container" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div className="editor-header" style={{ padding: '15px 25px', background: 'white', borderBottom: '1px solid #ddd', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 10 }}>
@@ -590,7 +597,16 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token 
                 <button className="btn-small" onClick={() => addNode('closeAutomationNode')} style={{ color: '#dc3545' }}><XCircle size={16} /> Fechar</button>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
-                <ReactFlow nodes={nodesWithHandlers} edges={edges} onNodesChange={(c) => setNodes(n => applyNodeChanges(c, n))} onEdgesChange={(c) => setEdges(e => applyEdgeChanges(c, e))} onConnect={(p) => setEdges(e => addEdge({ ...p, animated: true, markerEnd: { type: MarkerType.ArrowClosed } }, e))} nodeTypes={nodeTypes} fitView>
+                <ReactFlow
+                    nodes={nodesWithHandlers}
+                    edges={edges}
+                    onNodesChange={(c) => setNodes(n => applyNodeChanges(c, n))}
+                    onEdgesChange={(c) => setEdges(e => applyEdgeChanges(c, e))}
+                    onConnect={onConnect}
+                    deleteKeyCode={['Delete', 'BackSpace']}
+                    nodeTypes={nodeTypes}
+                    fitView
+                >
                     <Background color="#aaa" gap={20} /><Controls />
                 </ReactFlow>
             </div>
