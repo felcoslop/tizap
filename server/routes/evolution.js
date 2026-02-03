@@ -880,10 +880,15 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                     broadcastMessage('evolution:message', savedMsg, userId);
                 }
 
-                // Process automations ONLY for incoming messages
-                if (!isFromMe) {
-                    await processAutomations(userId, contactPhone, messageBody);
-                    await processEventAutomations(userId, 'messages_upsert', messageBody, contactPhone);
+                // Process automations
+                // Allow triggering from ME if it's not a bot-generated message (starts with BAE5)
+                const isBotMessage = isFromMe && key.id?.startsWith('BAE5');
+
+                if (!isFromMe || (isFromMe && !isBotMessage)) {
+                    await processAutomations(userId, contactPhone, messageBody, isFromMe);
+                    if (!isFromMe) {
+                        await processEventAutomations(userId, 'messages_upsert', messageBody, contactPhone);
+                    }
                 }
             }
         }
@@ -897,7 +902,7 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 });
 
 // Process automations when a new message arrives
-async function processAutomations(userId, contactPhone, messageBody) {
+async function processAutomations(userId, contactPhone, messageBody, isFromMe = false) {
     try {
         const FlowEngine = (await import('../services/flowEngine.js')).default;
 
@@ -942,6 +947,11 @@ async function processAutomations(userId, contactPhone, messageBody) {
                 });
                 // Continue to create new session below
             } else {
+                // If message is from ME, we probably want to INTERRUPT or just ignore?
+                // Usually we want to reply to the bot.
+                // If I am typing to the bot, I am strictly not the client.
+                // But if I am testing... I want it to process.
+
                 // Session is valid, process the reply
                 const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
                 if (sessionProcessed) {
@@ -952,6 +962,7 @@ async function processAutomations(userId, contactPhone, messageBody) {
         }
 
         // Check if contact has any active session (not just waiting_reply)
+        // This catches sessions that might be stuck in 'active' state (e.g. server crash during execution)
         const anyActiveSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
@@ -964,8 +975,20 @@ async function processAutomations(userId, contactPhone, messageBody) {
         });
 
         if (anyActiveSession) {
-            console.log(`[AUTOMATION] Contact ${contactPhone} already in an active session, skipping new triggers`);
-            return;
+            const sessionAge = Date.now() - new Date(anyActiveSession.updatedAt).getTime();
+            // If active/waiting session is older than 24h (or 1h for 'active' potentially stuck), expire it
+            // Using 24h to be safe and consistent with waiting_reply window
+            if (sessionAge > 24 * 60 * 60 * 1000) {
+                console.log(`[AUTOMATION] Found stuck/expired session ${anyActiveSession.id} (${Math.round(sessionAge / 3600000)}h old). Expiring it.`);
+                await prisma.flowSession.update({
+                    where: { id: anyActiveSession.id },
+                    data: { status: 'expired' }
+                });
+                // Continue to start new flow
+            } else {
+                console.log(`[AUTOMATION] Contact ${contactPhone} already in an active session (ID: ${anyActiveSession.id}), skipping new triggers`);
+                return;
+            }
         }
 
         // Fetch active automations
@@ -994,11 +1017,14 @@ async function processAutomations(userId, contactPhone, messageBody) {
         }
 
         // PRIORITY 2: If no keyword matched, check message automations
-        for (const automation of messageAutomations) {
-            console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
-            await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
-            console.log(`[AUTOMATION] Triggered message automation ${automation.id} for ${contactPhone}`);
-            return; // Only trigger one
+        // Prevent loop: Do NOT trigger "global message" automation if it's from me
+        if (!isFromMe) {
+            for (const automation of messageAutomations) {
+                console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
+                await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
+                console.log(`[AUTOMATION] Triggered message automation ${automation.id} for ${contactPhone}`);
+                return; // Only trigger one
+            }
         }
 
     } catch (err) {

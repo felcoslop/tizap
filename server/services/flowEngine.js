@@ -146,9 +146,18 @@ const FlowEngine = {
                 await this.logAction(session.id, currentNode.id, nodeName, 'sent_message', `Enviada(s) ${images.length} imagem(ns)`);
                 await this.saveHistory(session.contactPhone, `[${platform.toUpperCase()}] Enviou ${images.length} imagem(ns)`, true, userConfig.phoneId, platform, userConfig.userId);
             } else if (currentNode.type === 'optionsNode') {
-                const messageText = currentNode.data.label || currentNode.data.message || 'Escolha uma opção:';
+                const messageText = currentNode.data.label || currentNode.data.title || 'Escolha uma opção';
                 const options = currentNode.data.options || [];
                 let fullSentText = messageText;
+
+                // Typing Delay Logic
+                const isAutomation = !!session.automationId;
+                const typingTime = currentNode.data.typingTime !== undefined ? Number(currentNode.data.typingTime) : (isAutomation ? 5 : 0);
+
+                if (typingTime > 0) {
+                    if (platform === 'evolution') await this.sendEvolutionPresence(session.contactPhone, 'composing', userConfig);
+                    await sleep(typingTime * 1000);
+                }
 
                 if (platform === 'evolution') {
                     const optionsText = options.map((opt, i) => `*${i + 1}.* ${opt}`).join('\n');
@@ -168,6 +177,15 @@ const FlowEngine = {
             } else if (currentNode.type === 'messageNode' || !currentNode.type) {
                 const messageText = currentNode.data.label || currentNode.data.message || '';
                 if (messageText) {
+                    // Typing Delay Logic
+                    const isAutomation = !!session.automationId;
+                    const typingTime = currentNode.data.typingTime !== undefined ? Number(currentNode.data.typingTime) : (isAutomation ? 5 : 0);
+
+                    if (typingTime > 0) {
+                        if (platform === 'evolution') await this.sendEvolutionPresence(session.contactPhone, 'composing', userConfig);
+                        await sleep(typingTime * 1000);
+                    }
+
                     if (platform === 'evolution') {
                         await this.sendEvolutionMessage(session.contactPhone, messageText, null, null, userConfig);
                     } else {
@@ -315,6 +333,25 @@ const FlowEngine = {
     },
 
     // Evolution Send Helper
+    async sendEvolutionPresence(phone, status, config) {
+        try {
+            const baseUrl = process.env.EVOLUTION_API_URL || config.evolutionApiUrl;
+            const apiKey = process.env.EVOLUTION_API_KEY || config.evolutionApiKey;
+            const instance = config.evolutionInstanceName;
+
+            let normalizedPhone = String(phone).replace(/\D/g, '');
+            if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
+            const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+
+            // status: 'composing' | 'recording' | 'available'
+            await fetch(`${baseUrl}/chat/sendPresence/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+                body: JSON.stringify({ number: remoteJid, presence: status, delay: 0 })
+            });
+        } catch (e) { console.error('[EVOLUTION PRESENCE ERROR]', e); }
+    },
+
     async sendEvolutionMessage(phone, body, mediaUrl, mediaType, config) {
         try {
             const baseUrl = process.env.EVOLUTION_API_URL || config.evolutionApiUrl;

@@ -163,7 +163,8 @@ const NODE_STYLES = `
 function MessageNode({ data, id, selected }) {
     const [isEditing, setIsEditing] = useState(false);
     const [tempLabel, setTempLabel] = useState(data.label || '');
-    const handleSave = () => { data.onChange(id, { label: tempLabel }); setIsEditing(false); };
+    const [typingTime, setTypingTime] = useState(data.typingTime !== undefined ? data.typingTime : 5); // Default 5s
+    const handleSave = () => { data.onChange(id, { label: tempLabel, typingTime }); setIsEditing(false); };
     return (
         <div className={`flow-node message-node ${selected ? 'selected' : ''}`}>
             <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
@@ -178,6 +179,16 @@ function MessageNode({ data, id, selected }) {
                 {isEditing ? (
                     <div className="edit-mode nodrag">
                         <textarea value={tempLabel} onChange={(e) => setTempLabel(e.target.value)} rows={4} />
+                        <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '4px' }}>Tempo de Digitação (segundos):</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={typingTime}
+                                onChange={(e) => setTypingTime(e.target.value)}
+                                style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
+                            />
+                        </div>
                         <div className="edit-actions">
                             <label><input type="checkbox" checked={data.waitForReply} onChange={(e) => data.onChange(id, { waitForReply: e.target.checked })} /> Aguardar resposta</label>
                             <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
@@ -201,7 +212,8 @@ function OptionsNode({ data, id, selected }) {
     const [isEditing, setIsEditing] = useState(false);
     const [tempLabel, setTempLabel] = useState(data.label || '');
     const [options, setOptions] = useState(data.options || ['Sim', 'Não']);
-    const handleSave = () => { data.onChange(id, { label: tempLabel, options, validateSelection: data.validateSelection, waitForReply: true }); setIsEditing(false); };
+    const [typingTime, setTypingTime] = useState(data.typingTime !== undefined ? data.typingTime : 5); // Default 5s
+    const handleSave = () => { data.onChange(id, { label: tempLabel, options, validateSelection: data.validateSelection, waitForReply: true, typingTime }); setIsEditing(false); };
     return (
         <div className={`flow-node options-node ${selected ? 'selected' : ''}`}>
             <Handle type="target" position={Position.Top} id="target" style={{ background: '#555', width: 14, height: 14, border: '2px solid #333' }} />
@@ -216,6 +228,16 @@ function OptionsNode({ data, id, selected }) {
                 {isEditing ? (
                     <div className="edit-mode nodrag">
                         <textarea value={tempLabel} onChange={(e) => setTempLabel(e.target.value)} rows={2} />
+                        <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '4px' }}>Tempo de Digitação (s):</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={typingTime}
+                                onChange={(e) => setTypingTime(e.target.value)}
+                                style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
+                            />
+                        </div>
                         {options.map((opt, i) => (
                             <div key={i} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
                                 <input type="text" value={opt} onChange={(e) => { const n = [...options]; n[i] = e.target.value; setOptions(n); }} />
