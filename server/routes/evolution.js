@@ -907,6 +907,7 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
         const FlowEngine = (await import('../services/flowEngine.js')).default;
 
         // Normalize phone for consistent lookup
+        console.log(`[AUTOMATION DEBUG] Processing automations for ${contactPhone} (User: ${userId}) - IsFromMe: ${isFromMe} - Body: "${messageBody}"`);
         let normalizedPhone = String(contactPhone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
 
@@ -992,11 +993,13 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                 // Session is valid, process the reply
                 const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
                 if (sessionProcessed) {
-                    console.log(`[AUTOMATION] Message handled by active session for ${contactPhone}`);
+                    console.log(`[AUTOMATION DEBUG] Message handled by active session ${existingSession.id} for ${contactPhone}. Stopping global triggers.`);
                     return; // Stop here
                 }
-                // If NOT processed, continue...
+                console.log(`[AUTOMATION DEBUG] active session ${existingSession.id} did NOT handle message (returned false). Falling through to global triggers.`);
             }
+        } else {
+            console.log(`[AUTOMATION DEBUG] No waiting_reply session found for ${contactPhone}.`);
         }
 
         // PRIORITY 2: If no keyword matched, check message automations

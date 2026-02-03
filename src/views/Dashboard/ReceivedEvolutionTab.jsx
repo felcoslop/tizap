@@ -343,7 +343,7 @@ export function ReceivedEvolutionTab({
                                         </div>
                                         <div style={{ fontSize: '0.75rem', color: '#999', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <Clock size={10} />
-                                            {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(lastMsg.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
                                         </div>
                                     </div>
                                     {hasUnread && <span className="unread-dot" style={{ backgroundColor: '#00a276', width: '8px', height: '8px', borderRadius: '50%' }}></span>}
