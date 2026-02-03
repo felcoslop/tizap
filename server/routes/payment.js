@@ -25,6 +25,9 @@ router.post('/payment/preference', authenticateToken, async (req, res) => {
         const expiryDate = new Date();
         expiryDate.setMinutes(expiryDate.getMinutes() + 30); // 30 min expiration for link
 
+        const APP_URL = process.env.URL_NGROK || process.env.FRONTEND_URL || 'http://localhost:5173';
+        const API_URL = process.env.URL_NGROK || process.env.BACKEND_URL || 'https://seu-backend.com';
+
         const body = {
             items: [
                 {
@@ -39,22 +42,24 @@ router.post('/payment/preference', authenticateToken, async (req, res) => {
                 email: user.email
             },
             back_urls: {
-                success: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?status=success`,
-                failure: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/locked?status=failure`,
-                pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/locked?status=pending`
+                success: `${APP_URL}/dashboard?status=success`,
+                failure: `${APP_URL}/dashboard?status=failure`,
+                pending: `${APP_URL}/dashboard?status=pending`
             },
             auto_return: 'approved',
-            notification_url: `${process.env.BACKEND_URL || 'https://seu-backend.com'}/api/payment/webhook`,
+            notification_url: `${API_URL}/api/payment/webhook`,
             external_reference: String(user.id),
             date_of_expiration: expiryDate.toISOString()
         };
 
         const result = await preference.create({ body });
+        console.log('[PAYMENT] Preference created:', result.id);
         res.json({ id: result.id, init_point: result.init_point });
 
     } catch (err) {
         console.error('MP Create Preference Error:', err);
-        res.status(500).json({ error: 'Erro ao criar pagamento' });
+        const errorMessage = err.message || (err.errors && JSON.stringify(err.errors)) || 'Erro ao criar pagamento';
+        res.status(500).json({ error: errorMessage });
     }
 });
 

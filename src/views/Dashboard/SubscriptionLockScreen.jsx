@@ -12,14 +12,14 @@ export default function SubscriptionLockScreen({ user, onLogout }) {
                 headers: { 'Authorization': `Bearer ${user.token}` }
             });
             const data = await res.json();
-            if (data.init_point) {
+            if (res.ok && data.init_point) {
                 window.location.href = data.init_point;
             } else {
-                alert('Erro ao iniciar pagamento.');
+                alert(`Erro ao iniciar pagamento: ${data.error || 'Erro desconhecido'}`);
             }
         } catch (err) {
             console.error(err);
-            alert('Erro ao conectar com o serviço de pagamento.');
+            alert(`Erro de conexão: ${err.message}`);
         } finally {
             setLoading(false);
         }
