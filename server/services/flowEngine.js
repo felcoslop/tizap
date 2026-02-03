@@ -636,18 +636,28 @@ const FlowEngine = {
 
     // Helper to get current time in GMT-3
     getNowGMT3() {
-        const now = new Date();
-        // UTC to GMT-3: subtract 3 hours
-        return new Date(now.getTime() - (3 * 60 * 60 * 1000));
+        return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
     },
 
     isWithinHours(start, end) {
-        const now = this.getNowGMT3();
+        // Robust check using string parsing of Sao_Paulo time
+        const now = new Date();
+        const spTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+        const currentHour = spTime.getHours();
+        const currentMinute = spTime.getMinutes();
+
         const [sh, sm] = start.split(':').map(Number);
         const [eh, em] = end.split(':').map(Number);
-        const s = new Date(now); s.setHours(sh, sm, 0, 0);
-        const e = new Date(now); e.setHours(eh, em, 0, 0);
-        return now >= s && now <= e;
+
+        const currentTotal = currentHour * 60 + currentMinute;
+        const startTotal = sh * 60 + sm;
+        const endTotal = eh * 60 + em;
+
+        const isOpen = currentTotal >= startTotal && currentTotal <= endTotal;
+        console.log(`[FLOW ENGINE] Timezone Check (Sao_Paulo): Current ${currentHour}:${currentMinute} (${currentTotal}). Range ${shortTime(sh, sm)}-${shortTime(eh, em)}. OPEN: ${isOpen}`);
+        return isOpen;
+
+        function shortTime(h, m) { return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
     },
 
     getNextStartTime(start) {
