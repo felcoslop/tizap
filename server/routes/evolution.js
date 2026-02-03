@@ -999,34 +999,6 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             }
         }
 
-        // Check if contact has any active session (e.g. status='active')
-        const anyActiveSession = await prisma.flowSession.findFirst({
-            where: {
-                contactPhone: { in: possibleNumbers },
-                status: 'active', // Only check 'active' here
-                OR: [
-                    { flow: { userId } },
-                    { automation: { userId } }
-                ]
-            }
-        });
-
-        if (anyActiveSession) {
-            const sessionAge = Date.now() - new Date(anyActiveSession.updatedAt).getTime();
-            // stuck 'active' sessions should timeout quickly. 2 minutes seems reliable for "stuck"
-            if (sessionAge > 2 * 60 * 1000) {
-                console.log(`[AUTOMATION] Found stuck 'active' session ${anyActiveSession.id} (${Math.round(sessionAge / 1000)}s old). Expiring it.`);
-                await prisma.flowSession.update({
-                    where: { id: anyActiveSession.id },
-                    data: { status: 'expired' }
-                });
-                // Continue to start new flow
-            } else {
-                console.log(`[AUTOMATION] Contact ${contactPhone} currently processing (ID: ${anyActiveSession.id}), skipping new global triggers`);
-                return;
-            }
-        }
-
         // PRIORITY 2: If no keyword matched, check message automations
         // Prevent loop: Do NOT trigger "global message" automation if it's from me
         if (!isFromMe) {
