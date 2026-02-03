@@ -266,7 +266,7 @@ function MessageNode({ data, id, selected }) {
 
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <textarea
                             value={tempLabel}
                             onChange={(e) => setTempLabel(e.target.value)}
@@ -361,7 +361,7 @@ function OptionsNode({ data, id, selected }) {
 
             <div className="node-content">
                 {isEditing ? (
-                    <div className="edit-mode">
+                    <div className="edit-mode nodrag">
                         <textarea
                             value={tempLabel}
                             onChange={(e) => setTempLabel(e.target.value)}
