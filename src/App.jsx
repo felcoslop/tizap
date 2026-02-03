@@ -139,6 +139,7 @@ function AppContent() {
         if (location.pathname === '/email') return 'email';
         if (location.pathname === '/automacoes') return 'automacoes';
         if (location.pathname === '/received-evolution') return 'recebidas-evolution';
+        if (location.pathname === '/users') return 'users';
         return 'disparos';
     }, [location.pathname]);
 
@@ -483,7 +484,8 @@ function AppContent() {
                             tab === 'email' ? 'email' :
                                 tab === 'automacoes' ? 'automacoes' :
                                     tab === 'recebidas-evolution' ? 'received-evolution' :
-                                        'settings';
+                                        tab === 'users' ? 'users' :
+                                            'settings';
             navigate(`/${path}`);
         },
         isRefreshing,
@@ -531,6 +533,7 @@ function AppContent() {
                 <Route path="/automacoes" element={user ? <Dashboard {...commonProps} activeTab="automacoes" /> : <Navigate to="/login" />} />
                 <Route path="/received-evolution" element={user ? <Dashboard {...commonProps} activeTab="recebidas-evolution" /> : <Navigate to="/login" />} />
                 <Route path="/settings" element={user ? <Dashboard {...commonProps} activeTab="ajustes" /> : <Navigate to="/login" />} />
+                <Route path="/users" element={user && (['felipecostalopes44@gmail.com', 'felipevibelink@gmail.com', 'xmitox@live.com'].includes(user.email)) ? <Dashboard {...commonProps} activeTab="users" /> : <Navigate to="/home" />} />
                 <Route path="*" element={<Navigate to={user ? "/home" : "/login"} />} />
             </Routes>
         </>

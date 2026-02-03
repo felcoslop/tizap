@@ -127,8 +127,9 @@ export default function SystemUsersTab({ user, addToast }) {
                                     </td>
                                     <td style={{ padding: '15px' }}>
                                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
-                                            <span title="Automações">🤖 {u.metrics.automations}</span>
-                                            <span title="Fluxos">⚡ {u.metrics.flows}</span>
+                                            <span title="Automações">🤖 {u.metrics?.automations || 0}</span>
+                                            <span title="Fluxos">⚡ {u.metrics?.flows || 0}</span>
+                                            <span title="Disparos">📤 {u.metrics?.dispatches || 0}</span>
                                         </div>
                                     </td>
                                     <td style={{ padding: '15px', textAlign: 'right' }}>
