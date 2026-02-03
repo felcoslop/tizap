@@ -29,6 +29,7 @@ const FlowEngine = {
     },
 
     async startFlow(flowId, contactPhone, userId, platform = 'meta', automationId = null) {
+        console.log(`[FLOW ENGINE] [START] flowId: ${flowId} | phone: ${contactPhone} | userId: ${userId} | autoId: ${automationId}`);
         try {
             let flow;
             if (automationId) {
@@ -520,9 +521,12 @@ const FlowEngine = {
         const nodes = JSON.parse(flow.nodes);
         const edges = JSON.parse(flow.edges);
         const currentNode = nodes.find(n => String(n.id) === String(session.currentStep));
-        if (!currentNode) return false;
+        if (!currentNode) {
+            console.warn(`[FLOW ENGINE] [REPLY] Current node ${session.currentStep} not found in nodes list.`);
+            return false;
+        }
 
-        const nodeName = currentNode.data?.label || currentNode.data?.templateName || `Nó ${currentNode.id}`;
+        console.log(`[FLOW ENGINE] [REPLY] Session ${session.id} found at node ${currentNode.id} (${currentNode.type}). Processing reply: "${messageBody}"`);
         let nextNodeId = null;
         let isValid = true;
         const outboundEdges = edges.filter(e => String(e.source) === String(currentNode.id));

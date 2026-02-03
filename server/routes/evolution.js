@@ -907,7 +907,7 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
         const FlowEngine = (await import('../services/flowEngine.js')).default;
 
         // Normalize phone for consistent lookup
-        console.log(`[AUTOMATION DEBUG] Processing automations for ${contactPhone} (User: ${userId}) - IsFromMe: ${isFromMe} - Body: "${messageBody}"`);
+        console.log(`[AUTOMATION DEBUG] [START] Phone: ${contactPhone} | User: ${userId} | isFromMe: ${isFromMe} | Body: "${messageBody}"`);
         let normalizedPhone = String(contactPhone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
 
@@ -929,7 +929,7 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             prisma.userConfig.findUnique({ where: { userId } })
         ]);
 
-        console.log(`[AUTOMATION DEBUG] Found ${automations.length} active automations. Delay: ${userConfig?.automationDelay}min`);
+        console.log(`[AUTOMATION DEBUG] [RESOURCES] Automations: ${automations.length} | Config found: ${!!userConfig} | Delay set: ${userConfig?.automationDelay}min`);
 
         // Separate by type for priority handling
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
@@ -999,10 +999,10 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                 // Session is valid, process the reply
                 const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
                 if (sessionProcessed) {
-                    console.log(`[AUTOMATION DEBUG] Message handled by active session ${existingSession.id} for ${contactPhone}. Stopping global triggers.`);
+                    console.log(`[AUTOMATION DEBUG] [SESSION] Message handled by WAITING_REPLY session ${existingSession.id}.`);
                     return; // Stop here
                 }
-                console.log(`[AUTOMATION DEBUG] active session ${existingSession.id} did NOT handle message (returned false). Falling through to global triggers.`);
+                console.log(`[AUTOMATION DEBUG] [SESSION] Session ${existingSession.id} did NOT handle message.`);
             }
         } else {
             console.log(`[AUTOMATION DEBUG] No waiting_reply session found for ${contactPhone}.`);
@@ -1049,13 +1049,16 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
         // PRIORITY 2: If no keyword matched, check message automations
         // Prevent loop: Do NOT trigger "global message" automation if it's from me
         if (!isFromMe) {
-            console.log(`[AUTOMATION DEBUG] Checking message automations. Found: ${messageAutomations.length}`);
             for (const automation of messageAutomations) {
-                console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
+                console.log(`[AUTOMATION DEBUG] [TRIGGER] Matched "${automation.name}" (#${automation.id}) via global trigger.`);
                 await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
-                console.log(`[AUTOMATION] Triggered message automation ${automation.id} for ${contactPhone}`);
-                return; // Only trigger one
+                return;
             }
+            if (messageAutomations.length === 0) {
+                console.log(`[AUTOMATION DEBUG] [STOP] No global message automations to trigger.`);
+            }
+        } else {
+            console.log(`[AUTOMATION DEBUG] [STOP] Message is from user (source phone), skipping global triggers.`);
         }
 
     } catch (err) {
