@@ -598,8 +598,8 @@ const FlowEngine = {
                 const edges = JSON.parse(flow.edges || '[]');
                 const outboundEdges = edges.filter(e => String(e.source) === String(session.currentStep));
 
-                // Priority: gray handle or no handle (default path)
-                const nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-gray') ||
+                // Priority: gray/green handle or no handle (default path)
+                const nextEdge = outboundEdges.find(e => ['source-gray', 'source-green'].includes(e.sourceHandle)) ||
                     outboundEdges.find(e => !e.sourceHandle);
 
                 if (nextEdge) {

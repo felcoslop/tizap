@@ -429,7 +429,7 @@ function BusinessHoursNode({ data, id, selected }) {
                     </div>
                 ) : <p className="node-text">⏰ {data.start} às {data.end}</p>}
             </div>
-            <Handle type="source" position={Position.Bottom} id="source-gray" style={{ background: '#6c757d', width: 14, height: 14, border: '2px solid #333' }} />
+            <Handle type="source" position={Position.Bottom} id="source-green" style={{ background: '#00a276', width: 14, height: 14, border: '2px solid #333' }} />
         </div>
     );
 }
