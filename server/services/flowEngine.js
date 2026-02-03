@@ -174,7 +174,7 @@ const FlowEngine = {
 
                 // Typing Delay Logic
                 const isAutomation = !!session.automationId;
-                const typingTime = currentNode.data.typingTime !== undefined ? Number(currentNode.data.typingTime) : (isAutomation ? 5 : 0);
+                const typingTime = currentNode.data.typingTime !== undefined ? Number(currentNode.data.typingTime) : (isAutomation ? 2 : 0);
                 const delayMs = typingTime > 0 ? typingTime * 1000 : 0;
 
                 if (platform === 'evolution') {
@@ -527,6 +527,7 @@ const FlowEngine = {
         }
 
         console.log(`[FLOW ENGINE] [REPLY] Session ${session.id} found at node ${currentNode.id} (${currentNode.type}). Processing reply: "${messageBody}"`);
+        const nodeName = currentNode.data?.label || currentNode.data?.templateName || `Nó ${currentNode.id}`;
         let nextNodeId = null;
         let isValid = true;
         const outboundEdges = edges.filter(e => String(e.source) === String(currentNode.id));
