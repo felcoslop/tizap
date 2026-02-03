@@ -537,7 +537,7 @@ const FlowEngine = {
         if (!isValid) {
             const redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
 
-            if (currentNode.type === 'optionsNode' && currentNode.data?.validateSelection && !redEdge) {
+            if (currentNode.type === 'optionsNode' && !redEdge) {
                 // Dynamic validation message
                 const optionsCount = (currentNode.data?.options || []).length;
                 if (optionsCount > 0) {
