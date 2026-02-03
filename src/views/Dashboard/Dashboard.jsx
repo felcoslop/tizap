@@ -83,11 +83,15 @@ export function Dashboard({
         if (!user || isMaster) return true;
         if (user.planType === 'free') return true;
 
-        // Paid Check
-        if (user.subscriptionStatus === 'active') return true;
-
-        // Trial Check
+        // Trial Check (High Priority)
         if (user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) return true;
+
+        // Paid Check
+        if (user.planType === 'paid' && user.subscriptionStatus === 'active') {
+            if (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > new Date()) {
+                return true;
+            }
+        }
 
         return false;
     }, [user, isMaster]);
@@ -785,15 +789,25 @@ export function Dashboard({
                                 setIsDeleting={setIsDeleting}
                                 setShowDeleteConfirm={setShowDeleteConfirm}
                                 setShowProfileModal={setShowProfileModal}
+                                fileInputRef={fileInputRef}
+                                handleMediaUpload={handleMediaUpload}
+                                isUploadingMedia={isUploadingMedia}
+                                isRecording={isRecording}
+                                recordingTime={recordingTime}
+                                startRecording={startRecording}
+                                stopRecording={stopRecording}
+                                cancelRecording={cancelRecording}
                             />
                         )}
 
                         {activeTab === 'recebidas-evolution' && (
                             <ReceivedEvolutionTab
                                 user={user}
-                                evolutionMessages={evolutionMessages}
-                                fetchEvolutionMessages={fetchEvolutionMessages}
+                                config={config}
+                                messages={evolutionMessages}
+                                fetchMessages={fetchEvolutionMessages}
                                 addToast={addToast}
+                                isRefreshing={Boolean(evolutionMessages?.length === 0)}
                             />
                         )}
 
@@ -812,6 +826,8 @@ export function Dashboard({
                                 showToken={showToken}
                                 setShowToken={setShowToken}
                                 addToast={addToast}
+                                onLogout={onLogout}
+                                fetchUserData={fetchUserData}
                             />
                         )}
 

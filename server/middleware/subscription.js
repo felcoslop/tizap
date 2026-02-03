@@ -26,19 +26,19 @@ export const checkSubscription = async (req, res, next) => {
             return next();
         }
 
-        // 3. PAID Tier Check
+        // 3. TRIAL Check (High Priority for new users)
+        if (user.trialExpiresAt && new Date() < new Date(user.trialExpiresAt)) {
+            return next();
+        }
+
+        // 4. PAID Tier Check
         if (user.planType === 'paid') {
             // Check Subscription Status & Expiry
             if (user.subscriptionStatus === 'active') {
-                if (!user.subscriptionExpiresAt || new Date() < new Date(user.subscriptionExpiresAt)) {
+                // If they are active, they must have an expiry in the future
+                if (user.subscriptionExpiresAt && new Date() < new Date(user.subscriptionExpiresAt)) {
                     return next();
                 }
-                // If expired, we could automatically update the status here too
-            }
-
-            // Check Trial
-            if (user.trialExpiresAt && new Date() < new Date(user.trialExpiresAt)) {
-                return next();
             }
 
             // If we get here, they are blocked

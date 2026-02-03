@@ -6,12 +6,9 @@ import { checkSubscription, isMaster } from '../middleware/subscription.js';
 const router = express.Router();
 
 // Middleware: Verify Token -> Check Sub (Sets isMaster) -> Verify Master
-router.use(authenticateToken);
-router.use(checkSubscription);
-router.use(isMaster);
-
+// Routes with administrative protection
 // List All Users with Metrics
-router.get('/admin/users', async (req, res) => {
+router.get('/admin/users', authenticateToken, checkSubscription, isMaster, async (req, res) => {
     try {
         const users = await prisma.user.findMany({
             include: {
@@ -49,7 +46,7 @@ router.get('/admin/users', async (req, res) => {
 });
 
 // Update User Plan
-router.post('/admin/users/:id/plan', async (req, res) => {
+router.post('/admin/users/:id/plan', authenticateToken, checkSubscription, isMaster, async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
         const { planType, trialDays, subscriptionStatus } = req.body;

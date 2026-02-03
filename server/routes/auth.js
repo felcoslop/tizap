@@ -35,7 +35,7 @@ passport.use(new GoogleStrategy({
                     googleId: profile.id,
                     planType: 'paid', // Initial state is paid with trial
                     trialExpiresAt: trialExpiry,
-                    subscriptionStatus: 'active'
+                    subscriptionStatus: 'expired' // Expired until they pay, but trial allows access
                 }
             });
             await prisma.userConfig.create({ data: { userId: user.id } });
@@ -157,7 +157,7 @@ router.post('/register', async (req, res) => {
                 verificationExpires: expiresAt,
                 planType: 'paid',
                 trialExpiresAt: trialExpiry,
-                subscriptionStatus: 'active'
+                subscriptionStatus: 'expired'
             }
         });
 
