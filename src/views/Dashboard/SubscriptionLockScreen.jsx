@@ -46,8 +46,8 @@ export default function SubscriptionLockScreen({ user, onLogout }) {
                 <h1 style={{ fontSize: '2rem', margin: 0, color: '#333' }}>Acesso Bloqueado</h1>
 
                 <p style={{ fontSize: '1.1rem', color: '#666', lineHeight: 1.6 }}>
-                    Seu período de teste gratuito do <strong>App Village</strong> expirou.
-                    Para continuar utilizando todas as ferramentas de automação e gestão, é necessário adquirir/reativar sua licença.
+                    Seu período de acesso ao <strong>App Village</strong> expirou.
+                    Para continuar utilizando todas as ferramentas de automação e gestão, é necessário adquirir ou renovar sua licença.
                 </p>
 
                 <div style={{

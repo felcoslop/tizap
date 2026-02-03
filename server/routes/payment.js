@@ -90,6 +90,7 @@ router.post('/payment/webhook', async (req, res) => {
                                 planType: 'paid',
                                 subscriptionStatus: 'active',
                                 subscriptionExpiresAt: expiry,
+                                trialExpiresAt: expiry, // Also update trial to match for consistency
                                 lastPaymentId: String(data.id)
                             }
                         });

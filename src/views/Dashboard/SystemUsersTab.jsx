@@ -119,11 +119,25 @@ export default function SystemUsersTab({ user, addToast }) {
                                         ) : '-'}
                                     </td>
                                     <td style={{ padding: '15px', fontSize: '0.9rem' }}>
-                                        {u.trialExpiresAt ? (
-                                            new Date(u.trialExpiresAt) > new Date() ?
-                                                `Vence em ${Math.ceil((new Date(u.trialExpiresAt) - new Date()) / (1000 * 60 * 60 * 24))} dias` :
-                                                <span style={{ color: 'red' }}>Expirado</span>
-                                        ) : '-'}
+                                        {(() => {
+                                            const now = new Date();
+                                            const trialDate = u.trialExpiresAt ? new Date(u.trialExpiresAt) : null;
+                                            const subDate = u.subscriptionExpiresAt ? new Date(u.subscriptionExpiresAt) : null;
+
+                                            // Priority: Active subscription
+                                            if (u.subscriptionStatus === 'active' && subDate && subDate > now) {
+                                                const days = Math.ceil((subDate - now) / (1000 * 60 * 60 * 24));
+                                                return <span style={{ color: '#2e7d32', fontWeight: 600 }}>Assinatura: {days} dias</span>;
+                                            }
+
+                                            // Trial check
+                                            if (trialDate && trialDate > now) {
+                                                const days = Math.ceil((trialDate - now) / (1000 * 60 * 60 * 24));
+                                                return <span style={{ color: '#1565c0' }}>Trial: {days} dias</span>;
+                                            }
+
+                                            return <span style={{ color: '#d32f2f', fontWeight: 600 }}>Expirado / Bloqueado</span>;
+                                        })()}
                                     </td>
                                     <td style={{ padding: '15px' }}>
                                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>

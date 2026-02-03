@@ -60,6 +60,7 @@ router.post('/admin/users/:id/plan', authenticateToken, checkSubscription, isMas
                 const expiry = new Date();
                 expiry.setDate(expiry.getDate() + 30);
                 data.subscriptionExpiresAt = expiry;
+                data.trialExpiresAt = expiry; // Match trial for consistency
             }
         }
 
