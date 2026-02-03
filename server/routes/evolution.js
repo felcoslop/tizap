@@ -693,8 +693,9 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
     try {
         const { webhookToken } = req.params;
         const body = req.body;
+        const event = body.event || 'unknown';
 
-        console.log('[EVOLUTION WEBHOOK] Received:', JSON.stringify(body).slice(0, 500));
+        console.log(`[EVOLUTION WEBHOOK] [${event}] Received event. Token: ${webhookToken.substring(0, 5)}...`);
 
         // Find user by webhook token
         const config = await prisma.userConfig.findFirst({
@@ -707,7 +708,6 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
         }
 
         const userId = config.userId;
-        const event = body.event;
 
         // Handle connection update
         if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
@@ -921,10 +921,15 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
-        // Fetch active automations first to check keywords
-        const automations = await prisma.automation.findMany({
-            where: { userId, isActive: true }
-        });
+        // Fetch active automations and user config
+        const [automations, userConfig] = await Promise.all([
+            prisma.automation.findMany({
+                where: { userId, isActive: true }
+            }),
+            prisma.userConfig.findUnique({ where: { userId } })
+        ]);
+
+        console.log(`[AUTOMATION DEBUG] Found ${automations.length} active automations. Delay: ${userConfig?.automationDelay}min`);
 
         // Separate by type for priority handling
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
@@ -973,7 +978,8 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                     { automation: { userId } }
                 ]
             },
-            include: { automation: true }
+            include: { automation: true, flow: true },
+            orderBy: { updatedAt: 'desc' }
         });
 
         // If session exists, check 24h window
@@ -1010,35 +1016,40 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                 contactPhone: { in: possibleNumbers },
                 status: { in: ['active', 'completed'] },
                 OR: [{ flow: { userId } }, { automation: { userId } }]
-            }
+            },
+            orderBy: { updatedAt: 'desc' }
         });
 
         if (protectionSession) {
             const sessionAge = Date.now() - new Date(protectionSession.updatedAt).getTime();
+            const ageMins = Math.round(sessionAge / 60000);
 
             if (protectionSession.status === 'active') {
                 // Active session protection (Typing/Logic) - 5 minutes
                 if (sessionAge < 5 * 60 * 1000) {
-                    console.log(`[AUTOMATION DEBUG] Found RUNNING session ${protectionSession.id} (Active). Ignoring trigger (protection 5m).`);
+                    console.log(`[AUTOMATION DEBUG] Found RUNNING session ${protectionSession.id} (Active, Age: ${ageMins}m). Ignoring trigger (protection 5m).`);
                     return;
                 }
                 console.log(`[AUTOMATION DEBUG] Found stuck active session ${protectionSession.id} (> 5 mins). Allowing restart.`);
             } else if (protectionSession.status === 'completed') {
                 // Completed session protection (Anti-Loop) - Configurable (Default 24h)
-                const delayMinutes = userConfig?.automationDelay || 1440; // Default to 1440 minutes (24 hours)
+                const delayMinutes = userConfig?.automationDelay || 1440;
                 const delayMs = delayMinutes * 60 * 1000;
 
                 if (sessionAge < delayMs) {
-                    console.log(`[AUTOMATION DEBUG] Session ${protectionSession.id} completed recently (< ${delayMinutes}min). Ignoring trigger to prevent loop.`);
+                    console.log(`[AUTOMATION DEBUG] Session ${protectionSession.id} completed recently (${ageMins}m ago, limit ${delayMinutes}m). Ignoring trigger to prevent loop.`);
                     return;
                 }
-                console.log(`[AUTOMATION DEBUG] Completed session ${protectionSession.id} is old (> ${delayMinutes}min). Allowing restart.`);
+                console.log(`[AUTOMATION DEBUG] Completed session ${protectionSession.id} is old (${ageMins}m > ${delayMinutes}m). Allowing restart.`);
             }
+        } else {
+            console.log(`[AUTOMATION DEBUG] No protection session found for ${contactPhone}.`);
         }
 
         // PRIORITY 2: If no keyword matched, check message automations
         // Prevent loop: Do NOT trigger "global message" automation if it's from me
         if (!isFromMe) {
+            console.log(`[AUTOMATION DEBUG] Checking message automations. Found: ${messageAutomations.length}`);
             for (const automation of messageAutomations) {
                 console.log(`[AUTOMATION] Matched "${automation.name}" via global message trigger`);
                 await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
