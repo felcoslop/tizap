@@ -263,18 +263,101 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     );
 }
 
-export default function AutomationBuilder({ automations, onSave, onDelete, onToggle, userId, addToast, token, config, setConfig, user }) {
+export default function AutomationBuilder({ user, addToast, config, setConfig }) {
+    const [automations, setAutomations] = useState([]);
     const [editingAutomation, setEditingAutomation] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const userId = user?.id;
+    const token = user?.token;
+
+    const fetchAutomations = useCallback(async () => {
+        if (!userId) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/evolution/automations/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setAutomations(data || []);
+        } catch (err) {
+            console.error('Error fetching automations:', err);
+            addToast('Erro ao carregar automações', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, token, addToast]);
+
+    useEffect(() => {
+        fetchAutomations();
+    }, [fetchAutomations]);
+
+    const handleSaveAutomation = async (automationData) => {
+        try {
+            const res = await fetch('/api/evolution/automations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ ...automationData, userId })
+            });
+
+            if (res.ok) {
+                addToast('Automação salva!', 'success');
+                fetchAutomations();
+                setEditingAutomation(null);
+            } else {
+                const error = await res.json();
+                addToast(error.message || 'Erro ao salvar automação', 'error');
+            }
+        } catch (err) {
+            console.error('Error saving automation:', err);
+            addToast('Erro de conexão ao salvar', 'error');
+        }
+    };
+
+    const handleDeleteAutomation = async (id) => {
+        if (!window.confirm('Excluir esta automação?')) return;
+        try {
+            const res = await fetch(`/api/evolution/automations/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                addToast('Automação excluída!', 'success');
+                fetchAutomations();
+            } else {
+                addToast('Erro ao excluir automação', 'error');
+            }
+        } catch (err) {
+            addToast('Erro de conexão', 'error');
+        }
+    };
+
+    const handleToggleAutomation = async (id) => {
+        try {
+            const res = await fetch(`/api/evolution/automations/${id}/toggle`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                addToast('Status atualizado!', 'success');
+                fetchAutomations();
+            } else {
+                addToast('Erro ao atualizar status', 'error');
+            }
+        } catch (err) {
+            addToast('Erro de conexão', 'error');
+        }
+    };
 
     if (editingAutomation) {
         return (
             <ReactFlowProvider>
                 <AutomationEditor
                     automation={editingAutomation === 'new' ? null : editingAutomation}
-                    onSave={async (data) => {
-                        await onSave(data);
-                        setEditingAutomation(null);
-                    }}
+                    onSave={handleSaveAutomation}
                     onBack={() => setEditingAutomation(null)}
                     userId={userId}
                     addToast={addToast}
@@ -310,7 +393,7 @@ export default function AutomationBuilder({ automations, onSave, onDelete, onTog
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{auto.name}</h3>
                                     <div className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'}>
-                                        <input type="checkbox" checked={auto.isActive} onChange={() => onToggle(auto.id)} />
+                                        <input type="checkbox" checked={auto.isActive} onChange={() => handleToggleAutomation(auto.id)} />
                                         <span className="slider"></span>
                                     </div>
                                 </div>
@@ -331,7 +414,7 @@ export default function AutomationBuilder({ automations, onSave, onDelete, onTog
                             <button className="btn-edit-flow" onClick={() => setEditingAutomation(auto)} style={{ flex: 1, background: '#00a276' }}>
                                 <Edit3 size={16} /> Editar
                             </button>
-                            <button className="btn-delete-flow" onClick={() => { if (window.confirm('Excluir esta automação?')) onDelete(auto.id); }}>
+                            <button className="btn-delete-flow" onClick={() => handleDeleteAutomation(auto.id)}>
                                 <Trash2 size={18} />
                             </button>
                         </div>

@@ -155,18 +155,87 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token }) {
 
 // --- List View Component ---
 
-export default function FlowBuilder({ flows, onSave, onDelete, userId, addToast, token }) {
+export default function FlowBuilder({ user, addToast }) {
+    const [flows, setFlows] = useState([]);
     const [editingFlow, setEditingFlow] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const userId = user?.id;
+    const token = user?.token;
+
+    const fetchFlows = useCallback(async () => {
+        if (!userId) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/flows/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setFlows(data || []);
+        } catch (err) {
+            console.error('Error fetching flows:', err);
+            addToast('Erro ao carregar fluxos', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, token, addToast]);
+
+    useEffect(() => {
+        fetchFlows();
+    }, [fetchFlows]);
+
+    const handleSaveFlow = async (id, flowData) => {
+        try {
+            const url = id ? `/api/flows/${id}` : '/api/flows';
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ ...flowData, userId })
+            });
+
+            if (res.ok) {
+                addToast(id ? 'Fluxo atualizado!' : 'Fluxo criado!', 'success');
+                fetchFlows();
+                setEditingFlow(null);
+            } else {
+                const error = await res.json();
+                addToast(error.message || 'Erro ao salvar fluxo', 'error');
+            }
+        } catch (err) {
+            console.error('Error saving flow:', err);
+            addToast('Erro de conexão ao salvar fluxo', 'error');
+        }
+    };
+
+    const handleDeleteFlow = async (id) => {
+        if (!window.confirm('Excluir este fluxo?')) return;
+        try {
+            const res = await fetch(`/api/flows/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                addToast('Fluxo excluído!', 'success');
+                fetchFlows();
+            } else {
+                addToast('Erro ao excluir fluxo', 'error');
+            }
+        } catch (err) {
+            addToast('Erro de conexão', 'error');
+        }
+    };
 
     if (editingFlow) {
         return (
             <ReactFlowProvider>
                 <FlowEditor
                     flow={editingFlow === 'new' ? null : editingFlow}
-                    onSave={(data) => {
-                        onSave(editingFlow === 'new' ? null : editingFlow.id, data);
-                        setEditingFlow(null);
-                    }}
+                    onSave={(data) => handleSaveFlow(editingFlow === 'new' ? null : editingFlow.id, data)}
                     onBack={() => setEditingFlow(null)}
                     userId={userId}
                     addToast={addToast}
@@ -205,7 +274,7 @@ export default function FlowBuilder({ flows, onSave, onDelete, userId, addToast,
                             <button className="btn-edit-flow" onClick={() => setEditingFlow(flow)} style={{ flex: 1 }}>
                                 <Edit3 size={16} /> Editar
                             </button>
-                            <button className="btn-delete-flow" onClick={() => { if (window.confirm('Excluir este fluxo?')) onDelete(flow.id); }}>
+                            <button className="btn-delete-flow" onClick={() => handleDeleteFlow(flow.id)}>
                                 <Trash2 size={18} />
                             </button>
                         </div>
