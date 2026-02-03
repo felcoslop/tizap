@@ -920,6 +920,48 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
             possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
+        // Fetch active automations first to check keywords
+        const automations = await prisma.automation.findMany({
+            where: { userId, isActive: true }
+        });
+
+        // Separate by type for priority handling
+        const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
+        const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
+
+        // PRIORITY 1: Check keyword automations first - THEY CAN INTERRUPT SESSIONS
+        for (const automation of keywordAutomations) {
+            const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            if (keywords.length === 0) continue;
+
+            for (const kw of keywords) {
+                if (messageBody.toLowerCase().includes(kw)) {
+                    console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
+
+                    // If matched, force close any existing session for this contact
+                    const activeSessions = await prisma.flowSession.findMany({
+                        where: {
+                            contactPhone: { in: possibleNumbers },
+                            status: { in: ['active', 'waiting_reply'] },
+                            OR: [{ flow: { userId } }, { automation: { userId } }]
+                        }
+                    });
+
+                    if (activeSessions.length > 0) {
+                        await prisma.flowSession.updateMany({
+                            where: { id: { in: activeSessions.map(s => s.id) } },
+                            data: { status: 'expired' }
+                        });
+                        console.log(`[AUTOMATION] Keyword interrupted ${activeSessions.length} active sessions.`);
+                    }
+
+                    await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
+                    console.log(`[AUTOMATION] Triggered keyword automation ${automation.id} for ${contactPhone}`);
+                    return; // Stop - keyword takes priority
+                }
+            }
+        }
+
         // Check for existing active session (waiting for reply)
         const existingSession = await prisma.flowSession.findFirst({
             where: {
@@ -945,28 +987,23 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
                     where: { id: existingSession.id },
                     data: { status: 'expired' }
                 });
-                // Continue to create new session below
+                // Continue to default triggers
             } else {
-                // If message is from ME, we probably want to INTERRUPT or just ignore?
-                // Usually we want to reply to the bot.
-                // If I am typing to the bot, I am strictly not the client.
-                // But if I am testing... I want it to process.
-
                 // Session is valid, process the reply
                 const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
                 if (sessionProcessed) {
                     console.log(`[AUTOMATION] Message handled by active session for ${contactPhone}`);
                     return; // Stop here
                 }
+                // If NOT processed, continue...
             }
         }
 
-        // Check if contact has any active session (not just waiting_reply)
-        // This catches sessions that might be stuck in 'active' state (e.g. server crash during execution)
+        // Check if contact has any active session (e.g. status='active')
         const anyActiveSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
-                status: { in: ['active', 'waiting_reply'] },
+                status: 'active', // Only check 'active' here
                 OR: [
                     { flow: { userId } },
                     { automation: { userId } }
@@ -976,43 +1013,17 @@ async function processAutomations(userId, contactPhone, messageBody, isFromMe = 
 
         if (anyActiveSession) {
             const sessionAge = Date.now() - new Date(anyActiveSession.updatedAt).getTime();
-            // If active/waiting session is older than 24h (or 1h for 'active' potentially stuck), expire it
-            // Using 24h to be safe and consistent with waiting_reply window
-            if (sessionAge > 24 * 60 * 60 * 1000) {
-                console.log(`[AUTOMATION] Found stuck/expired session ${anyActiveSession.id} (${Math.round(sessionAge / 3600000)}h old). Expiring it.`);
+            // stuck 'active' sessions should timeout quickly. 2 minutes seems reliable for "stuck"
+            if (sessionAge > 2 * 60 * 1000) {
+                console.log(`[AUTOMATION] Found stuck 'active' session ${anyActiveSession.id} (${Math.round(sessionAge / 1000)}s old). Expiring it.`);
                 await prisma.flowSession.update({
                     where: { id: anyActiveSession.id },
                     data: { status: 'expired' }
                 });
                 // Continue to start new flow
             } else {
-                console.log(`[AUTOMATION] Contact ${contactPhone} already in an active session (ID: ${anyActiveSession.id}), skipping new triggers`);
+                console.log(`[AUTOMATION] Contact ${contactPhone} currently processing (ID: ${anyActiveSession.id}), skipping new global triggers`);
                 return;
-            }
-        }
-
-        // Fetch active automations
-        const automations = await prisma.automation.findMany({
-            where: { userId, isActive: true }
-        });
-        console.log(`[AUTOMATION] Checking ${automations.length} active automations for user ${userId}`);
-
-        // Separate by type for priority handling
-        const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
-        const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
-
-        // PRIORITY 1: Check keyword automations first
-        for (const automation of keywordAutomations) {
-            const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-            if (keywords.length === 0) continue;
-
-            for (const kw of keywords) {
-                if (messageBody.toLowerCase().includes(kw)) {
-                    console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
-                    await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
-                    console.log(`[AUTOMATION] Triggered keyword automation ${automation.id} for ${contactPhone}`);
-                    return; // Stop - keyword takes priority
-                }
             }
         }
 
