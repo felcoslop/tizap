@@ -17,7 +17,6 @@ import EmailTab from './EmailTab';
 import SettingsTab from './SettingsTab';
 import FlowBuilder from './FlowBuilder';
 import AutomationBuilder from './AutomationBuilder';
-import AutomationBuilder from './AutomationBuilder';
 import ReceivedEvolutionTab from './ReceivedEvolutionTab';
 import SystemUsersTab from './SystemUsersTab'; // NEW
 import SubscriptionLockScreen from './SubscriptionLockScreen'; // NEW
