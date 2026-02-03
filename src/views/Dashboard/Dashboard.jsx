@@ -802,6 +802,7 @@ export function Dashboard({
                         {activeTab === 'ajustes' && (
                             <SettingsTab
                                 user={user}
+                                config={config}
                                 tempConfig={tempConfig}
                                 setTempConfig={setTempConfig}
                                 isEditing={isEditing}

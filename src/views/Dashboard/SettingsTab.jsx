@@ -25,10 +25,10 @@ export function SettingsTab({
 
     // Check Evolution connection status on mount and when config changes
     useEffect(() => {
-        if (config.evolutionApiUrl && config.evolutionInstanceName) {
+        if (config?.evolutionApiUrl && config?.evolutionInstanceName) {
             checkEvolutionStatus();
         }
-    }, [config.evolutionApiUrl, config.evolutionInstanceName]);
+    }, [config?.evolutionApiUrl, config?.evolutionInstanceName]);
 
     // Cleanup QR polling on unmount
     useEffect(() => {
