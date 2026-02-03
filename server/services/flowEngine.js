@@ -547,7 +547,17 @@ const FlowEngine = {
         }
 
         if (!isValid) {
-            const redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+            let redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+
+            // Validate Red Edge Target
+            if (redEdge) {
+                const targetNode = nodes.find(n => String(n.id) === String(redEdge.target));
+                if (!targetNode) {
+                    console.log(`[FLOW DEBUG] RedEdge target ${redEdge.target} missing. Treating as null.`);
+                    redEdge = null;
+                }
+            }
+
             console.log(`[FLOW DEBUG] Validation Failed. RedEdge: ${!!redEdge}, Node Type: ${currentNode.type}`);
 
             if (currentNode.type === 'optionsNode' && !redEdge) {
