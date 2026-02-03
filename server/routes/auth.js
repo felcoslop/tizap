@@ -258,6 +258,10 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 name: user.name,
                 avatar: user.avatar,
+                planType: user.planType,
+                subscriptionStatus: user.subscriptionStatus,
+                trialExpiresAt: user.trialExpiresAt,
+                subscriptionExpiresAt: user.subscriptionExpiresAt,
                 config: user.config ? {
                     token: user.config.token,
                     phoneId: user.config.phoneId,

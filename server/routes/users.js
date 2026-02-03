@@ -17,6 +17,10 @@ router.get('/user/me', authenticateToken, async (req, res) => {
             id: user.id,
             email: user.email,
             name: user.name,
+            planType: user.planType,
+            subscriptionStatus: user.subscriptionStatus,
+            trialExpiresAt: user.trialExpiresAt,
+            subscriptionExpiresAt: user.subscriptionExpiresAt,
             config: user.config ? {
                 ...user.config,
                 mapping: JSON.parse(user.config.mapping || '{}')

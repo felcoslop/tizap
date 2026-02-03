@@ -152,6 +152,18 @@ function AppContent() {
             });
             if (res.ok) {
                 const data = await res.json();
+
+                // Update User State with latest trial/subscription info
+                setUser(prev => ({
+                    ...prev,
+                    email: data.email,
+                    name: data.name,
+                    planType: data.planType,
+                    subscriptionStatus: data.subscriptionStatus,
+                    trialExpiresAt: data.trialExpiresAt,
+                    subscriptionExpiresAt: data.subscriptionExpiresAt
+                }));
+
                 if (data.config) {
                     setConfig(data.config);
                     setTemplateName(data.config.templateName || '');

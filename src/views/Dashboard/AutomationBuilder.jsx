@@ -444,9 +444,12 @@ function BusinessHoursNode({ data, id, selected }) {
             <div className="node-content">
                 {isEditing ? (
                     <div className="edit-mode nodrag">
-                        <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+                        <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
+                            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ flex: 1 }} />
+                            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ flex: 1 }} />
+                        </div>
                         <textarea value={fallback} onChange={(e) => setFallback(e.target.value)} rows={2} placeholder="Fora do horário" />
-                        <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
+                        <button className="btn-small btn-primary" onClick={handleSave} style={{ marginTop: '8px', width: '100%' }}>Salvar</button>
                     </div>
                 ) : (
                     <div className="nodrag">
