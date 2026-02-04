@@ -8,11 +8,20 @@ Este projeto é uma solução robusta de Software as a Service (SaaS) projetada 
 
 O tiZAP! permite que empresas gerenciem sua comunicação de forma escalável. Suas principais capacidades incluem:
 
-- **Canvas de Fluxo (Chatbot):** Interface visual para criação de fluxos de conversação inteligentes com suporte a mensagens de texto, imagens, opções interativas e controle de horário comercial.
-- **Disparo de Mensagens em Massa:** Sistema para envio de campanhas (Broadcast) para listas de leads via WhatsApp e E-mail.
-- **Integração Omnichannel:** Suporte nativo à API Oficial da Meta e APIs alternativas (Evolution API) para máxima flexibilidade.
-- **Gestão de Leads e Histórico:** Armazenamento centralizado de conversas, logs de execução de fluxos e status de entrega.
-- **Sistema de Assinaturas:** Controle de acesso baseado em planos (Free/Paid) com integração de pagamentos.
+- **Canvas de Fluxo (Chatbot) Completo:** Interface visual para criação de fluxos de conversação. Tipos de nós suportados:
+  - `Message`: Texto simples e dinâmico.
+  - `Image`: Envio de mídias com upload centralizado.
+  - `Options`: Menus interativos para ramificação de fluxos.
+  - `Business Hours`: Controle baseado em horário comercial e feriados.
+  - `Template`: Integração direta com templates da API Oficial da Meta.
+  - `Email`: Disparo de e-mails transacionais diretamente do fluxo.
+  - `Alert`: Notificações internas baseadas em eventos do consumidor.
+  - `Close Automation`: Finalização lógica de sessões ativas.
+- **Disparo de Mensagens em Massa:** Sistema para envio de campanhas (Broadcast) com suporte a variáveis de personalização via WhatsApp e E-mail.
+- **Integração Omnichannel:** Suporte via API Oficial da Meta e Evolution API.
+- **Gestão Financeira:** Integração nativa com **Mercado Pago** para controle de assinaturas e planos.
+- **Segurança e Identidade:** Autenticação via **Google OAuth 2.0** e Login Local protegido por `bcrypt` e `JWT`.
+- **Relatórios de Execução:** Histórico detalhado de sessões (`FlowSession`), status de mensagens e logs de entrega.
 
 ---
 
@@ -27,17 +36,20 @@ O tiZAP! permite que empresas gerenciem sua comunicação de forma escalável. S
 ### Backend
 - **Runtime:** Node.js (Ambiente ES Modules).
 - **Framework Web:** Express.js (v5+).
-- **Persistência:** SQLite (via Prisma ORM) para armazenamento leve e eficiente.
+- **Persistência Multi-DB:** 
+  - **SQLite:** Utilizado para desenvolvimento local e fallback automático.
+  - **PostgreSQL:** Banco de dados de alta performance para produção.
+- **Mensageria & Filas:** `BullMQ` + `Redis` para processamento assíncrono e resiliente de disparos em massa.
 - **Real-time:** Integração nativa com WebSocket para comunicação bidirecional com o frontend.
 
 ### Banco de Dados (Prisma Schema)
-Modelos principais definidos em `prisma/schema.prisma`:
+Modelos principais definidos em `prisma/schema.prisma` (SQLite) e `prisma/schema.postgres.prisma` (PostgreSQL):
 - `User`: Cadastro de usuários, preferências e status de assinatura.
 - `UserConfig`: Configurações técnicas (Tokens API, IDs de telefone, Horário Comercial).
 - `Flow` / `Automation`: Definições JSON dos nós e arestas do construtor de fluxos.
 - `FlowSession`: Estado atual de um contato dentro de um fluxo (passo atual, variáveis).
 - `ReceivedMessage` / `EvolutionMessage`: Logs históricos de mensagens enviadas e recebidas.
-- `Dispatch`: Controle de campanhas de disparo em massa.
+- `Dispatch`: Controle de campanhas de disparo em massa via filas BullMQ.
 
 ---
 
@@ -55,10 +67,11 @@ Implementado primordialmente em `src/views/Dashboard/FlowBuilder.jsx` e `Automat
 - **Nós:** Cada nó possui atributos como `typingTime` (atraso de resposta), `label` e dados específicos do tipo (ex: URLs de imagem para nó de Imagem, horários para nó de Business Hours).
 - **Execução:** O `FlowEngine.js` reside no servidor e interpreta esses objetos JSON em tempo real conforme as mensagens chegam, gerenciando a transição de estados (`FlowSession`).
 
-### Disparador de E-mails
-- **Engine:** Utiliza `nodemailer` para o transporte de mensagens.
-- **Lógica:** Localizada em `server/services/emailEngine.js`. Suporta templates HTML personalizados e variáveis dinâmicas baseadas nos dados dos leads.
-- **Fila:** O progresso é monitorado via `dispatchEngine.js`, enviando atualizações de status via WebSocket para o Dashboard do usuário.
+### Gestão de Filas (High Performance)
+O sistema utiliza uma arquitetura baseada em eventos para disparos em massa:
+- **Queueing:** Implementado com `BullMQ` e `Redis`.
+- **Worker:** Um worker dedicado processa os trabalhos de disparo, permitindo retentativas, controle de taxa (Rate Limiting) e processamento em segundo plano sem bloquear o servidor principal.
+- **Logs:** Todo o progresso é transmitido via WebSocket em tempo real.
 
 ---
 
@@ -66,8 +79,9 @@ Implementado primordialmente em `src/views/Dashboard/FlowBuilder.jsx` e `Automat
 
 ### Pré-requisitos
 - Node.js v18 ou superior.
-- NPM ou Yarn.
-- Docker (opcional, para deploy).
+- Redis (Obrigatório para o sistema de filas).
+- PostgreSQL (Recomendado para produção).
+- Docker & Docker Compose (Recomendado para infraestrutura).
 
 ### Setup Local
 1.  **Instalação:**
@@ -75,21 +89,25 @@ Implementado primordialmente em `src/views/Dashboard/FlowBuilder.jsx` e `Automat
     cd ambev
     npm install
     ```
-2.  **Configuração:** Crie um arquivo `.env` na raiz da pasta `ambev` seguindo o modelo:
+2.  **Configuração:** Crie um arquivo `.env` na raiz da pasta `ambev`:
     ```env
     DATABASE_URL="file:./database.sqlite"
-    JWT_SECRET="seu_segredo_jwt"
-    EVOLUTION_API_URL="URL_DA_SUA_EVOLUTION_API"
-    EVOLUTION_API_KEY="SUA_CHAVE_API"
-    # Configurações adicionais de Email e Meta conforme necessário
+    DATABASE_URL_PG="postgresql://user:pass@host:port/db"
+    REDIS_HOST="localhost"
+    REDIS_PORT=6379
+    # ... outras configs API e Email
     ```
-3.  **Banco de Dados:**
+3.  **Banco de Dados & Migração:**
     ```bash
+    # Para SQLite (Dev)
     npx prisma db push
+    
+    # Para migrar dados SQLite -> PostgreSQL
+    sh scripts/deploy-setup.sh
     ```
 4.  **Execução:**
-    - Modo Dev: `npm run dev` (Frontend e Backend integrados via Vite Proxy se configurado, ou rode o servidor separadamente).
-    - Servidor: `npm run server`.
+    - Modo Dev: `npm run dev`
+    - Servidor: `npm start`
 
 ### Docker (Produção)
 Para rodar via Docker:
@@ -106,10 +124,11 @@ O sistema utiliza `nginx.conf` para roteamento de tráfego e servir os arquivos 
 - `/prisma`: Contém o schema e as gerações do cliente de banco de dados.
 - `/public`: Assets estáticos acessíveis diretamente pelo navegador.
 - `/server`:
-    - `/config`: Constantes globais e strings de configuração.
-    - `/middleware`: Lógica de autenticação e logs de requisição.
-    - `/routes`: Definição de todos os endpoints REST (Auth, Evolution, Flows, etc).
-    - `/services`: O "cérebro" do sistema (FlowEngine, WhatsAppService, EmailEngine).
+    - `/config`: Constantes globais e configs de Redis/DB.
+    - `/middleware`: Lógica de autenticação e logs.
+    - `/queues`: Definição de filas e logic de Workers (BullMQ).
+    - `/routes`: Endpoints REST.
+    - `/services`: Engine de Fluxo, WhatsApp e E-mail.
 - `/src`:
     - `/components`: Componentes React reutilizáveis.
     - `/views`: Páginas principais da aplicação, com destaque para o `/Dashboard`.
@@ -219,6 +238,3 @@ Conforme as práticas recomendadas para bancos SQLite:
 |               LandingPage.jsx
 \---uploads
 ```
-
----
-*Documentação gerada automaticamente para referência técnica.*
