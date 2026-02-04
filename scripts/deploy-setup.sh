@@ -3,7 +3,10 @@
 # Fail on error
 set -e
 
-echo "[DEPLOY] Starting Deployment Setup..."
+echo "[DEPLOY] Current Directory: $(pwd)"
+echo "[DEPLOY] Listing files:"
+ls -la
+echo "[DEPLOY] Environment DATABASE_URL: $DATABASE_URL"
 
 # 1. Install dependencies (if needed, usually handled by Docker build)
 # npm install --production

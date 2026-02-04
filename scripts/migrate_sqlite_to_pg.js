@@ -8,12 +8,24 @@ import dotenv from 'dotenv';
 // Load .env variables
 dotenv.config();
 
+console.log('🔍 Debug: Checking Environment...');
+console.log(`   CWD: ${process.cwd()}`);
+console.log(`   DATABASE_URL from env: ${process.env.DATABASE_URL}`);
+
+// Check if .env file exists
+if (fs.existsSync('.env')) {
+    console.log('   ✅ .env file found in root');
+} else {
+    console.log('   ❌ .env file NOT found in root');
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // DB Configuration
 // Normalize SQLite path to remove "file:" prefix if present
 let sqlitePath = process.env.DATABASE_URL || './database.sqlite';
+console.log(`   Raw sqlitePath: ${sqlitePath}`);
 sqlitePath = sqlitePath.replace('file:', '');
 if (!path.isAbsolute(sqlitePath)) {
     sqlitePath = path.resolve(process.cwd(), sqlitePath);
