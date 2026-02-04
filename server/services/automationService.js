@@ -94,22 +94,6 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
 
                     console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
 
-                    // Clean up other dead/stuck sessions
-                    const otherSessions = await prisma.flowSession.findMany({
-                        where: {
-                            contactPhone: { in: possibleNumbers },
-                            status: { in: ['active', 'waiting_reply'] },
-                            OR: [{ flow: { userId } }, { automation: { userId } }]
-                        }
-                    });
-
-                    if (otherSessions.length > 0) {
-                        await prisma.flowSession.updateMany({
-                            where: { id: { in: otherSessions.map(s => s.id) } },
-                            data: { status: 'expired' }
-                        });
-                    }
-
                     await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
                     return;
                 }

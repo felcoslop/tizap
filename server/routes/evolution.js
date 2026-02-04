@@ -136,16 +136,19 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 endpoint = `/message/sendWhatsAppAudio/${config.evolutionInstanceName}`;
                 payload.audio = mediaUrl; payload.delay = 1200; payload.encoding = true;
             } else if (mediaType === 'document' || String(mediaUrl).toLowerCase().endsWith('.pdf')) {
+                // Evolution API v2: /message/sendMedia with mediaMessage object
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
-                const filename = (messageBody && (messageBody.toLowerCase().endsWith('.pdf') || messageBody.length < 50))
-                    ? (messageBody.toLowerCase().endsWith('.pdf') ? messageBody : messageBody + '.pdf')
-                    : 'documento.pdf';
+                const filename = 'documento.pdf';
 
-                payload.mediaMessage = {
-                    url: mediaUrl,
-                    filename: filename,
-                    mimetype: 'application/pdf',
-                    caption: messageBody || ''
+                payload = {
+                    number: remoteJid,
+                    mediaMessage: {
+                        mediatype: 'document',
+                        url: mediaUrl,
+                        fileName: filename,
+                        mimetype: 'application/pdf',
+                        caption: ''
+                    }
                 };
             } else {
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
@@ -157,6 +160,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
             payload.text = messageBody;
         }
 
+        console.log('[EVOLUTION SEND] Endpoint:', endpoint, '| Payload:', JSON.stringify(payload));
         const data = await evolutionRequest(config.evolutionApiUrl, config.evolutionApiKey, endpoint, 'POST', payload);
         const savedMsg = await prisma.evolutionMessage.create({
             data: { userId, instanceName: config.evolutionInstanceName, contactPhone: normalizedPhone, contactName: 'Eu', messageBody: messageBody || `[${mediaType?.toUpperCase() || 'MEDIA'}]`, isFromMe: true, isRead: true, mediaUrl, mediaType }
