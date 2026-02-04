@@ -24,7 +24,20 @@ export function HistoryTab({
                 </h3>
 
                 {dispatches.length === 0 ? (
-                    <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Nenhuma campanha de disparo encontrada.</p>
+                    <div style={{
+                        padding: '60px',
+                        textAlign: 'center',
+                        background: '#f8fafc',
+                        border: '2px dashed #e2e8f0',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        <List size={48} color="#94a3b8" strokeWidth={1} />
+                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma campanha de disparo encontrada.</p>
+                    </div>
                 ) : (
                     <>
                         <div style={{ overflowX: 'auto' }}>

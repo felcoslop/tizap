@@ -54,7 +54,7 @@ export default function SystemUsersTab({ user, addToast }) {
         }
     };
 
-    const filteredUsers = users.filter(u =>
+    const filteredUsers = (users || []).filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -105,10 +105,10 @@ export default function SystemUsersTab({ user, addToast }) {
                                     <td style={{ padding: '15px' }}>
                                         <span style={{
                                             padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 700,
-                                            background: u.planType === 'free' ? '#e8f5e9' : '#e3f2fd',
-                                            color: u.planType === 'free' ? '#2e7d32' : '#1565c0'
+                                            background: (u.planType || 'free') === 'free' ? '#e8f5e9' : '#e3f2fd',
+                                            color: (u.planType || 'free') === 'free' ? '#2e7d32' : '#1565c0'
                                         }}>
-                                            {u.planType.toUpperCase()}
+                                            {(u.planType || 'free').toUpperCase()}
                                         </span>
                                     </td>
                                     <td style={{ padding: '15px' }}>
@@ -160,60 +160,63 @@ export default function SystemUsersTab({ user, addToast }) {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )
+            }
 
             {/* Edit User Modal */}
-            {editingUser && (
-                <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-content" style={{ width: '400px' }}>
-                        <h3>Editar Usuário: {editingUser.name}</h3>
-                        <form onSubmit={handleSaveUser}>
-                            <div className="input-group mb-4">
-                                <label>Tipo de Plano</label>
-                                <select
-                                    value={editingUser.planType}
-                                    onChange={e => setEditingUser({ ...editingUser, planType: e.target.value })}
-                                    style={{ width: '100%', padding: '10px' }}
-                                >
-                                    <option value="free">FREE (Grátis para sempre)</option>
-                                    <option value="paid">PAGANTE (Requer assinatura)</option>
-                                </select>
-                            </div>
+            {
+                editingUser && (
+                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                        <div className="modal-content" style={{ width: '400px' }}>
+                            <h3>Editar Usuário: {editingUser.name}</h3>
+                            <form onSubmit={handleSaveUser}>
+                                <div className="input-group mb-4">
+                                    <label>Tipo de Plano</label>
+                                    <select
+                                        value={editingUser.planType}
+                                        onChange={e => setEditingUser({ ...editingUser, planType: e.target.value })}
+                                        style={{ width: '100%', padding: '10px' }}
+                                    >
+                                        <option value="free">FREE (Grátis para sempre)</option>
+                                        <option value="paid">PAGANTE (Requer assinatura)</option>
+                                    </select>
+                                </div>
 
-                            {editingUser.planType === 'paid' && (
-                                <>
-                                    <div className="input-group mb-4">
-                                        <label>Status da Assinatura</label>
-                                        <select
-                                            value={editingUser.subscriptionStatus}
-                                            onChange={e => setEditingUser({ ...editingUser, subscriptionStatus: e.target.value })}
-                                            style={{ width: '100%', padding: '10px' }}
-                                        >
-                                            <option value="active">Ativo (Pago)</option>
-                                            <option value="expired">Expirado / Bloqueado</option>
-                                        </select>
-                                    </div>
-                                    <div className="input-group mb-4">
-                                        <label>Adicionar Dias de Trial</label>
-                                        <input
-                                            type="number"
-                                            placeholder="Ex: 7"
-                                            onChange={e => setEditingUser({ ...editingUser, addTrialDays: e.target.value })}
-                                            style={{ width: '100%', padding: '10px' }}
-                                        />
-                                        <p style={{ fontSize: '0.8rem', color: '#666' }}>Deixe vazio para não alterar.</p>
-                                    </div>
-                                </>
-                            )}
+                                {editingUser.planType === 'paid' && (
+                                    <>
+                                        <div className="input-group mb-4">
+                                            <label>Status da Assinatura</label>
+                                            <select
+                                                value={editingUser.subscriptionStatus}
+                                                onChange={e => setEditingUser({ ...editingUser, subscriptionStatus: e.target.value })}
+                                                style={{ width: '100%', padding: '10px' }}
+                                            >
+                                                <option value="active">Ativo (Pago)</option>
+                                                <option value="expired">Expirado / Bloqueado</option>
+                                            </select>
+                                        </div>
+                                        <div className="input-group mb-4">
+                                            <label>Adicionar Dias de Trial</label>
+                                            <input
+                                                type="number"
+                                                placeholder="Ex: 7"
+                                                onChange={e => setEditingUser({ ...editingUser, addTrialDays: e.target.value })}
+                                                style={{ width: '100%', padding: '10px' }}
+                                            />
+                                            <p style={{ fontSize: '0.8rem', color: '#666' }}>Deixe vazio para não alterar.</p>
+                                        </div>
+                                    </>
+                                )}
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button type="button" className="btn-secondary" onClick={() => setEditingUser(null)}>Cancelar</button>
-                                <button type="submit" className="btn-primary">Salvar Alterações</button>
-                            </div>
-                        </form>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                    <button type="button" className="btn-secondary" onClick={() => setEditingUser(null)}>Cancelar</button>
+                                    <button type="submit" className="btn-primary">Salvar Alterações</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

@@ -6,9 +6,9 @@ import FlowEngine from '../services/flowEngine.js';
 const router = express.Router();
 
 // List Flow Sessions
-router.get('/flow-sessions/:userId', authenticateToken, async (req, res) => {
+router.get('/flow-sessions', authenticateToken, async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId);
+        const userId = req.userId;
         console.log(`[API] Fetching flow sessions for UserID: ${userId}`);
 
         const sessions = await prisma.flowSession.findMany({
@@ -43,12 +43,17 @@ router.get('/flow-sessions/:userId', authenticateToken, async (req, res) => {
 // Create/Update flow
 router.post('/flows', authenticateToken, async (req, res) => {
     try {
-        const { id, name, userId, nodes, edges } = req.body;
+        const userId = req.userId;
+        const { id, name, nodes, edges } = req.body;
         console.log('[FLOW SAVE] Request received:', { id, name, userId, nodesCount: nodes?.length, edgesCount: edges?.length });
 
         let flow;
         if (id) {
             console.log('[FLOW SAVE] Updating existing flow:', id);
+            // Ownership check
+            const existing = await prisma.flow.findUnique({ where: { id: parseInt(id) } });
+            if (!existing || existing.userId !== userId) return res.status(404).json({ error: 'Fluxo não encontrado' });
+
             flow = await prisma.flow.update({
                 where: { id: parseInt(id) },
                 data: { name, nodes: JSON.stringify(nodes), edges: JSON.stringify(edges) }
@@ -88,16 +93,22 @@ router.post('/flows/:id', authenticateToken, async (req, res) => {
 // Delete flow
 router.delete('/flows/:id', authenticateToken, async (req, res) => {
     try {
-        await prisma.flow.delete({ where: { id: parseInt(req.params.id) } });
+        const userId = req.userId;
+        const id = parseInt(req.params.id);
+
+        const existing = await prisma.flow.findUnique({ where: { id } });
+        if (!existing || existing.userId !== userId) return res.status(404).json({ error: 'Fluxo não encontrado' });
+
+        await prisma.flow.delete({ where: { id } });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir fluxo' });
     }
 });
 
-router.get('/flows/:userId', authenticateToken, async (req, res) => {
+router.get('/flows', authenticateToken, async (req, res) => {
     try {
-        const flows = await prisma.flow.findMany({ where: { userId: parseInt(req.params.userId) } });
+        const flows = await prisma.flow.findMany({ where: { userId: req.userId } });
         res.json(flows);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar fluxos' });
@@ -159,9 +170,9 @@ router.get('/flow-session-logs/:sessionId', authenticateToken, async (req, res) 
     }
 });
 
-router.get('/flow-sessions/active-check/:userId', authenticateToken, async (req, res) => {
+router.get('/flow-sessions/active-check', authenticateToken, async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId);
+        const userId = req.userId;
         const activeDispatch = await prisma.dispatch.findFirst({ where: { userId, status: { in: ['running', 'idle'] } } });
         const activeSessions = await prisma.flowSession.count({ where: { flow: { userId }, status: { in: ['active', 'waiting_reply'] } } });
         res.json({ isBusy: !!activeDispatch || activeSessions > 0, hasActiveDispatch: !!activeDispatch, activeDispatchId: activeDispatch?.id, activeSessionCount: activeSessions });

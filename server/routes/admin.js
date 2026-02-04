@@ -10,6 +10,7 @@ const router = express.Router();
 // List All Users with Metrics
 router.get('/admin/users', authenticateToken, checkSubscription, isMaster, async (req, res) => {
     try {
+        console.log('[ADMIN] Fetching users list. Requester:', req.userId);
         const users = await prisma.user.findMany({
             include: {
                 _count: {
@@ -21,6 +22,7 @@ router.get('/admin/users', authenticateToken, checkSubscription, isMaster, async
                 }
             }
         });
+        console.log(`[ADMIN] Found ${users.length} users.`);
 
         const formattedUsers = users.map(u => ({
             id: u.id,

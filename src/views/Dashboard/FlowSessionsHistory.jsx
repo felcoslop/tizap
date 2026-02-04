@@ -17,7 +17,7 @@ export function FlowSessionsHistory({ user, addToast }) {
 
     const fetchSessions = async () => {
         try {
-            const res = await fetch(`/api/flow-sessions/${user.id}`, {
+            const res = await fetch('/api/flow-sessions', {
                 headers: { 'Authorization': `Bearer ${user.token}` }
             });
             if (res.ok) {
@@ -233,7 +233,20 @@ export function FlowSessionsHistory({ user, addToast }) {
             {loading ? (
                 <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Carregando...</p>
             ) : sessions.length === 0 ? (
-                <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Nenhuma sessão de fluxo encontrada.</p>
+                <div style={{
+                    padding: '60px',
+                    textAlign: 'center',
+                    background: '#f8fafc',
+                    border: '2px dashed #e2e8f0',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px'
+                }}>
+                    <Clock size={48} color="#94a3b8" strokeWidth={1} />
+                    <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma sessão de fluxo encontrada.</p>
+                </div>
             ) : (
                 <>
                     <div style={{ overflowX: 'auto' }}>

@@ -198,8 +198,10 @@ router.get('/evolution/public/contact/:userId/:phone/photo', async (req, res) =>
 
 // --- Automations CRUD ---
 
-router.get('/evolution/automations/:userId', authenticateToken, async (req, res) => {
-    const autos = await prisma.automation.findMany({ where: { userId: parseInt(req.params.userId) }, orderBy: { createdAt: 'desc' } });
+router.get('/evolution/automations', authenticateToken, async (req, res) => {
+    const userId = req.userId;
+    console.log(`[EVO] Fetching automations for UserID: ${userId}`);
+    const autos = await prisma.automation.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
     res.json(autos);
 });
 
@@ -208,33 +210,119 @@ router.post('/evolution/automations', authenticateToken, async (req, res) => {
         const userId = req.userId;
         const { id, name, triggerKeywords, nodes, edges, conditions, isActive, triggerType } = req.body;
         const ensureString = (v) => typeof v === 'string' ? v : JSON.stringify(v || []);
-        const data = { name: name || 'Nova Automação', triggerKeywords: ensureString(triggerKeywords || '').replace(/[\[\]"]/g, ''), nodes: ensureString(nodes), edges: ensureString(edges), conditions: ensureString(conditions), isActive: isActive ?? true, triggerType: triggerType || 'message' };
+        const data = { name: name || 'Nova Automação', triggerKeywords: ensureString(triggerKeywords || '').replace(/[\[\]"]/g, ''), nodes: ensureString(nodes), edges: ensureString(edges), conditions: ensureString(conditions), isActive: isActive ?? false, triggerType: triggerType || 'message' };
 
-        if (id) {
+        if (id && id !== 'new') {
             const existing = await prisma.automation.findUnique({ where: { id: parseInt(id) } });
-            if (existing?.userId === userId) return res.json(await prisma.automation.update({ where: { id: parseInt(id) }, data }));
+            if (!existing || existing.userId !== userId) return res.status(404).json({ error: 'Automação não encontrada' });
+
+            // Validation: Keyword mandatory for keyword type
+            if (data.triggerType === 'keyword' && !data.triggerKeywords) {
+                return res.status(400).json({ error: 'Palavra-chave é obrigatória para este tipo de gatilho.' });
+            }
+
+            // Uniqueness check for keywords
+            if (data.triggerType === 'keyword') {
+                const keywords = data.triggerKeywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                const otherAutos = await prisma.automation.findMany({
+                    where: { userId, triggerType: 'keyword', id: { not: parseInt(id) } }
+                });
+
+                for (const auto of otherAutos) {
+                    const existingKeywords = auto.triggerKeywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                    const collision = keywords.find(k => existingKeywords.includes(k));
+                    if (collision) {
+                        return res.status(400).json({ error: `A palavra-chave "${collision}" já está em uso em outra automação.` });
+                    }
+                }
+            }
+
+            return res.json(await prisma.automation.update({ where: { id: parseInt(id) }, data }));
         }
+
+        // Validation for new automation
+        if (data.triggerType === 'keyword' && !data.triggerKeywords) {
+            return res.status(400).json({ error: 'Palavra-chave é obrigatória para este tipo de gatilho.' });
+        }
+
+        // Uniqueness check for new automation
+        if (data.triggerType === 'keyword') {
+            const keywords = data.triggerKeywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+            const otherAutos = await prisma.automation.findMany({
+                where: { userId, triggerType: 'keyword' }
+            });
+
+            for (const auto of otherAutos) {
+                const existingKeywords = auto.triggerKeywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                const collision = keywords.find(k => existingKeywords.includes(k));
+                if (collision) {
+                    return res.status(400).json({ error: `A palavra-chave "${collision}" já está em uso em outra automação.` });
+                }
+            }
+        }
+
+        console.log('[EVO] Creating new automation for user:', userId);
         res.json(await prisma.automation.create({ data: { ...data, userId } }));
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        console.error('[AUTO SAVE ERROR]', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 router.delete('/evolution/automations/:id', authenticateToken, async (req, res) => {
-    await prisma.automation.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
+    try {
+        const userId = req.userId;
+        const id = parseInt(req.params.id);
+        const existing = await prisma.automation.findUnique({ where: { id } });
+        if (!existing || existing.userId !== userId) return res.status(404).json({ error: 'Automação não encontrada' });
+
+        await prisma.automation.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 router.patch('/evolution/automations/:id/toggle', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
+        const userId = req.userId;
+        console.log(`[EVO] Toggling automation ${id} for user ${userId}`);
         const auto = await prisma.automation.findUnique({ where: { id } });
-        if (!auto) return res.status(404).send();
-        const newState = !auto.isActive;
-        if (newState) {
-            const types = (auto.triggerType === 'qrcode_updated' || auto.triggerType === 'connection_update') ? [auto.triggerType] : [auto.triggerType];
-            await prisma.automation.updateMany({ where: { userId: auto.userId, triggerType: { in: types }, isActive: true, id: { not: id } }, data: { isActive: false } });
+
+        if (!auto) {
+            console.error(`[EVO] Automation ${id} not found`);
+            return res.status(404).json({ error: 'Automação não encontrada' });
         }
-        res.json(await prisma.automation.update({ where: { id }, data: { isActive: newState } }));
-    } catch (err) { res.status(500).json({ error: err.message }); }
+
+        if (auto.userId !== userId) {
+            console.error(`[EVO] User ${userId} tried to toggle automation ${id} belonging to user ${auto.userId}`);
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+
+        const newState = !auto.isActive;
+        if (newState && auto.triggerType === 'message') {
+            // Se for ativado um do tipo 'message' (Qualquer Mensagem), 
+            // desativa outros 'message' para evitar conflito de fallback.
+            await prisma.automation.updateMany({
+                where: {
+                    userId,
+                    triggerType: 'message',
+                    isActive: true,
+                    id: { not: id }
+                },
+                data: { isActive: false }
+            });
+            console.log(`[EVO] Deactivated other 'message' automations for user ${userId} because ID ${id} was activated.`);
+        }
+
+        const updated = await prisma.automation.update({ where: { id }, data: { isActive: newState } });
+        console.log(`[EVO] Automation ${id} toggled to ${newState} for user ${userId}`);
+        res.json(updated);
+    } catch (err) {
+        console.error('[TOGGLE ERROR]', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // --- Webhook ---

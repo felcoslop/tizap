@@ -545,7 +545,7 @@ function AppContent() {
                 <Route path="/automacoes" element={user ? <Dashboard {...commonProps} activeTab="automacoes" /> : <Navigate to="/login" />} />
                 <Route path="/received-evolution" element={user ? <Dashboard {...commonProps} activeTab="recebidas-evolution" /> : <Navigate to="/login" />} />
                 <Route path="/settings" element={user ? <Dashboard {...commonProps} activeTab="ajustes" /> : <Navigate to="/login" />} />
-                <Route path="/users" element={user && (['felipecostalopes44@gmail.com', 'felipevibelink@gmail.com', 'xmitox@live.com'].includes(user.email)) ? <Dashboard {...commonProps} activeTab="users" /> : <Navigate to="/home" />} />
+                <Route path="/users" element={user && user.email && (['felipecostalopes44@gmail.com', 'felipevibelink@gmail.com', 'xmitox@live.com'].includes(user.email.toLowerCase())) ? <Dashboard {...commonProps} activeTab="users" /> : <Navigate to="/home" />} />
                 <Route path="*" element={<Navigate to={user ? "/home" : "/login"} />} />
             </Routes>
         </>

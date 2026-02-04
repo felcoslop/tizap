@@ -4,7 +4,7 @@ import {
     LogOut, Upload, CheckCircle2, RefreshCw, List,
     Pause, Play, RotateCcw, Download, Eye, EyeOff,
     Copy, Trash2, Clock, Paperclip, Mic, AlertCircle, X, Mail,
-    Zap, Radio
+    Zap, Radio, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -78,7 +78,7 @@ export function Dashboard({
     fetchEvolutionMessages
 }) {
     // Subscription Check
-    const isMaster = user && MASTERS.includes(user.email);
+    const isMaster = user && user.email && MASTERS.includes(user.email.toLowerCase());
     const isSubscriptionValid = useMemo(() => {
         if (!user || isMaster) return true;
         if (user.planType === 'free') return true;
@@ -104,6 +104,7 @@ export function Dashboard({
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedContacts, setSelectedContacts] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [tempConfig, setTempConfig] = useState(config);
     const [selectedLogDispatch, setSelectedLogDispatch] = useState(null);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -127,15 +128,15 @@ export function Dashboard({
 
     // Sidebar navigation items
     const navItems = [
-        { id: 'disparos', label: 'Disparos', icon: Send },
+        { id: 'disparos', label: <div style={{ lineHeight: '1.2' }}>Disparos<br /><span style={{ fontSize: '0.85em', opacity: 0.8 }}>API-OF</span></div>, icon: Send },
         { id: 'fluxos', label: 'Fluxos', icon: GitBranch },
-        { id: 'automacoes', label: 'Automações', icon: Zap },
+        { id: 'automacoes', label: <div style={{ lineHeight: '1.2' }}>Automações<br /><span style={{ fontSize: '0.85em', opacity: 0.8 }}>API-EVO</span></div>, icon: Zap },
         { id: 'historico', label: 'Histórico', icon: History },
-        { id: 'recebidas', label: 'Recebidas', icon: MessageSquare },
-        { id: 'recebidas-evolution', label: 'Recebidas Evolution', icon: Radio },
+        { id: 'recebidas', label: <div style={{ lineHeight: '1.2' }}>Recebidas<br /><span style={{ fontSize: '0.85em', opacity: 0.8 }}>API-OF</span></div>, icon: MessageSquare },
+        { id: 'recebidas-evolution', label: <div style={{ lineHeight: '1.2' }}>Recebidas<br /><span style={{ fontSize: '0.85em', opacity: 0.8 }}>API-EVO</span></div>, icon: Radio },
         { id: 'email', label: 'E-mail', icon: Mail },
         { id: 'ajustes', label: 'Ajustes', icon: Settings },
-        ...(isMaster ? [{ id: 'users', icon: Users, label: 'Usuários do Sistema' }] : []), // Added Users tab
+        ...(isMaster ? [{ id: 'users', icon: Users, label: 'Usuários' }] : []), // Added Users tab
     ];
 
     useEffect(() => {
@@ -147,7 +148,7 @@ export function Dashboard({
 
     useEffect(() => {
         if (dispatchMode === 'flow' && user?.id) {
-            fetch(`/api/flows/${user.id}`, {
+            fetch('/api/flows', {
                 headers: { 'Authorization': `Bearer ${user.token}` }
             })
                 .then(res => res.json())
@@ -551,7 +552,7 @@ export function Dashboard({
         if (!config.token || !config.phoneId) return addToast('Configure as credenciais primeiro.', 'error');
 
         try {
-            const checkRes = await fetch(`/api/flow-sessions/active-check/${user.id}`, {
+            const checkRes = await fetch('/api/flow-sessions/active-check', {
                 headers: { 'Authorization': `Bearer ${user.token}` }
             });
             if (checkRes.ok) {
@@ -680,8 +681,15 @@ export function Dashboard({
     };
 
     return (
-        <div className="dashboard-container">
-            <aside className="sidebar">
+        <div className="dashboard-container" style={{ gridTemplateColumns: isSidebarCollapsed ? '80px 1fr' : '260px 1fr', transition: 'grid-template-columns 0.3s ease' }}>
+            <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+                <div
+                    className="sidebar-toggle"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    title={isSidebarCollapsed ? "Expandir Menu" : "Recolher Menu"}
+                >
+                    {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </div>
                 <div className="logo-small">
                     <img src="/android-chrome-512x512.png" alt="tiZAP!" className="rounded-logo" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
                     <span style={{ textTransform: 'lowercase' }}>tizap!</span>
@@ -693,7 +701,7 @@ export function Dashboard({
                             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
                             onClick={() => setActiveTab(item.id)}
                         >
-                            <item.icon size={20} /> {item.label}
+                            <item.icon size={20} /> <span>{item.label}</span>
                         </button>
                     ))}
                 </nav>
@@ -710,7 +718,7 @@ export function Dashboard({
             <main className="content">
                 {activeTab === 'fluxos' || activeTab === 'automacoes' ? (
                     activeTab === 'fluxos' ? (
-                        <FlowBuilder user={user} addToast={addToast} />
+                        <FlowBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
                     ) : (
                         <AutomationBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
                     )

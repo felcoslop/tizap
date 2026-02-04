@@ -23,10 +23,11 @@ router.get('/user/me', authenticateToken, async (req, res) => {
             subscriptionExpiresAt: user.subscriptionExpiresAt,
             config: user.config ? {
                 ...user.config,
-                mapping: JSON.parse(user.config.mapping || '{}')
+                mapping: typeof user.config.mapping === 'string' ? JSON.parse(user.config.mapping || '{}') : (user.config.mapping || {})
             } : null
         });
     } catch (err) {
+        console.error('[GET ME ERROR]', err);
         res.status(500).json({ error: 'Erro ao buscar dados' });
     }
 });
@@ -81,7 +82,14 @@ router.get('/user/:id', authenticateToken, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
         if (user.config) {
-            user.config.mapping = JSON.parse(user.config.mapping || '{}');
+            try {
+                user.config.mapping = typeof user.config.mapping === 'string'
+                    ? JSON.parse(user.config.mapping || '{}')
+                    : (user.config.mapping || {});
+            } catch (e) {
+                console.error('[MAPPING PARSE ERROR]', e);
+                user.config.mapping = {};
+            }
         }
         res.json(user);
     } catch (err) {

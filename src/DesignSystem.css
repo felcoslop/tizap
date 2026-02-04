@@ -606,6 +606,70 @@ button:focus {
   color: white;
 }
 
+/* Sidebar Toggle & Collasped State */
+.sidebar {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.sidebar.collapsed {
+  padding: 2rem 1rem;
+  width: 80px;
+}
+
+.sidebar.collapsed .logo-small span,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .user-email {
+  display: none;
+}
+
+.sidebar.collapsed .logo-small {
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.sidebar.collapsed .user-profile {
+  flex-direction: column;
+  padding: 1rem 0;
+  gap: 15px;
+}
+
+.sidebar.collapsed .logout-btn {
+  width: 100%;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  /* Center vertically relative to sidebar height, or adjust as pleased. */
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #ddd;
+  color: var(--ambev-blue);
+  z-index: 20;
+  transform: translateY(-50%);
+  transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: var(--ambev-yellow);
+  color: var(--ambev-blue);
+  transform: translateY(-50%) scale(1.1);
+}
+
 .content {
   padding: 2.5rem;
   overflow-y: auto;

@@ -30,6 +30,7 @@ export default function EmailTab({ user, addToast }) {
 
     // Deletion Modal State
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState(null);
     const [selectedLogCampaign, setSelectedLogCampaign] = useState(null);
 
@@ -49,7 +50,11 @@ export default function EmailTab({ user, addToast }) {
     }, [editorHtml]);
 
     const isModified = () => {
-        if (!selectedTemplate) return templateName || templateSubject || editorHtml;
+        // Se não tem template selecionado, mas tem conteúdo no editor (HTML), considera modificado (novo não salvo)
+        if (!selectedTemplate) {
+            return editorHtml.trim() !== '';
+        }
+
         return templateName !== selectedTemplate.name ||
             templateSubject !== (selectedTemplate.subject || '') ||
             editorHtml !== selectedTemplate.html;
@@ -132,22 +137,31 @@ export default function EmailTab({ user, addToast }) {
                     return [updated, ...prev];
                 });
                 setSelectedTemplate(updated);
+                return true;
             } else {
                 const errData = await res.json();
                 addToast(errData.error || 'Erro ao salvar template', 'error');
+                return false;
             }
         } catch (e) {
             console.error('[SAVE_TEMPLATE_ERROR]', e);
             addToast('Erro de conexão ao salvar template', 'error');
+            return false;
         } finally {
             setIsSaving(false);
         }
     };
 
-    const startCampaign = async () => {
+    const startCampaign = async (force = false) => {
         if (!campaignData || campaignData.length === 0) return addToast('Carregue os leads', 'error');
         if (!mapping.email) return addToast('Mapeie a coluna de E-mail', 'error');
         if (!editorHtml) return addToast('Crie ou selecione um template', 'error');
+
+        // Check for unsaved changes before starting
+        if (!force && isModified()) {
+            setShowUnsavedModal(true);
+            return;
+        }
 
         // Check if all detected variables are mapped
         const unmapped = detectedVars.filter(v => !varMapping[v]);
@@ -649,6 +663,56 @@ export default function EmailTab({ user, addToast }) {
                     </div>
                 </div>
             )}
+
+            {showUnsavedModal && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content alert" style={{ maxWidth: '450px', textAlign: 'center' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ background: '#fff7ed', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                <AlertCircle size={30} color="#ea580c" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)', marginBottom: '10px' }}>Alterações não salvas!</h3>
+                            <p style={{ color: '#666', fontSize: '1rem' }}>
+                                Você fez alterações no modelo que ainda não foram salvas.
+                                Deseja **salvar agora** ou **prosseguir mesmo assim** com a versão atual do editor?
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button
+                                className="btn-3d-yellow"
+                                style={{ width: '100%', height: '45px' }}
+                                onClick={async () => {
+                                    const success = await saveTemplate();
+                                    if (success) {
+                                        setShowUnsavedModal(false);
+                                        startCampaign(true);
+                                    }
+                                }}
+                            >
+                                <Save size={18} /> Salvar e Iniciar Campanha
+                            </button>
+                            <button
+                                className="btn-3d-blue"
+                                style={{ width: '100%', height: '45px', background: '#64748b' }}
+                                onClick={() => {
+                                    setShowUnsavedModal(false);
+                                    startCampaign(true);
+                                }}
+                            >
+                                Iniciar sem Salvar
+                            </button>
+                            <button
+                                className="btn-link"
+                                style={{ marginTop: '5px', color: '#94a3b8' }}
+                                onClick={() => setShowUnsavedModal(false)}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {selectedLogCampaign && (
                 <EmailLogModal
                     campaign={selectedLogCampaign}

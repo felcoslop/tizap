@@ -16,7 +16,7 @@ export const checkSubscription = async (req, res, next) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         // 1. MASTER Check (Always Allowed)
-        if (MASTERS.includes(user.email)) {
+        if (user.email && MASTERS.includes(user.email.toLowerCase())) {
             req.isMaster = true;
             return next();
         }

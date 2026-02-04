@@ -30,37 +30,26 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
         const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
 
-        // PRIORITY 1: Check keyword automations first
-        for (const automation of keywordAutomations) {
-            const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-            if (keywords.length === 0) continue;
+        // PROTECTION 1: Active session protection (global for contact)
+        // If there's an active session (not waiting_reply), don't trigger anything else to avoid overlapping.
+        const activeSession = await prisma.flowSession.findFirst({
+            where: {
+                contactPhone: { in: possibleNumbers },
+                status: 'active',
+                OR: [{ flow: { userId } }, { automation: { userId } }]
+            },
+            orderBy: { updatedAt: 'desc' }
+        });
 
-            for (const kw of keywords) {
-                if (messageBody.toLowerCase().includes(kw)) {
-                    console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
-
-                    const activeSessions = await prisma.flowSession.findMany({
-                        where: {
-                            contactPhone: { in: possibleNumbers },
-                            status: { in: ['active', 'waiting_reply'] },
-                            OR: [{ flow: { userId } }, { automation: { userId } }]
-                        }
-                    });
-
-                    if (activeSessions.length > 0) {
-                        await prisma.flowSession.updateMany({
-                            where: { id: { in: activeSessions.map(s => s.id) } },
-                            data: { status: 'expired' }
-                        });
-                    }
-
-                    await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
-                    return;
-                }
+        if (activeSession) {
+            const sessionAge = Date.now() - new Date(activeSession.updatedAt).getTime();
+            if (sessionAge < 10 * 60 * 1000) { // Increased to 10 min for active protection
+                console.log(`[AUTOMATION] Contact has an active session. Skipping trigger.`);
+                return;
             }
         }
 
-        // Check for existing active session
+        // PRIORITY 1: Check for existing active session waiting for reply
         const existingSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
@@ -73,9 +62,10 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
 
         if (existingSession) {
             const sessionAge = Date.now() - new Date(existingSession.updatedAt).getTime();
-            const twentyFourHours = 24 * 60 * 60 * 1000;
+            const waitTimeMinutes = userConfig?.sessionWaitTime || 1440;
+            const expirationLimit = waitTimeMinutes * 60 * 1000;
 
-            if (sessionAge > twentyFourHours) {
+            if (sessionAge > expirationLimit) {
                 await prisma.flowSession.update({
                     where: { id: existingSession.id },
                     data: { status: 'expired' }
@@ -83,32 +73,86 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
             } else {
                 const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
                 if (sessionProcessed) return;
+
+                // If it wasn't processed (invalid input for that node), we still DON'T want
+                // other automations to interfere according to user request.
+                console.log(`[AUTOMATION] Session ${existingSession.id} exists but message not processed. Blocking other triggers.`);
+                return;
             }
         }
 
-        // PROTECTION: Running or recently completed session
-        const protectionSession = await prisma.flowSession.findFirst({
-            where: {
-                contactPhone: { in: possibleNumbers },
-                status: { in: ['active', 'completed'] },
-                OR: [{ flow: { userId } }, { automation: { userId } }]
-            },
-            orderBy: { updatedAt: 'desc' }
-        });
+        // PRIORITY 2: Check keyword automations
+        for (const automation of keywordAutomations) {
+            const keywords = (automation.triggerKeywords || '').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            if (keywords.length === 0) continue;
 
-        if (protectionSession) {
-            const sessionAge = Date.now() - new Date(protectionSession.updatedAt).getTime();
-            if (protectionSession.status === 'active') {
-                if (sessionAge < 5 * 60 * 1000) return;
-            } else if (protectionSession.status === 'completed') {
-                const delayMinutes = userConfig?.automationDelay || 1440;
-                if (sessionAge < delayMinutes * 60 * 1000) return;
+            for (const kw of keywords) {
+                if (messageBody.toLowerCase().includes(kw)) {
+                    // Check Anti-Loop for THIS SPECIFIC automation
+                    const lastExecution = await prisma.flowSession.findFirst({
+                        where: {
+                            contactPhone: { in: possibleNumbers },
+                            automationId: automation.id,
+                            status: 'completed'
+                        },
+                        orderBy: { updatedAt: 'desc' }
+                    });
+
+                    if (lastExecution) {
+                        const delayMinutes = userConfig?.automationDelay || 1440;
+                        const age = Date.now() - new Date(lastExecution.updatedAt).getTime();
+                        if (age < delayMinutes * 60 * 1000) {
+                            console.log(`[AUTOMATION] Keyword match skipped by Anti-Loop for "${automation.name}"`);
+                            continue; // Skip this automation but could check others
+                        }
+                    }
+
+                    console.log(`[AUTOMATION] Matched "${automation.name}" via keyword: ${kw}`);
+
+                    // Clean up other dead/stuck sessions
+                    const otherSessions = await prisma.flowSession.findMany({
+                        where: {
+                            contactPhone: { in: possibleNumbers },
+                            status: { in: ['active', 'waiting_reply'] },
+                            OR: [{ flow: { userId } }, { automation: { userId } }]
+                        }
+                    });
+
+                    if (otherSessions.length > 0) {
+                        await prisma.flowSession.updateMany({
+                            where: { id: { in: otherSessions.map(s => s.id) } },
+                            data: { status: 'expired' }
+                        });
+                    }
+
+                    await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
+                    return;
+                }
             }
         }
 
-        // PRIORITY 2: Global message automations
+        // PRIORITY 3: Global message automations
         if (!isFromMe) {
             for (const automation of messageAutomations) {
+                // Check Anti-Loop for THIS SPECIFIC global automation
+                const lastExecution = await prisma.flowSession.findFirst({
+                    where: {
+                        contactPhone: { in: possibleNumbers },
+                        automationId: automation.id,
+                        status: 'completed'
+                    },
+                    orderBy: { updatedAt: 'desc' }
+                });
+
+                if (lastExecution) {
+                    const delayMinutes = userConfig?.automationDelay || 1440;
+                    const age = Date.now() - new Date(lastExecution.updatedAt).getTime();
+                    if (age < delayMinutes * 60 * 1000) {
+                        console.log(`[AUTOMATION] Global trigger skipped by Anti-Loop for "${automation.name}"`);
+                        continue;
+                    }
+                }
+
                 await FlowEngine.startFlow(null, contactPhone, userId, 'evolution', automation.id);
                 return;
             }

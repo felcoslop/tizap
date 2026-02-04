@@ -3,7 +3,7 @@ import ReactFlow, { Background, Controls, ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
     Plus, Trash2, Edit3, Save, ArrowLeft, Image as ImageIcon,
-    MessageSquare, ListOrdered, RefreshCw, Zap, Clock, Bell, XCircle, Mail, Settings, X
+    MessageSquare, ListOrdered, RefreshCw, Zap, Clock, Bell, XCircle, Mail, Settings, X, Upload, AlertCircle, Download
 } from 'lucide-react';
 
 // Import Custom Nodes
@@ -38,6 +38,7 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     // Settings Modal State
     const [showDelayModal, setShowDelayModal] = useState(false);
     const [automationDelay, setAutomationDelay] = useState(1440); // Default 24h
+    const [sessionWaitTime, setSessionWaitTime] = useState(1440); // Default 24h expiration
 
     const {
         nodes, setNodes, edges, setEdges,
@@ -51,6 +52,9 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
         if (config?.automationDelay !== undefined) {
             setAutomationDelay(config.automationDelay);
         }
+        if (config?.sessionWaitTime !== undefined) {
+            setSessionWaitTime(config.sessionWaitTime);
+        }
     }, [config]);
 
     const saveDelayConfig = async () => {
@@ -59,10 +63,15 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
             await fetch(`/api/user-config/${user.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ ...config, mapping: config?.mapping || {}, automationDelay: parseInt(automationDelay) })
+                body: JSON.stringify({
+                    ...config,
+                    mapping: config?.mapping || {},
+                    automationDelay: parseInt(automationDelay),
+                    sessionWaitTime: parseInt(sessionWaitTime)
+                })
             });
             setShowDelayModal(false);
-            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay) });
+            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay), sessionWaitTime: parseInt(sessionWaitTime) });
             addToast('Configuração salva!', 'success');
         } catch (err) {
             console.error(err);
@@ -73,8 +82,8 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     useEffect(() => {
         if (automation && automation !== 'new') {
             try {
-                const loadedNodes = JSON.parse(automation.nodes || '[]');
-                const loadedEdges = JSON.parse(automation.edges || '[]');
+                const loadedNodes = typeof automation.nodes === 'string' ? JSON.parse(automation.nodes || '[]') : (automation.nodes || []);
+                const loadedEdges = typeof automation.edges === 'string' ? JSON.parse(automation.edges || '[]') : (automation.edges || []);
                 // Inject common handlers 
                 const nodesWithHandlers = loadedNodes.map(n => ({
                     ...n,
@@ -122,6 +131,10 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     };
 
     const handleSave = async () => {
+        if (triggerType === 'keyword' && !triggerKeywords.trim()) {
+            return addToast('Por favor, insira ao menos uma palavra-chave.', 'error');
+        }
+
         setLoading(true);
         try {
             const data = {
@@ -129,9 +142,9 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                 name,
                 triggerType,
                 triggerKeywords,
-                nodes: JSON.stringify(nodes),
-                edges: JSON.stringify(edges),
-                isActive: automation?.isActive ?? true
+                nodes, // Pass as object, backend/wrapper handles stringify
+                edges,
+                isActive: automation && automation !== 'new' ? (automation.isActive ?? true) : false
             };
             await onSave(data);
         } finally {
@@ -139,9 +152,28 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
         }
     };
 
+    const handleDownloadJson = () => {
+        const data = {
+            name,
+            triggerType,
+            triggerKeywords,
+            nodes,
+            edges
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${name.replace(/\s+/g, '_')}_automation.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        addToast('JSON da automação baixado!', 'success');
+    };
+
     return (
         <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', background: '#fcfcfc' }}>
-            {/* Header omitted for brevity, same as before */}
             <div style={{ padding: '12px 24px', background: 'white', borderBottom: '1px solid #eef0f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button onClick={onBack} style={{ background: '#f8f9fa', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><ArrowLeft size={18} /></button>
@@ -150,7 +182,7 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            style={{ fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#1a1a1a' }}
+                            style={{ fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#1a1a1a', width: '600px' }}
                             placeholder="Nome da Automação"
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
@@ -189,6 +221,13 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                         title="Configurações de Anti-Loop"
                     >
                         <Settings size={18} />
+                    </button>
+                    <button
+                        onClick={handleDownloadJson}
+                        style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', color: '#475569' }}
+                        title="Baixar JSON da Automação"
+                    >
+                        <Download size={18} />
                     </button>
                     <button className="btn-small btn-primary" onClick={handleSave} disabled={loading} style={{ background: '#00a276', height: '38px', padding: '0 20px', fontWeight: '700' }}>
                         {loading ? <RefreshCw className="animate-spin" size={16} /> : <><Save size={16} /> Salvar Automação</>}
@@ -242,20 +281,46 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                             <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Configurações Anti-Loop</h2>
                             <button onClick={() => setShowDelayModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}><X size={20} /></button>
                         </div>
-                        <p style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', marginBottom: '24px' }}>
-                            Defina o tempo de espera para que um contato possa disparar esta automação novamente após tê-la concluído.
-                            <b> Recomendado: 1440 min (24 horas)</b> para evitar loops.
-                        </p>
-                        <div style={{ marginBottom: '24px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Intervalo de Reentrada (minutos):</label>
-                            <input
-                                type="number"
-                                value={automationDelay}
-                                onChange={(e) => setAutomationDelay(e.target.value)}
-                                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '16px', fontWeight: '700' }}
-                            />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Anti-Loop (Reentrada):</label>
+                                <select
+                                    value={automationDelay}
+                                    onChange={(e) => setAutomationDelay(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
+                                >
+                                    <option value="1">1 minuto</option>
+                                    <option value="60">1 hora</option>
+                                    <option value="180">3 horas</option>
+                                    <option value="360">6 horas</option>
+                                    <option value="720">12 horas</option>
+                                    <option value="1440">24 horas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Expiração da Sessão:</label>
+                                <select
+                                    value={sessionWaitTime}
+                                    onChange={(e) => setSessionWaitTime(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
+                                >
+                                    <option value="1">1 minuto</option>
+                                    <option value="60">1 hora</option>
+                                    <option value="180">3 horas</option>
+                                    <option value="360">6 horas</option>
+                                    <option value="720">12 horas</option>
+                                    <option value="1440">24 horas</option>
+                                </select>
+                            </div>
                         </div>
-                        <button className="btn-primary" onClick={saveDelayConfig} style={{ width: '100%', height: '48px', justifyContent: 'center', background: '#00a276' }}>Salvar Configuração</button>
+
+                        <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '24px', fontStyle: 'italic' }}>
+                            * O tempo de expiração define quanto tempo o sistema espera uma resposta antes de liberar novas automações.
+                        </p>
+
+                        <button className="btn-primary" onClick={saveDelayConfig} style={{ width: '100%', height: '45px', borderRadius: '12px' }}>
+                            Salvar Configurações
+                        </button>
                     </div>
                 </div>
             )}
@@ -263,19 +328,25 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     );
 }
 
+// --- List View Component ---
+
 export default function AutomationBuilder({ user, addToast, config, setConfig }) {
     const [automations, setAutomations] = useState([]);
     const [editingAutomation, setEditingAutomation] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [automationToDelete, setAutomationToDelete] = useState(null); // State for delete modal
+    const [automationToToggle, setAutomationToToggle] = useState(null); // State for deactivate confirmation
+    const [showKillModal, setShowKillModal] = useState(false); // State for kill sessions modal
 
     const userId = user?.id;
     const token = user?.token;
+    const fileInputRef = useRef(null);
 
     const fetchAutomations = useCallback(async () => {
         if (!userId) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/evolution/automations/${userId}`, {
+            const res = await fetch('/api/evolution/automations', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -317,16 +388,17 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
         }
     };
 
-    const handleDeleteAutomation = async (id) => {
-        if (!window.confirm('Excluir esta automação?')) return;
+    const confirmDeleteAutomation = async () => {
+        if (!automationToDelete) return;
         try {
-            const res = await fetch(`/api/evolution/automations/${id}`, {
+            const res = await fetch(`/api/evolution/automations/${automationToDelete.id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 addToast('Automação excluída!', 'success');
                 fetchAutomations();
+                setAutomationToDelete(null);
             } else {
                 addToast('Erro ao excluir automação', 'error');
             }
@@ -335,15 +407,25 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
         }
     };
 
-    const handleToggleAutomation = async (id) => {
+    const handleToggleAutomation = (id) => {
+        const auto = automations.find(a => a.id === id);
+        if (auto && auto.isActive) {
+            setAutomationToToggle(auto);
+        } else {
+            executeToggle(id);
+        }
+    };
+
+    const executeToggle = async (id) => {
         try {
             const res = await fetch(`/api/evolution/automations/${id}/toggle`, {
-                method: 'POST',
+                method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 addToast('Status atualizado!', 'success');
                 fetchAutomations();
+                if (automationToToggle) setAutomationToToggle(null);
             } else {
                 addToast('Erro ao atualizar status', 'error');
             }
@@ -352,37 +434,105 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
         }
     };
 
+    const confirmKillSessions = async () => {
+        try {
+            const res = await fetch('/api/evolution/sessions/close-all', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                addToast('Todas as sessões foram finalizadas.', 'success');
+                setShowKillModal(false);
+            } else {
+                addToast('Erro ao finalizar sessões.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            addToast('Erro de conexão.', 'error');
+        }
+    };
+
+    const handleKillSessions = () => setShowKillModal(true);
+
+    const triggerImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImport = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = JSON.parse(e.target.result);
+                if (content.nodes && content.edges) {
+                    setEditingAutomation({
+                        ...content,
+                        id: undefined,
+                        name: (content.name || 'Nova Automação') + ' (Importado)',
+                        triggerType: content.triggerType || 'keyword',
+                        triggerKeywords: content.triggerKeywords || ''
+                    });
+                    addToast('Automação importada! Clique em salvar para persistir.', 'success');
+                } else {
+                    addToast('Arquivo de automação inválido.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                addToast('Erro ao ler arquivo.', 'error');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = ''; // Reset input
+    };
+
     if (editingAutomation) {
         return (
-            <ReactFlowProvider>
-                <AutomationEditor
-                    automation={editingAutomation === 'new' ? null : editingAutomation}
-                    onSave={handleSaveAutomation}
-                    onBack={() => setEditingAutomation(null)}
-                    userId={userId}
-                    addToast={addToast}
-                    token={token}
-                    config={config}
-                    setConfig={setConfig}
-                    user={user}
-                />
-            </ReactFlowProvider>
+            <AutomationEditor
+                automation={editingAutomation === 'new' ? null : editingAutomation}
+                onSave={handleSaveAutomation}
+                onBack={() => { setEditingAutomation(null); fetchAutomations(); }}
+                userId={userId}
+                addToast={addToast}
+                token={token}
+                config={config}
+                setConfig={setConfig}
+                user={user}
+            />
         );
     }
 
     return (
-        <div className="flow-builder-list">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <div>
-                    <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1a1a1a', marginBottom: '8px' }}>Automações Evolution</h1>
-                    <p className="subtitle"> Configure respostas automáticas por palavras-chave ou eventos</p>
+        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>Automações Evolution</h1>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        accept=".json"
+                        onChange={handleImport}
+                    />
+                    <button
+                        className="btn-secondary"
+                        onClick={handleKillSessions}
+                        style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626', borderColor: '#fee2e2', background: '#fef2f2' }}
+                    >
+                        <XCircle size={20} /> Finalizar Sessões
+                    </button>
+                    <button className="btn-secondary" onClick={triggerImport} style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '42px' }}>
+                        <Upload size={20} /> Importar
+                    </button>
+                    <button className="btn-primary" style={{ background: '#00a276', height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setEditingAutomation('new')}>
+                        <Plus size={20} /> Nova Automação
+                    </button>
                 </div>
-                <button className="btn-primary" style={{ background: '#00a276' }} onClick={() => setEditingAutomation('new')}>
-                    <Plus size={20} /> Nova Automação
-                </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', marginTop: '24px' }}>
                 {automations.map(auto => (
                     <div key={auto.id} className="flow-card">
                         <div style={{ display: 'flex', gap: '16px' }}>
@@ -391,11 +541,13 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                             </div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{auto.name}</h3>
-                                    <div className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'}>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={auto.name}>
+                                        {auto.name}
+                                    </h3>
+                                    <label className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'} style={{ cursor: 'pointer', flexShrink: 0 }}>
                                         <input type="checkbox" checked={auto.isActive} onChange={() => handleToggleAutomation(auto.id)} />
                                         <span className="slider"></span>
-                                    </div>
+                                    </label>
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                                     <span style={{ fontSize: '10px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', color: '#475569', fontWeight: 'bold' }}>
@@ -414,7 +566,7 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                             <button className="btn-edit-flow" onClick={() => setEditingAutomation(auto)} style={{ flex: 1, background: '#00a276' }}>
                                 <Edit3 size={16} /> Editar
                             </button>
-                            <button className="btn-delete-flow" onClick={() => handleDeleteAutomation(auto.id)}>
+                            <button className="btn-delete-flow" onClick={() => setAutomationToDelete(auto)}>
                                 <Trash2 size={18} />
                             </button>
                         </div>
@@ -422,16 +574,105 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                 ))}
 
                 {automations.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px', background: '#f9fafb', borderRadius: '16px', border: '2px dashed #e5e7eb' }}>
-                        <Zap size={48} color="#00a276" style={{ marginBottom: '16px', opacity: 0.3 }} />
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Nenhuma automação</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>Crie automações para responder seus clientes instantaneamente.</p>
-                        <button className="btn-primary" style={{ margin: '0 auto', background: '#00a276' }} onClick={() => setEditingAutomation('new')}>
-                            <Plus size={20} /> Criar Automação
-                        </button>
+                    <div style={{
+                        gridColumn: '1 / -1',
+                        padding: '60px',
+                        textAlign: 'center',
+                        background: '#f8fafc',
+                        border: '2px dashed #e2e8f0',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px',
+                        margin: '20px 0'
+                    }}>
+                        <Zap size={48} color="#94a3b8" strokeWidth={1} />
+                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma automação criada ainda.</p>
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {automationToDelete && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                        <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <AlertCircle size={32} color="#dc2626" />
+                        </div>
+                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Excluir Automação?</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                            Tem certeza que deseja excluir a automação <strong>{automationToDelete.name}</strong>? Esta ação não pode ser desfeita.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                            <button className="btn-secondary" onClick={() => setAutomationToDelete(null)}>
+                                Cancelar
+                            </button>
+                            <button
+                                className="btn-primary"
+                                style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                onClick={confirmDeleteAutomation}
+                            >
+                                Sim, Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Deactivate Confirmation Modal */}
+            {automationToToggle && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                        <div style={{ background: '#fff7ed', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <AlertCircle size={32} color="#ea580c" />
+                        </div>
+                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Desativar Automação?</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                            Tem certeza que deseja desativar a automação <strong>{automationToToggle.name}</strong>? Ela parará de responder às mensagens.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                            <button className="btn-secondary" onClick={() => setAutomationToToggle(null)}>
+                                Manter Ativa
+                            </button>
+                            <button
+                                className="btn-primary"
+                                style={{ background: '#ea580c', borderColor: '#ea580c' }}
+                                onClick={() => executeToggle(automationToToggle.id)}
+                            >
+                                Sim, Desativar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Kill Sessions Confirmation Modal */}
+            {showKillModal && (
+                <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                        <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <XCircle size={32} color="#dc2626" />
+                        </div>
+                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Finalizar Todas as Sessões?</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                            Isso interromperá imediatamente todos os fluxos ativos de todos os usuários. Deseja continuar?
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                            <button className="btn-secondary" onClick={() => setShowKillModal(false)}>
+                                Cancelar
+                            </button>
+                            <button
+                                className="btn-primary"
+                                style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                onClick={confirmKillSessions}
+                            >
+                                Sim, Finalizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

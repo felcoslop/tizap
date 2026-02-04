@@ -52,6 +52,7 @@ model UserConfig {
   evolutionConnected    Boolean @default(false)
   businessHours         String  @default("{}")
   automationDelay       Int     @default(1440) // Delay in minutes for re-entry protection
+  sessionWaitTime       Int     @default(1440) // Time in minutes to wait for user reply before expiration
   user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
