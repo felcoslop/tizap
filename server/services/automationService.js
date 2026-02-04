@@ -43,7 +43,8 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
 
         if (existingSession) {
             const sessionAge = Date.now() - new Date(existingSession.updatedAt).getTime();
-            const waitTimeMinutes = userConfig?.sessionWaitTime || 1440;
+            const automationWaitTime = existingSession.automation?.sessionWaitTime;
+            const waitTimeMinutes = automationWaitTime !== undefined ? automationWaitTime : (userConfig?.sessionWaitTime || 1440);
             const expirationLimit = waitTimeMinutes * 60 * 1000;
 
             console.log(`[AUTOMATION DEBUG] Session ${existingSession.id} (${existingSession.status}) age: ${Math.round(sessionAge / 1000)}s | Limit: ${Math.round(expirationLimit / 1000)}s`);

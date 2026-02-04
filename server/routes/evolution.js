@@ -223,9 +223,18 @@ router.get('/evolution/automations', authenticateToken, async (req, res) => {
 router.post('/evolution/automations', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
-        const { id, name, triggerKeywords, nodes, edges, conditions, isActive, triggerType } = req.body;
+        const { id, name, triggerKeywords, nodes, edges, conditions, isActive, triggerType, sessionWaitTime } = req.body;
         const ensureString = (v) => typeof v === 'string' ? v : JSON.stringify(v || []);
-        const data = { name: name || 'Nova Automação', triggerKeywords: ensureString(triggerKeywords || '').replace(/[\[\]"]/g, ''), nodes: ensureString(nodes), edges: ensureString(edges), conditions: ensureString(conditions), isActive: isActive ?? false, triggerType: triggerType || 'message' };
+        const data = {
+            name: name || 'Nova Automação',
+            triggerKeywords: ensureString(triggerKeywords || '').replace(/[\[\]"]/g, ''),
+            nodes: ensureString(nodes),
+            edges: ensureString(edges),
+            conditions: ensureString(conditions),
+            isActive: isActive ?? false,
+            triggerType: triggerType || 'message',
+            sessionWaitTime: parseInt(sessionWaitTime) || 1440
+        };
 
         if (id && id !== 'new') {
             const existing = await prisma.automation.findUnique({ where: { id: parseInt(id) } });

@@ -370,20 +370,23 @@ const FlowEngine = {
 
         for (const session of activeSessions) {
             try {
-                const flow = session.flow || session.automation;
+                const automation = session.automation;
+                const flow = session.flow || automation;
                 if (!flow) continue;
 
                 const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
                 if (!userConfig) continue;
 
                 const sessionAge = Date.now() - new Date(session.createdAt).getTime();
-                const globalWaitTime = userConfig.sessionWaitTime || 1440;
-                const expirationLimit = globalWaitTime * 60 * 1000;
 
-                console.log(`[FLOW ENGINE] Session ${session.id}: Age=${Math.round(sessionAge / 60000)}min | Limit=${globalWaitTime}min | Expired=${sessionAge > expirationLimit}`);
+                // Prioritize per-automation sessionWaitTime
+                const waitTime = automation?.sessionWaitTime || userConfig.sessionWaitTime || 1440;
+                const expirationLimit = waitTime * 60 * 1000;
+
+                console.log(`[FLOW ENGINE] Session ${session.id}: Age=${Math.round(sessionAge / 60000)}min | Limit=${waitTime}min | Expired=${sessionAge > expirationLimit}`);
 
                 if (sessionAge > expirationLimit) {
-                    console.log(`[FLOW ENGINE] Session ${session.id} EXPIRED by global timer!`);
+                    console.log(`[FLOW ENGINE] Session ${session.id} EXPIRED by ${automation ? 'automation' : 'global'} timer!`);
                     await prisma.flowSession.update({ where: { id: session.id }, data: { status: 'expired' } });
                 }
             } catch (e) {

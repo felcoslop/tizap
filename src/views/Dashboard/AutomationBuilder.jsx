@@ -47,31 +47,29 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
         handleNodeDataChange, handleDeleteNode
     } = useFlowEditor({ defaultColor: '#00a276' });
 
-    // Load initial config
+    // Load initial config (automationDelay is still global, sessionWaitTime is per-automation)
     useEffect(() => {
         if (config?.automationDelay !== undefined) {
             setAutomationDelay(config.automationDelay);
         }
-        if (config?.sessionWaitTime !== undefined) {
-            setSessionWaitTime(config.sessionWaitTime);
-        }
+        // sessionWaitTime is loaded from automation in the other useEffect
     }, [config]);
 
     const saveDelayConfig = async () => {
         try {
             if (!user?.id) return;
+            // Only save automationDelay to global config (sessionWaitTime is now per-automation)
             await fetch(`/api/user-config/${user.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     ...config,
                     mapping: config?.mapping || {},
-                    automationDelay: parseInt(automationDelay),
-                    sessionWaitTime: parseInt(sessionWaitTime)
+                    automationDelay: parseInt(automationDelay)
                 })
             });
             setShowDelayModal(false);
-            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay), sessionWaitTime: parseInt(sessionWaitTime) });
+            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay) });
             addToast('Configuração salva!', 'success');
         } catch (err) {
             console.error(err);
@@ -99,6 +97,10 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                 setName(automation.name);
                 setTriggerType(automation.triggerType || 'keyword');
                 setTriggerKeywords(automation.triggerKeywords || '');
+                // Load per-automation sessionWaitTime
+                if (automation.sessionWaitTime !== undefined) {
+                    setSessionWaitTime(automation.sessionWaitTime);
+                }
             } catch (e) {
                 console.error('Error loading automation nodes:', e);
             }
@@ -144,6 +146,7 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                 triggerKeywords,
                 nodes, // Pass as object, backend/wrapper handles stringify
                 edges,
+                sessionWaitTime: parseInt(sessionWaitTime),
                 isActive: automation && automation !== 'new' ? (automation.isActive ?? true) : false
             };
             await onSave(data);
