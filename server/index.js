@@ -80,6 +80,22 @@ const broadcastMessage = (event, data, targetUserId = null) => {
 // Expose broadcast to routes
 app.set('broadcastMessage', broadcastMessage);
 
+// Inject broadcast into Worker System
+import { setBroadcastCallback } from './queues/dispatchQueue.js';
+setBroadcastCallback((data) => {
+    // If data has dispatchId, we assume it's a dispatch event
+    // The previous engine passed (event, data, userId).
+    // The new worker passes ({ dispatchId, currentIndex... }) or ({ event, data }).
+
+    // Adapt to legacy broadcast signature if needed, or simply:
+    if (data.event) {
+        broadcastMessage(data.event, data.data);
+    } else {
+        // It's a progress update
+        broadcastMessage('dispatch:progress', data);
+    }
+});
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(requestLogger);
