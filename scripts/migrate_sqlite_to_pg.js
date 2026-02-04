@@ -1,30 +1,44 @@
 
-import { PrismaClient as PrismaClientSQLite } from '@prisma/client'; // Will use default schema (which is currently sqlite)
-import { PrismaClient as PrismaClientPG } from '@prisma/client'; // We need a way to instantiate PG client dynamically or use a raw query builder
 import pg from 'pg';
-import fs from 'fs';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Since we cannot have two generated Prisma Clients with different providers easily in one project without complex setup,
-// We will use:
-// 1. Prisma Client for READ (SQLite) - assuming generated client is currently SQLite.
-// 2. 'pg' library for WRITE (PostgreSQL) - using raw INSERTs for speed and simplicity.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // DB Configuration
-const SQLITE_URL = process.env.DATABASE_URL || 'file:./database.sqlite';
-const PG_CONNECTION_STRING = process.env.DATABASE_URL_PG || 'postgresql://user:password@localhost:5432/tizap_db';
+// Normalize SQLite path to remove "file:" prefix if present
+let sqlitePath = process.env.DATABASE_URL || './database.sqlite';
+sqlitePath = sqlitePath.replace('file:', '');
+if (!path.isAbsolute(sqlitePath)) {
+    sqlitePath = path.resolve(process.cwd(), sqlitePath);
+}
+
+const PG_CONNECTION_STRING = process.env.DATABASE_URL_PG;
 
 async function migrate() {
-    console.log('🚀 Starting Migration: SQLite -> PostgreSQL');
+    if (!PG_CONNECTION_STRING) {
+        console.error('❌ DATABASE_URL_PG not set. Skipping migration.');
+        return;
+    }
 
-    // 1. Initialize SQLite Client
-    const prismaSqlite = new PrismaClientSQLite({
-        datasources: { db: { url: SQLITE_URL } }
-    });
+    console.log('🚀 Starting Migration: SQLite -> PostgreSQL');
+    console.log(`📂 SQLite File: ${sqlitePath}`);
+
+    // 1. Initialize SQLite (Raw Driver)
+    let db;
+    try {
+        db = await open({
+            filename: sqlitePath,
+            driver: sqlite3.Database
+        });
+        console.log('✅ Connected to SQLite');
+    } catch (err) {
+        console.error('❌ Failed to open SQLite:', err.message);
+        return;
+    }
 
     // 2. Initialize Postgres Client
     const pgPool = new pg.Pool({
@@ -32,16 +46,11 @@ async function migrate() {
     });
 
     try {
-        // Test Connections
-        await prismaSqlite.$connect();
-        console.log('✅ Connected to SQLite');
-
         const pgClient = await pgPool.connect();
         console.log('✅ Connected to PostgreSQL');
         pgClient.release();
 
         // 3. Define Tables in Order (for Foreign Keys)
-        // Order matters! Parents first.
         const tables = [
             'User',
             'UserConfig',
@@ -59,34 +68,30 @@ async function migrate() {
         for (const table of tables) {
             console.log(`\n📦 Migrating table: ${table}...`);
 
-            // Read from SQLite
-            // Dynamic access like prismaSqlite[table.toLowerCase()] required mapping casing
-            // Prisma Client properties are usually camelCase (user, userConfig)
-            const modelName = table.charAt(0).toLowerCase() + table.slice(1);
-
-            if (!prismaSqlite[modelName]) {
-                console.error(`❌ Model ${modelName} not found in Prisma Client`);
+            // Check if table exists in SQLite
+            const tableExists = await db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'`);
+            if (!tableExists) {
+                console.log(`   ⏩ Table ${table} does not exist in SQLite. Skipping...`);
                 continue;
             }
 
-            const records = await prismaSqlite[modelName].findMany();
+            // Read from SQLite using raw SQL
+            const records = await db.all(`SELECT * FROM "${table}"`);
             console.log(`   Found ${records.length} records in SQLite.`);
 
             if (records.length === 0) continue;
 
             // Write to Postgres
-            // We'll use a transaction for safety
             const client = await pgPool.connect();
             try {
                 await client.query('BEGIN');
 
                 for (const record of records) {
                     const keys = Object.keys(record);
-                    const values = Object.values(record);
+                    const values = keys.map(key => record[key]);
 
-                    // Construct param placeholders ($1, $2, ...)
                     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-                    const columns = keys.map(k => `"${k}"`).join(', '); // Quote columns for safety
+                    const columns = keys.map(k => `"${k}"`).join(', ');
 
                     const query = `
                         INSERT INTO "${table}" (${columns}) 
@@ -113,7 +118,7 @@ async function migrate() {
     } catch (err) {
         console.error('\n❌ Migration Failed:', err);
     } finally {
-        await prismaSqlite.$disconnect();
+        if (db) await db.close();
         await pgPool.end();
     }
 }

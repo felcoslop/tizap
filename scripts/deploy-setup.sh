@@ -17,7 +17,7 @@ if [ -n "$DATABASE_URL_PG" ]; then
     
     # Run Prisma Push to ensure tables exist in Postgres
     echo "[DEPLOY] Pushing schema to Postgres..."
-    npx prisma db push --schema prisma/schema.postgres.prisma --accept-data-loss
+    npx prisma db push --schema prisma/schema.postgres.prisma
 
     # Run Data Migration Script
     # This script should handle "idempotency" (i.e., not duplicate data if already run)
