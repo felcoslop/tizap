@@ -136,19 +136,16 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 endpoint = `/message/sendWhatsAppAudio/${config.evolutionInstanceName}`;
                 payload.audio = mediaUrl; payload.delay = 1200; payload.encoding = true;
             } else if (mediaType === 'document' || String(mediaUrl).toLowerCase().endsWith('.pdf')) {
-                // Evolution API v2: /message/sendMedia with mediaMessage object
+                // Evolution API v2: /message/sendMedia with FLAT structure
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
-                const filename = 'documento.pdf';
 
                 payload = {
                     number: remoteJid,
-                    mediaMessage: {
-                        mediatype: 'document',
-                        url: mediaUrl,
-                        fileName: filename,
-                        mimetype: 'application/pdf',
-                        caption: ''
-                    }
+                    mediatype: 'document',
+                    media: mediaUrl,
+                    mimetype: 'application/pdf',
+                    fileName: 'documento.pdf',
+                    caption: ''
                 };
             } else {
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
