@@ -357,6 +357,33 @@ const FlowEngine = {
                 console.error(`[FLOW ENGINE] Error processing scheduled session ${session.id}:`, err);
             }
         }
+
+        // NEW: Check for sessions that exceeded the global sessionWaitTime since creation
+        const activeSessions = await prisma.flowSession.findMany({
+            where: { status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] } },
+            include: { flow: true, automation: true }
+        });
+
+        for (const session of activeSessions) {
+            try {
+                const flow = session.flow || session.automation;
+                if (!flow) continue;
+
+                const userConfig = await prisma.userConfig.findUnique({ where: { userId: flow.userId } });
+                if (!userConfig) continue;
+
+                const sessionAge = Date.now() - new Date(session.createdAt).getTime();
+                const globalWaitTime = userConfig.sessionWaitTime || 1440;
+                const expirationLimit = globalWaitTime * 60 * 1000;
+
+                if (sessionAge > expirationLimit) {
+                    console.log(`[FLOW ENGINE] Session ${session.id} expired by global timer. Age: ${Math.round(sessionAge / 60000)}min | Limit: ${globalWaitTime}min`);
+                    await prisma.flowSession.update({ where: { id: session.id }, data: { status: 'expired' } });
+                }
+            } catch (e) {
+                console.error(`[FLOW ENGINE] Error checking session ${session.id} expiration:`, e);
+            }
+        }
     },
 
     async sendEvolutionPresence(phone, status, config) {

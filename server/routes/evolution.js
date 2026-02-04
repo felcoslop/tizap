@@ -127,7 +127,7 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
 
         let normalizedPhone = String(phone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
-        const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+        const remoteJid = `${normalizedPhone}@c.us`;
 
         let payload = { number: remoteJid };
         let endpoint = `/message/sendText/${config.evolutionInstanceName}`;
@@ -137,15 +137,21 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
                 payload.audio = mediaUrl; payload.delay = 1200; payload.encoding = true;
             } else if (mediaType === 'document' || String(mediaUrl).toLowerCase().endsWith('.pdf')) {
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
+                const filename = (messageBody && (messageBody.toLowerCase().endsWith('.pdf') || messageBody.length < 50))
+                    ? (messageBody.toLowerCase().endsWith('.pdf') ? messageBody : messageBody + '.pdf')
+                    : 'documento.pdf';
+
                 payload.mediaMessage = {
                     url: mediaUrl,
-                    filename: bodyText ? (bodyText.toLowerCase().endsWith('.pdf') ? bodyText : bodyText + '.pdf') : 'documento.pdf',
+                    filename: filename,
                     mimetype: 'application/pdf',
-                    caption: bodyText || ''
+                    caption: messageBody || ''
                 };
             } else {
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
-                payload.mediatype = mediaType || 'image'; payload.media = mediaUrl; payload.caption = messageBody || '';
+                payload.mediatype = mediaType || 'image';
+                payload.media = mediaUrl;
+                payload.caption = messageBody || '';
             }
         } else {
             payload.text = messageBody;

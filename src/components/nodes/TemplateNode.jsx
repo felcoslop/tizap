@@ -8,7 +8,12 @@ const TemplateNode = ({ data, id, selected }) => {
     const [templateName, setTemplateName] = useState(data.templateName || '');
 
     const handleSave = () => {
-        data.onChange(id, { templateName, isTemplate: true, waitForReply: data.waitForReply });
+        data.onChange(id, {
+            templateName,
+            isTemplate: true,
+            waitForReply: data.waitForReply,
+            waitTimeout: data.waitTimeout
+        });
         setIsEditing(false);
     };
 
@@ -43,6 +48,19 @@ const TemplateNode = ({ data, id, selected }) => {
                             />
                             Aguardar resposta
                         </label>
+                        {data.waitForReply && (
+                            <div style={{ marginTop: '8px', padding: '8px', background: '#f8f9fa', borderRadius: '4px' }}>
+                                <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '4px' }}>Tempo limite (minutos):</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={data.waitTimeout || 5}
+                                    onChange={(e) => data.onChange(id, { waitTimeout: Number(e.target.value) })}
+                                    style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                                />
+                                <span style={{ fontSize: '10px', color: '#888' }}>Segue pelo caminho vermelho se não responder.</span>
+                            </div>
+                        )}
                         <button className="btn-small btn-primary" onClick={handleSave}>Salvar</button>
                     </div>
                 </div>

@@ -51,6 +51,9 @@ export const nodeHandlers = {
         if (res.success) {
             await logAction(session.id, node.id, node.data.label, 'sent_message', `Template: ${templateName}`);
             await saveHistory(session.contactPhone, `[Meta] Template: ${templateName}`, true, userConfig.phoneId, 'meta', userConfig.userId);
+            if (node.data.waitForReply) {
+                return { action: 'wait', waitTimeout: node.data.waitTimeout };
+            }
             return { action: 'continue' };
         } else {
             await logAction(session.id, node.id, node.data.label, 'error', res.error || 'Erro ao enviar template');

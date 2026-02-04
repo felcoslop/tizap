@@ -248,7 +248,7 @@ export function ReceivedEvolutionTab({
                             // Robust name labeling logic
                             const nonMeMsg = sortedMsgs.find(m => !m.isFromMe);
                             const foundName = nonMeMsg?.pushName || nonMeMsg?.contactName || lastMsg.pushName || lastMsg.contactName;
-                            const contactName = foundName && foundName !== 'Eu' ? foundName : phoneKey;
+                            const contactName = foundName && foundName !== 'Eu' ? foundName : lastMsg.contactPhone;
 
                             const hasUnread = contactMsgs.some(m => !m.isFromMe && !m.isRead);
                             const isSelected = normalize(activeContact) === phoneKey;
