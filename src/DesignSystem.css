@@ -617,8 +617,25 @@ button:focus {
   width: 80px;
 }
 
+/* Logo Image in Sidebar */
+.sidebar .logo-small img.rounded-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+/* Multiline Nav Label Styles */
+.nav-label-multiline {
+  line-height: 1.2;
+}
+
+.nav-label-multiline span {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
 .sidebar.collapsed .logo-small span,
-.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-item .nav-label,
 .sidebar.collapsed .user-email {
   display: none;
 }
