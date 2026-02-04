@@ -472,7 +472,8 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                         id: undefined,
                         name: (content.name || 'Nova Automação') + ' (Importado)',
                         triggerType: content.triggerType || 'keyword',
-                        triggerKeywords: content.triggerKeywords || ''
+                        triggerKeywords: content.triggerKeywords || '',
+                        isActive: false
                     });
                     addToast('Automação importada! Clique em salvar para persistir.', 'success');
                 } else {

@@ -75,7 +75,7 @@ const EmailNode = ({ data, id, selected }) => {
                 </div>
             ) : (
                 <div>
-                    <p className="node-text">📧 <b>Para:</b> {data.recipientEmail || '(Geral / Variável)'}</p>
+                    <p className="node-text"><b>Para:</b> {data.recipientEmail || '(Geral / Variável)'}</p>
                     <p className="node-text" style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Template: {data.templateName || 'Não definido'}</p>
                 </div>
             )}

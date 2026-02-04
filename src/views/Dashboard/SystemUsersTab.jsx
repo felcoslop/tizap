@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Edit3, Shield, Check, X, RefreshCw } from 'lucide-react';
+import { Users, Search, Edit3, Shield, Check, X, RefreshCw, GitBranch, Send } from 'lucide-react';
 
 export default function SystemUsersTab({ user, addToast }) {
     const [users, setUsers] = useState([]);
@@ -140,10 +140,10 @@ export default function SystemUsersTab({ user, addToast }) {
                                         })()}
                                     </td>
                                     <td style={{ padding: '15px' }}>
-                                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem' }}>
-                                            <span title="Automações">🤖 {u.metrics?.automations || 0}</span>
-                                            <span title="Fluxos">⚡ {u.metrics?.flows || 0}</span>
-                                            <span title="Disparos">📤 {u.metrics?.dispatches || 0}</span>
+                                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', alignItems: 'center' }}>
+                                            <span title="Automações" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Shield size={12} /> {u.metrics?.automations || 0}</span>
+                                            <span title="Fluxos" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GitBranch size={12} /> {u.metrics?.flows || 0}</span>
+                                            <span title="Disparos" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Send size={12} /> {u.metrics?.dispatches || 0}</span>
                                         </div>
                                     </td>
                                     <td style={{ padding: '15px', textAlign: 'right' }}>

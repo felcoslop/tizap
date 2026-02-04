@@ -97,7 +97,7 @@ export const nodeHandlers = {
         }
         await logAction(session.id, node.id, node.data.label, 'sent_message', `Opções: ${messageText.substring(0, 50)}...`);
         await saveHistory(session.contactPhone, `[${platform.toUpperCase()}] ${fullSentText}`, true, userConfig.phoneId, platform, userConfig.userId);
-        return { action: 'wait' };
+        return { action: 'wait', waitTimeout: node.data.waitTimeout };
     },
 
     messageNode: async (session, node, userConfig, platform) => {
@@ -117,6 +117,10 @@ export const nodeHandlers = {
         }
         await logAction(session.id, node.id, node.data.label, 'sent_message', messageText.substring(0, 100));
         await saveHistory(session.contactPhone, `[${platform.toUpperCase()}] ${messageText}`, true, userConfig.phoneId, platform, userConfig.userId);
+
+        if (node.data.waitForReply) {
+            return { action: 'wait', waitTimeout: node.data.waitTimeout };
+        }
         return { action: 'continue' };
     },
 

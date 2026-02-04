@@ -228,217 +228,225 @@ export function SettingsTab({
                 </div>
             )}
 
-            {/* Meta WhatsApp Credentials Section */}
-            <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <h3 style={{ margin: 0 }}>Credenciais WhatsApp Meta</h3>
-                    <button className="btn-secondary" onClick={() => setIsEditing(!isEditing)}>{isEditing ? 'Cancelar' : 'Editar'}</button>
-                </div>
-                <div className="input-grid mt-4">
-                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Token</label>
-                        <div className="input-with-btn">
-                            <input type={showToken ? "text" : "password"} value={isEditing ? tempConfig.token : config.token} onChange={e => setTempConfig({ ...tempConfig, token: e.target.value })} disabled={!isEditing} />
-                            <button type="button" className="btn-secondary" onClick={() => setShowToken(!showToken)} style={{ padding: '0 12px' }}>
-                                {showToken ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </button>
-                        </div>
+            {/* Split layout for Meta and Evolution */}
+            <div className="settings-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                gap: '1.5rem',
+                alignItems: 'start'
+            }}>
+                {/* Meta WhatsApp Credentials Section */}
+                <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', height: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <h3 style={{ margin: 0 }}>Credenciais WhatsApp Meta</h3>
+                        <button className="btn-secondary" onClick={() => setIsEditing(!isEditing)}>{isEditing ? 'Cancelar' : 'Editar'}</button>
                     </div>
-                    <div className="input-group">
-                        <label>Phone ID</label>
-                        <input type="text" value={isEditing ? tempConfig.phoneId : config.phoneId} onChange={e => setTempConfig({ ...tempConfig, phoneId: e.target.value })} disabled={!isEditing} />
-                    </div>
-                    <div className="input-group">
-                        <label>WABA ID</label>
-                        <input type="text" value={isEditing ? tempConfig.wabaId : config.wabaId} onChange={e => setTempConfig({ ...tempConfig, wabaId: e.target.value })} disabled={!isEditing} />
-                    </div>
-
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '1rem 0' }} />
-                    </div>
-
-                    <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h4 style={{ margin: 0 }}>Webhook para o Meta</h4>
-                        {isEditing && (
-                            <button className="btn-secondary" onClick={generateWebhook} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-                                <RefreshCw size={14} style={{ marginRight: '6px' }} /> Gerar Verify Token
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Webhook URL (Configurações do App Meta)</label>
-                        <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="text"
-                                value={config.webhookToken ? `${window.location.origin}/webhook/token/${config.webhookToken}` : 'Salve as configurações para gerar a URL'}
-                                readOnly
-                                style={{ flex: 1 }}
-                            />
-                            <button
-                                className="btn-icon"
-                                onClick={() => {
-                                    if (config.webhookToken) {
-                                        navigator.clipboard.writeText(`${window.location.origin}/webhook/token/${config.webhookToken}`);
-                                        addToast('URL copiada!', 'info');
-                                    }
-                                }}
-                                title="Copiar URL"
-                                disabled={!config.webhookToken}
-                            >
-                                <Copy size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="input-group mt-3" style={{ gridColumn: 'span 2' }}>
-                        <label>Verify Token (Configurações do App Meta)</label>
-                        <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
-                            <div className="input-with-btn" style={{ flex: 1, display: 'flex' }}>
-                                <input
-                                    type={showToken ? "text" : "password"}
-                                    value={isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken}
-                                    onChange={e => setTempConfig({ ...tempConfig, webhookVerifyToken: e.target.value })}
-                                    readOnly={!isEditing}
-                                    placeholder="Clique em Gerar ou digite um token"
-                                    style={{ flex: 1 }}
-                                />
+                    <div className="input-grid mt-4">
+                        <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Token</label>
+                            <div className="input-with-btn">
+                                <input type={showToken ? "text" : "password"} value={isEditing ? tempConfig.token : config.token} onChange={e => setTempConfig({ ...tempConfig, token: e.target.value })} disabled={!isEditing} />
                                 <button type="button" className="btn-secondary" onClick={() => setShowToken(!showToken)} style={{ padding: '0 12px' }}>
                                     {showToken ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-                            <button
-                                className="btn-icon"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken);
-                                    addToast('Token copiado!', 'info');
-                                }}
-                                title="Copiar Token"
-                            >
-                                <Copy size={18} />
-                            </button>
                         </div>
-                    </div>
+                        <div className="input-group">
+                            <label>Phone ID</label>
+                            <input type="text" value={isEditing ? tempConfig.phoneId : config.phoneId} onChange={e => setTempConfig({ ...tempConfig, phoneId: e.target.value })} disabled={!isEditing} />
+                        </div>
+                        <div className="input-group">
+                            <label>WABA ID</label>
+                            <input type="text" value={isEditing ? tempConfig.wabaId : config.wabaId} onChange={e => setTempConfig({ ...tempConfig, wabaId: e.target.value })} disabled={!isEditing} />
+                        </div>
 
-                    {isEditing && (
                         <div style={{ gridColumn: 'span 2' }}>
-                            <button className="btn-primary w-full mt-6" onClick={saveConfig}>Salvar Configurações</button>
+                            <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '1rem 0' }} />
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* Evolution API Section */}
-            <div className="card" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', border: '2px solid #00a276', borderRadius: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Radio size={24} color="#00a276" />
-                        <div>
-                            <h3 style={{ margin: 0, color: '#00a276' }}>Evolution API</h3>
-                            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#666' }}>Conexão via QR Code (Baileys)</p>
+                        <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h4 style={{ margin: 0 }}>Webhook para o Meta</h4>
+                            {isEditing && (
+                                <button className="btn-secondary" onClick={generateWebhook} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                                    <RefreshCw size={14} style={{ marginRight: '6px' }} /> Gerar Verify Token
+                                </button>
+                            )}
                         </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {evolutionStatus === 'connected' ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e8f5e9', color: '#2e7d32', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
-                                <Wifi size={16} /> Conectado
-                            </span>
-                        ) : (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff3e0', color: '#e65100', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
-                                <WifiOff size={16} /> Desconectado
-                            </span>
-                        )}
-                    </div>
-                </div>
 
-                <div className="input-grid">
-                    <div style={{ gridColumn: 'span 2', background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #eee', marginBottom: '10px' }}>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
-                            <strong>Configuração Servidor:</strong> A URL e API Key estão configuradas globalmente.
-                            Cada usuário terá uma instância exclusiva criada automaticamente.
-                        </p>
-                    </div>
-
-                    {config.evolutionWebhookToken && (
                         <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                            <label>Webhook Evolution (gerado automaticamente)</label>
+                            <label>Webhook URL (Configurações do App Meta)</label>
                             <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
                                 <input
                                     type="text"
-                                    value={`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`}
+                                    value={config.webhookToken ? `${window.location.origin}/webhook/token/${config.webhookToken}` : 'Salve as configurações para gerar a URL'}
                                     readOnly
-                                    style={{ flex: 1, fontSize: '0.85rem' }}
+                                    style={{ flex: 1 }}
                                 />
                                 <button
                                     className="btn-icon"
                                     onClick={() => {
-                                        navigator.clipboard.writeText(`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`);
-                                        addToast('Webhook URL copiada!', 'info');
+                                        if (config.webhookToken) {
+                                            navigator.clipboard.writeText(`${window.location.origin}/webhook/token/${config.webhookToken}`);
+                                            addToast('URL copiada!', 'info');
+                                        }
                                     }}
                                     title="Copiar URL"
+                                    disabled={!config.webhookToken}
                                 >
                                     <Copy size={18} />
                                 </button>
                             </div>
                         </div>
-                    )}
 
-                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '1rem' }}>
-                        {evolutionStatus === 'connected' ? (
-                            <>
+                        <div className="input-group mt-3" style={{ gridColumn: 'span 2' }}>
+                            <label>Verify Token (Configurações do App Meta)</label>
+                            <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
+                                <div className="input-with-btn" style={{ flex: 1, display: 'flex' }}>
+                                    <input
+                                        type={showToken ? "text" : "password"}
+                                        value={isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken}
+                                        onChange={e => setTempConfig({ ...tempConfig, webhookVerifyToken: e.target.value })}
+                                        readOnly={!isEditing}
+                                        placeholder="Clique em Gerar ou digite um token"
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button type="button" className="btn-secondary" onClick={() => setShowToken(!showToken)} style={{ padding: '0 12px' }}>
+                                        {showToken ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                                 <button
-                                    className="btn-secondary"
-                                    onClick={() => { setShowEvolutionQR(true); fetchEvolutionQR(); }}
-                                    style={{ flex: 1 }}
+                                    className="btn-icon"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(isEditing ? tempConfig.webhookVerifyToken : config.webhookVerifyToken);
+                                        addToast('Token copiado!', 'info');
+                                    }}
+                                    title="Copiar Token"
                                 >
-                                    <QrCode size={18} style={{ marginRight: '8px' }} />
-                                    Ver QR Code
-                                </button>
-                                <button
-                                    className="btn-secondary"
-                                    onClick={handleEnableWebhook}
-                                    disabled={evolutionLoading || !config.evolutionInstanceName}
-                                    style={{ flex: 1 }}
-                                    title="Sincroniza os eventos de áudio, imagem e texto"
-                                >
-                                    <Wifi size={18} style={{ marginRight: '8px' }} />
-                                    Ativar Webhook
-                                </button>
-                                <button
-                                    className="btn-secondary"
-                                    onClick={handleDisconnectEvolution}
-                                    style={{ color: '#d32f2f', borderColor: '#ffcdd2', background: '#fff5f5' }}
-                                >
-                                    <WifiOff size={18} style={{ marginRight: '8px' }} />
-                                    Desconectar
-                                </button>
-                            </>
-                        ) : (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
-                                <button
-                                    className="btn-primary"
-                                    onClick={handleSetupEvolution}
-                                    disabled={evolutionLoading}
-                                    style={{ flex: 2, background: '#00a276', minWidth: '200px' }}
-                                >
-                                    {evolutionLoading ? (
-                                        <><RefreshCw size={18} className="animate-spin" style={{ marginRight: '8px' }} /> Configurando...</>
-                                    ) : (
-                                        <><QrCode size={18} style={{ marginRight: '8px' }} /> Conectar via QR Code</>
-                                    )}
-                                </button>
-                                <button
-                                    className="btn-secondary"
-                                    onClick={handleEnableWebhook}
-                                    disabled={evolutionLoading || !config.evolutionInstanceName}
-                                    style={{ flex: 1, minWidth: '150px' }}
-                                    title="Configura os eventos de áudio, imagem e texto na Evolution"
-                                >
-                                    <Wifi size={18} style={{ marginRight: '8px' }} />
-                                    Corrigir Webhook
+                                    <Copy size={18} />
                                 </button>
                             </div>
+                        </div>
+
+                        {isEditing && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <button className="btn-primary w-full mt-6" onClick={saveConfig}>Salvar Configurações</button>
+                            </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Evolution API Section */}
+                <div className="card" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', border: '2px solid #00a276', borderRadius: '16px', height: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Radio size={24} color="#00a276" />
+                            <div>
+                                <h3 style={{ margin: 0, color: '#00a276' }}>Evolution API</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#666' }}>Conexão via QR Code (Baileys)</p>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {evolutionStatus === 'connected' ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e8f5e9', color: '#2e7d32', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                    <Wifi size={16} /> Conectado
+                                </span>
+                            ) : (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff3e0', color: '#e65100', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                    <WifiOff size={16} /> Desconectado
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="input-grid">
+                        <div style={{ gridColumn: 'span 2', background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #eee', marginBottom: '10px' }}>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+                                <strong>Configuração Servidor:</strong> A URL e API Key estão configuradas globalmente.
+                                Cada usuário terá uma instância exclusiva criada automaticamente.
+                            </p>
+                        </div>
+
+                        {config.evolutionWebhookToken && (
+                            <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Webhook Evolution (gerado automaticamente)</label>
+                                <div className="copy-input" style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`}
+                                        readOnly
+                                        style={{ flex: 1, fontSize: '0.85rem' }}
+                                    />
+                                    <button
+                                        className="btn-icon"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}/api/evolution/webhook/${config.evolutionWebhookToken}`);
+                                            addToast('Webhook URL copiada!', 'info');
+                                        }}
+                                        title="Copiar URL"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '1rem' }}>
+                            {evolutionStatus === 'connected' ? (
+                                <>
+                                    <button
+                                        className="btn-secondary"
+                                        onClick={() => { setShowEvolutionQR(true); fetchEvolutionQR(); }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <QrCode size={18} style={{ marginRight: '8px' }} />
+                                        Ver QR Code
+                                    </button>
+                                    <button
+                                        className="btn-secondary"
+                                        onClick={handleEnableWebhook}
+                                        disabled={evolutionLoading || !config.evolutionInstanceName}
+                                        style={{ flex: 1 }}
+                                        title="Sincroniza os eventos de áudio, imagem e texto"
+                                    >
+                                        <Wifi size={18} style={{ marginRight: '8px' }} />
+                                        Ativar Webhook
+                                    </button>
+                                    <button
+                                        className="btn-secondary"
+                                        onClick={handleDisconnectEvolution}
+                                        style={{ color: '#d32f2f', borderColor: '#ffcdd2', background: '#fff5f5' }}
+                                    >
+                                        <WifiOff size={18} style={{ marginRight: '8px' }} />
+                                        Desconectar
+                                    </button>
+                                </>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '12px', width: '100%', alignItems: 'stretch' }}>
+                                    <button
+                                        className="btn-primary"
+                                        onClick={handleSetupEvolution}
+                                        disabled={evolutionLoading}
+                                        style={{ flex: 2, background: '#00a276', height: '45px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        {evolutionLoading ? (
+                                            <><RefreshCw size={18} className="animate-spin" style={{ marginRight: '8px' }} /> Configurando...</>
+                                        ) : (
+                                            <><QrCode size={18} style={{ marginRight: '8px' }} /> Conectar via QR Code</>
+                                        )}
+                                    </button>
+                                    <button
+                                        className="btn-secondary"
+                                        onClick={handleEnableWebhook}
+                                        disabled={true}
+                                        style={{ flex: 1, height: '45px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6, cursor: 'not-allowed' }}
+                                        title="Conecte seu WhatsApp para habilitar esta função"
+                                    >
+                                        <Wifi size={18} style={{ marginRight: '8px' }} />
+                                        Corrigir Webhook
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

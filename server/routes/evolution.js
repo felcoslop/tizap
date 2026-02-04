@@ -82,7 +82,7 @@ router.post('/evolution/webhook/enable', authenticateToken, async (req, res) => 
                 events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'MESSAGES_DELETE', 'SEND_MESSAGE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'PRESENCE_UPDATE', 'CONTACTS_UPSERT', 'CHATS_UPSERT']
             }
         });
-        res.json({ success: true, instance: targetInstance, webhookUrl: finalWebhookUrl, evolutionResponse: result, message: "✅ Webhook corrigido!" });
+        res.json({ success: true, instance: targetInstance, webhookUrl: finalWebhookUrl, evolutionResponse: result, message: "Webhook corrigido!" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -135,6 +135,14 @@ router.post('/evolution/send-message', authenticateToken, async (req, res) => {
             if (mediaType === 'audio') {
                 endpoint = `/message/sendWhatsAppAudio/${config.evolutionInstanceName}`;
                 payload.audio = mediaUrl; payload.delay = 1200; payload.encoding = true;
+            } else if (mediaType === 'document' || String(mediaUrl).toLowerCase().endsWith('.pdf')) {
+                endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
+                payload.mediaMessage = {
+                    url: mediaUrl,
+                    filename: bodyText ? (bodyText.toLowerCase().endsWith('.pdf') ? bodyText : bodyText + '.pdf') : 'documento.pdf',
+                    mimetype: 'application/pdf',
+                    caption: bodyText || ''
+                };
             } else {
                 endpoint = `/message/sendMedia/${config.evolutionInstanceName}`;
                 payload.mediatype = mediaType || 'image'; payload.media = mediaUrl; payload.caption = messageBody || '';
@@ -366,10 +374,11 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 const isFromMe = !!key.fromMe;
                 const content = message.ephemeralMessage?.message || message.viewOnceMessage?.message || message;
 
-                let bodyText = content.conversation || content.extendedTextMessage?.text || (content.imageMessage ? '[Imagem]' : content.audioMessage ? '[Áudio]' : '');
+                let bodyText = content.conversation || content.extendedTextMessage?.text || (content.imageMessage ? '[Imagem]' : content.audioMessage ? '[Áudio]' : content.documentMessage ? (content.documentMessage.fileName || '[Documento]') : '');
                 let mediaUrl = null, mediaType = null;
                 if (content.imageMessage) mediaType = 'image';
                 if (content.audioMessage) mediaType = 'audio';
+                if (content.documentMessage) mediaType = 'document';
 
                 if (mediaType) mediaUrl = await downloadEvolutionMedia(msgData, config);
 

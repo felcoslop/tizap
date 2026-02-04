@@ -15,6 +15,7 @@ const OptionsNode = ({ data, id, selected }) => {
             options,
             validateSelection: data.validateSelection,
             waitForReply: true,
+            waitTimeout: data.waitTimeout,
             typingTime: Number(typingTime)
         });
         setIsEditing(false);
@@ -74,7 +75,7 @@ const OptionsNode = ({ data, id, selected }) => {
                     </div>
 
                     <div style={{ marginBottom: '12px', padding: '8px', background: '#f8f9fa', borderRadius: '6px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '8px' }}>
                             <input
                                 type="checkbox"
                                 checked={data.validateSelection}
@@ -82,6 +83,17 @@ const OptionsNode = ({ data, id, selected }) => {
                             />
                             <span style={{ fontSize: '12px' }}>Validar resposta (exigir número)</span>
                         </label>
+                        <div style={{ marginTop: '8px', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+                            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '4px' }}>Tempo limite (minutos):</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={data.waitTimeout || 5}
+                                onChange={(e) => data.onChange(id, { waitTimeout: Number(e.target.value) })}
+                                style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                            />
+                            <p style={{ fontSize: '10px', color: '#888', marginTop: '4px', lineHeight: '1.2' }}>Segue pelo caminho <strong>Inválido</strong> se não responder.</p>
+                        </div>
                     </div>
 
                     <button className="btn-small btn-primary" onClick={handleSave} style={{ width: '100%' }}>Salvar</button>

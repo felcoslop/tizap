@@ -132,11 +132,23 @@ const FlowEngine = {
             }
 
             if (result.action === 'wait' || currentNode.data?.waitForReply) {
+                let scheduledAt = null;
+                const nodeWaitTimeout = result.waitTimeout || currentNode.data?.waitTimeout;
+
+                if (nodeWaitTimeout) {
+                    const globalWaitTime = userConfig?.sessionWaitTime || 1440;
+                    const finalTimeout = Math.min(nodeWaitTimeout, globalWaitTime);
+                    scheduledAt = new Date(Date.now() + finalTimeout * 60 * 1000);
+                }
+
                 await prisma.flowSession.update({
                     where: { id: session.id },
-                    data: { status: 'waiting_reply' }
+                    data: {
+                        status: 'waiting_reply',
+                        scheduledAt: scheduledAt
+                    }
                 });
-                await logAction(session.id, currentNode.id, nodeName, 'waiting_reply', 'Aguardando resposta');
+                await logAction(session.id, currentNode.id, nodeName, 'waiting_reply', `Aguardando resposta${scheduledAt ? ` até ${scheduledAt.toLocaleTimeString()}` : ''}`);
                 return;
             }
 
@@ -292,7 +304,12 @@ const FlowEngine = {
     async processScheduledFlows() {
         const now = new Date();
         const sessions = await prisma.flowSession.findMany({
-            where: { status: 'waiting_business_hours', scheduledAt: { lte: now } },
+            where: {
+                OR: [
+                    { status: 'waiting_business_hours', scheduledAt: { lte: now } },
+                    { status: 'waiting_reply', scheduledAt: { lte: now } }
+                ]
+            },
             include: { flow: true, automation: true }
         });
 
@@ -308,8 +325,24 @@ const FlowEngine = {
                 if (!userConfig) continue;
 
                 const edges = JSON.parse(flow.edges || '[]');
+                const nodes = JSON.parse(flow.nodes || '[]');
+                const currentNode = nodes.find(n => String(n.id) === String(session.currentStep));
                 const outboundEdges = edges.filter(e => String(e.source) === String(session.currentStep));
-                const nextEdge = outboundEdges.find(e => ['source-gray', 'source-green'].includes(e.sourceHandle)) || outboundEdges.find(e => !e.sourceHandle);
+
+                let nextEdge = null;
+
+                if (session.status === 'waiting_business_hours') {
+                    nextEdge = outboundEdges.find(e => ['source-gray', 'source-green'].includes(e.sourceHandle)) || outboundEdges.find(e => !e.sourceHandle);
+                } else if (session.status === 'waiting_reply') {
+                    // TIMEOUT: Look for the negative path (red or invalid)
+                    nextEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+
+                    if (nextEdge) {
+                        await logAction(session.id, session.currentStep, currentNode?.data?.label, 'timeout_path', 'Tempo limite atingido, seguindo caminho negativo');
+                    } else {
+                        await logAction(session.id, session.currentStep, currentNode?.data?.label, 'timeout_expired', 'Tempo limite atingido, sem caminho negativo definido. Encerrando.');
+                    }
+                }
 
                 if (nextEdge) {
                     const nextSession = await prisma.flowSession.update({

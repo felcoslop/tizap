@@ -30,30 +30,11 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
         const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
 
-        // PROTECTION 1: Active session protection (global for contact)
-        // If there's an active session (not waiting_reply), don't trigger anything else to avoid overlapping.
-        const activeSession = await prisma.flowSession.findFirst({
-            where: {
-                contactPhone: { in: possibleNumbers },
-                status: 'active',
-                OR: [{ flow: { userId } }, { automation: { userId } }]
-            },
-            orderBy: { updatedAt: 'desc' }
-        });
-
-        if (activeSession) {
-            const sessionAge = Date.now() - new Date(activeSession.updatedAt).getTime();
-            if (sessionAge < 10 * 60 * 1000) { // Increased to 10 min for active protection
-                console.log(`[AUTOMATION] Contact has an active session. Skipping trigger.`);
-                return;
-            }
-        }
-
-        // PRIORITY 1: Check for existing active session waiting for reply
+        // CONSOLIDATED PROTECTION: Active or Waiting sessions
         const existingSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
-                status: 'waiting_reply',
+                status: { in: ['active', 'waiting_reply'] },
                 OR: [{ flow: { userId } }, { automation: { userId } }]
             },
             include: { automation: true, flow: true },
@@ -65,18 +46,22 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
             const waitTimeMinutes = userConfig?.sessionWaitTime || 1440;
             const expirationLimit = waitTimeMinutes * 60 * 1000;
 
+            console.log(`[AUTOMATION DEBUG] Session ${existingSession.id} (${existingSession.status}) age: ${Math.round(sessionAge / 1000)}s | Limit: ${Math.round(expirationLimit / 1000)}s`);
+
             if (sessionAge > expirationLimit) {
+                console.log(`[AUTOMATION DEBUG] Session ${existingSession.id} EXPIRED. Updating status.`);
                 await prisma.flowSession.update({
                     where: { id: existingSession.id },
                     data: { status: 'expired' }
                 });
+                // After expiring, we let the logic continue to check new triggers
             } else {
-                const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
-                if (sessionProcessed) return;
+                if (existingSession.status === 'waiting_reply') {
+                    const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
+                    if (sessionProcessed) return;
+                }
 
-                // If it wasn't processed (invalid input for that node), we still DON'T want
-                // other automations to interfere according to user request.
-                console.log(`[AUTOMATION] Session ${existingSession.id} exists but message not processed. Blocking other triggers.`);
+                console.log(`[AUTOMATION] Contact has an existing ${existingSession.status} session. Blocking other triggers.`);
                 return;
             }
         }
@@ -139,14 +124,15 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
                     where: {
                         contactPhone: { in: possibleNumbers },
                         automationId: automation.id,
-                        status: 'completed'
+                        status: { in: ['completed', 'expired', 'stopped'] }
                     },
                     orderBy: { updatedAt: 'desc' }
                 });
 
                 if (lastExecution) {
                     const delayMinutes = userConfig?.automationDelay || 1440;
-                    const age = Date.now() - new Date(lastExecution.updatedAt).getTime();
+                    const diff = Date.now() - new Date(lastExecution.updatedAt).getTime();
+                    const age = Math.max(0, diff);
                     if (age < delayMinutes * 60 * 1000) {
                         console.log(`[AUTOMATION] Global trigger skipped by Anti-Loop for "${automation.name}"`);
                         continue;

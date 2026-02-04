@@ -50,6 +50,11 @@ export const handleIncomingWebhook = async (req, res, targetUserId = null, broad
                             messageBody = '[Áudio]';
                             mediaType = 'audio';
                             mediaUrl = await downloadMedia(mediaId, userConfig);
+                        } else if (message.type === 'document') {
+                            mediaId = message.document.id;
+                            messageBody = message.document.filename || '[Documento]';
+                            mediaType = 'document';
+                            mediaUrl = await downloadMedia(mediaId, userConfig);
                         } else if (message.type === 'interactive') {
                             messageBody = message.interactive.button_reply?.title || message.interactive.list_reply?.title || '[Interativo]';
                             const buttonId = message.interactive.button_reply?.id || message.interactive.list_reply?.id;

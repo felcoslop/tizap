@@ -83,7 +83,7 @@ export function AutomationTab({
                             <div className="log-container">
                                 <label>Último:</label>
                                 <div className={`log-entry ${activeDispatch.lastLog.status === 'error' ? 'error' : ''}`}>
-                                    {activeDispatch.lastLog.phone}: {activeDispatch.lastLog.status === 'success' ? '✓ OK' : `✗ ${activeDispatch.lastLog.message}`}
+                                    {activeDispatch.lastLog.phone}: {activeDispatch.lastLog.status === 'success' ? 'OK' : `${activeDispatch.lastLog.message}`}
                                 </div>
                             </div>
                         )}

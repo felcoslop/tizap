@@ -142,7 +142,7 @@ export function FlowSessionsHistory({ user, addToast }) {
         <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--ambev-blue)', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
-                    <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo
+                    <FileText size={28} color="var(--ambev-blue)" /> Sessões de Fluxo API Oficial
                 </h3>
                 <button
                     onClick={() => hasActiveSessions && setShowStopConfirm(true)}
@@ -175,7 +175,7 @@ export function FlowSessionsHistory({ user, addToast }) {
                             <div style={{ background: '#ffebee', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
                                 <AlertCircle size={30} color="#d32f2f" />
                             </div>
-                            <h3 style={{ fontSize: '1.3rem', color: '#d32f2f', marginBottom: '10px' }}>Parada de Emergência</h3>
+                            <h3 style={{ fontSize: '1.3rem', color: '#d32f2f', marginBottom: '10px', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Parada de Emergência</h3>
                             <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>
                                 Tem certeza que deseja <strong>interromper todos os fluxos</strong> em andamento?
                                 <br />

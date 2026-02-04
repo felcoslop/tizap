@@ -49,7 +49,7 @@ const TemplateNode = ({ data, id, selected }) => {
             ) : (
                 <div>
                     <p className="node-text" style={{ color: '#00a276' }}><strong>Template:</strong> {data.templateName || 'Nenhum selecionado'}</p>
-                    {waitForReply && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>⏱ Aguardando resposta</p>}
+                    {waitForReply && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>Aguardando resposta</p>}
                 </div>
             )}
 
