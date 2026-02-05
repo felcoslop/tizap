@@ -380,7 +380,7 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
 
         if (event === 'qrcode.updated' || event === 'QRCODE_UPDATED') await processEventAutomations(userId, 'qrcode_updated');
 
-        if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT') {
+        if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT' || event === 'SEND_MESSAGE') {
             const messages = Array.isArray(body.data) ? body.data : [body.data || body];
             for (const msgData of messages) {
                 const key = msgData.key || {};
