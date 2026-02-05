@@ -176,22 +176,7 @@ export function ReceivedTab({
                     </div>
                 </div>
 
-                <div className="card ambev-flag chat-view" style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '0',
-                    ...(window.innerWidth <= 768 && activeContact ? {
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100dvh',
-                        zIndex: 9999,
-                        borderRadius: 0,
-                        backgroundColor: '#fff'
-                    } : {})
-                }}>
+                <div className="card ambev-flag chat-view" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0' }}>
                     {activeContact ? (
                         <>
                             <header style={{ padding: '1rem', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center' }}>
