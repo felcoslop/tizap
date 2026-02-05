@@ -414,9 +414,69 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
     } catch (err) { res.sendStatus(500); }
 });
 
+router.get('/evolution/sessions', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const sessions = await prisma.flowSession.findMany({
+            where: {
+                status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] },
+                OR: [
+                    { flow: { userId } },
+                    { automation: { userId } }
+                ]
+            },
+            orderBy: { updatedAt: 'desc' },
+            include: { flow: true, automation: true }
+        });
+
+        const enriched = sessions.map(s => ({
+            id: s.id,
+            contactPhone: s.contactPhone,
+            status: s.status,
+            createdAt: s.createdAt,
+            updatedAt: s.updatedAt,
+            type: s.flowId ? 'Fluxo' : 'Automação',
+            name: s.flow?.name || s.automation?.name || 'Desconhecido',
+            currentStep: s.currentStep
+        }));
+
+        res.json(enriched);
+    } catch (err) {
+        console.error('[EVO SESSIONS ERROR]', err);
+        res.status(500).json({ error: 'Erro ao buscar sessões ativas' });
+    }
+});
+
+router.post('/evolution/sessions/:id/close', authenticateToken, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const userId = req.userId;
+
+        const session = await prisma.flowSession.findUnique({
+            where: { id },
+            include: { flow: true, automation: true }
+        });
+
+        if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+
+        const ownerId = session.flow?.userId || session.automation?.userId;
+        if (ownerId !== userId) return res.status(403).json({ error: 'Acesso negado' });
+
+        await prisma.flowSession.update({
+            where: { id },
+            data: { status: 'stopped' }
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[EVO SESSION CLOSE ERROR]', err);
+        res.status(500).json({ error: 'Erro ao fechar sessão' });
+    }
+});
+
 router.post('/evolution/sessions/close-all', authenticateToken, async (req, res) => {
     const sessions = await prisma.flowSession.findMany({ where: { status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] }, OR: [{ flow: { userId: req.userId } }, { automation: { userId: req.userId } }] } });
-    if (sessions.length) await prisma.flowSession.updateMany({ where: { id: { in: sessions.map(s => s.id) } }, data: { status: 'completed' } });
+    if (sessions.length) await prisma.flowSession.updateMany({ where: { id: { in: sessions.map(s => s.id) } }, data: { status: 'stopped' } });
     res.json({ success: true, count: sessions.length });
 });
 

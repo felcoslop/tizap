@@ -123,6 +123,7 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token, config, set
 
     const handleSave = () => {
         const flowData = {
+            id: flow?.id,
             name: flowName,
             nodes,
             edges

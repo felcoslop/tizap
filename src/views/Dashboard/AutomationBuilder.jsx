@@ -16,6 +16,7 @@ import BusinessHoursNode from '../../components/nodes/BusinessHoursNode';
 import CloseAutomationNode from '../../components/nodes/CloseAutomationNode';
 import EmailNode from '../../components/nodes/EmailNode';
 import '../../components/nodes/NodeStyles.css';
+import SessionManagerModal from '../../components/Modals/SessionManagerModal';
 
 // Import Custom Hook
 import { useFlowEditor } from '../../hooks/useFlowEditor';
@@ -439,23 +440,7 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
         }
     };
 
-    const confirmKillSessions = async () => {
-        try {
-            const res = await fetch('/api/evolution/sessions/close-all', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                addToast('Todas as sessões foram finalizadas.', 'success');
-                setShowKillModal(false);
-            } else {
-                addToast('Erro ao finalizar sessões.', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            addToast('Erro de conexão.', 'error');
-        }
-    };
+
 
     const handleKillSessions = () => setShowKillModal(true);
 
