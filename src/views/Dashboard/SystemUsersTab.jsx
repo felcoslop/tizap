@@ -60,14 +60,8 @@ export default function SystemUsersTab({ user, addToast }) {
     );
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.8rem', color: '#280091', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Users /> Gestão de Usuários
-                    </h2>
-                    <p style={{ color: '#666' }}>Controle de licenças e métricas</p>
-                </div>
+        <div className="card fade-in">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '30px' }}>
                 <div style={{ position: 'relative' }}>
                     <Search size={18} style={{ position: 'absolute', left: 12, top: 12, color: '#999' }} />
                     <input

@@ -717,10 +717,15 @@ button:focus {
   text-transform: uppercase;
 }
 
-.dashboard-grid {
+.dashboard-grid,
+.settings-grid {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 2rem;
+}
+
+.settings-grid {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
 }
 
 .card h3 {
@@ -1321,150 +1326,7 @@ button:focus {
   display: none;
 }
 
-/* 
-   -------------------------------------------------
-   MOBILE IOS MATERIAL UI (OVERRIDE ONLY)
-   -------------------------------------------------
-*/
-.mobile-only-logout {
-  display: none !important;
-}
 
-@media (max-width: 768px) {
-  .mobile-only-logout {
-    display: block !important;
-  }
-
-  :root {
-    --ios-bg: #F2F2F7;
-    --ios-surface: #FFFFFF;
-    --ios-blue: #007AFF;
-    --ios-input-bg: #E5E5EA;
-  }
-
-  body {
-    background-color: var(--ios-bg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .dashboard-container {
-    display: block;
-    /* Stack sidebar and content */
-    height: auto;
-  }
-
-  .sidebar {
-    display: none;
-    /* Desktop sidebar hidden */
-  }
-
-  .content {
-    padding: 16px !important;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important;
-    /* Space for bottom nav */
-  }
-
-  .content-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .dashboard-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 16px !important;
-  }
-
-  .card,
-  .ambev-flag {
-    padding: 16px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-    border: none !important;
-  }
-
-  input,
-  select,
-  textarea {
-    height: 44px !important;
-    /* iOS standard */
-    font-size: 17px !important;
-    /* Prevent zoom */
-    border-radius: 10px !important;
-    background-color: var(--ios-input-bg) !important;
-  }
-
-  .input-grid {
-    gap: 12px !important;
-  }
-
-  .input-row,
-  .campaign-setup {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-    max-width: none !important;
-    width: 100% !important;
-    align-items: stretch !important;
-  }
-
-  .mobile-nav {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: calc(65px + env(safe-area-inset-bottom));
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    justify-content: space-around;
-    align-items: flex-start;
-    padding-top: 10px;
-    z-index: 1000;
-  }
-
-  .mobile-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: none;
-    border: none;
-    color: #8E8E93;
-    font-size: 10px;
-    font-weight: 500;
-    gap: 4px;
-    padding: 4px 0;
-    width: 25%;
-    cursor: pointer;
-  }
-
-  .mobile-nav-item.active {
-    color: var(--ios-blue);
-  }
-
-  .mobile-nav-item svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  /* Chat Adjustments */
-  .received-container {
-    flex-direction: column !important;
-    height: auto !important;
-  }
-
-  .contacts-sidebar {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 40vh;
-  }
-
-  .chat-area {
-    height: 50vh !important;
-  }
-}
 
 .legal-footer-login {
   margin-top: 1.5rem;
@@ -1645,5 +1507,265 @@ button:focus {
   100% {
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(40, 0, 145, 0);
+  }
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+/* ============================================
+   📱 RESPONSIVIDADE MOBILE (ESTILO WHATSAPP)
+   ============================================ */
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    grid-template-columns: 1fr !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  .sidebar {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    z-index: 2000 !important;
+    background: var(--ambev-gradient) !important;
+  }
+
+  .sidebar-toggle,
+  .logo-small,
+  .user-profile,
+  .nav-item.desktop-only,
+  .desktop-only {
+    display: none !important;
+  }
+
+  .dashboard-grid,
+  .settings-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .settings-grid>.card {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .settings-grid button {
+    width: auto;
+  }
+
+  .settings-grid .input-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .settings-grid .input-group {
+    grid-column: span 1 !important;
+  }
+
+  .evolution-controls {
+    flex-direction: column !important;
+  }
+
+  .evolution-controls button {
+    width: 100% !important;
+  }
+
+  .sidebar nav {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
+  }
+
+  .nav-item {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    margin: 0 !important;
+    flex: 1 !important;
+    background: none !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    height: 100% !important;
+  }
+
+  .nav-item.active {
+    background: none !important;
+    color: var(--ambev-yellow) !important;
+    transform: none !important;
+  }
+
+  .nav-item span {
+    font-size: 10px !important;
+    text-align: center !important;
+  }
+
+  .nav-label-multiline span {
+    display: none !important;
+  }
+
+  .content {
+    padding: 10px !important;
+    padding-bottom: 80px !important;
+    height: calc(100vh - 70px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .content-header {
+    display: none !important;
+  }
+
+  .card {
+    padding: 1.25rem !important;
+    margin-bottom: 12px !important;
+    min-height: 100px !important;
+    border-radius: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: auto !important;
+  }
+
+  .dispatch-actions {
+    margin-bottom: 40px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .received-container {
+    height: 100% !important;
+    gap: 0 !important;
+    position: relative !important;
+    display: block !important;
+  }
+
+  /* WhatsApp Style: List vs Chat Toggling */
+  .received-container>div:first-child {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 10px !important;
+    box-shadow: none !important;
+    border-top: none !important;
+  }
+
+  .chat-view {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 70px;
+    /* Above mobile menu */
+    width: 100vw !important;
+    z-index: 1100;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white !important;
+    height: calc(100vh - 70px) !important;
+    border: none !important;
+  }
+
+  .connection-lock-overlay {
+    z-index: 1500 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+  }
+
+  .connection-lock-card {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 !important;
+  }
+
+  .received-container.chat-active .chat-view {
+    transform: translateX(0);
+  }
+
+  .received-container.chat-active>div:first-child {
+    display: none !important;
+  }
+
+  .chat-messages {
+    padding: 10px !important;
+  }
+
+  .chat-view header {
+    padding: 12px 16px !important;
+    background: #f0f2f5 !important;
+    border-bottom: 1px solid #ddd !important;
+  }
+
+  .chat-view form {
+    padding: 8px !important;
+    background: #f0f2f5 !important;
+  }
+
+  .back-button-mobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ambev-blue);
+    padding: 4px;
+  }
+
+  /* Immersive Editor & Messages: Full screen on mobile */
+  .content:has(.react-flow) .content-header,
+  .content:has(.received-container) .content-header {
+    display: none !important;
+  }
+
+  .content:has(.react-flow),
+  .content:has(.received-container) {
+    padding: 10px !important;
+    padding-bottom: 0 !important;
+    height: calc(100vh - 70px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .content:has(.react-flow) .card,
+  .content:has(.received-container) .card {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 16px !important;
+    height: 100% !important;
+    min-height: auto !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .back-button-mobile {
+    display: none !important;
   }
 }

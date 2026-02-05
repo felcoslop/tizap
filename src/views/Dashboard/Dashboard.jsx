@@ -683,166 +683,151 @@ export function Dashboard({
             />
 
             <main className="content">
-                {activeTab === 'fluxos' || activeTab === 'automacoes' ? (
-                    activeTab === 'fluxos' ? (
-                        <FlowBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
-                    ) : (
-                        <AutomationBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
-                    )
-                ) : (
-                    <>
-                        <header className="content-header">
-                            <h1>
-                                {activeTab === 'disparos' ? 'Automação de Notificações' :
-                                    activeTab === 'historico' ? 'Histórico' :
-                                        activeTab === 'users' ? 'Usuários do Sistema' :
-                                            activeTab === 'recebidas' ? 'Mensagens Recebidas' :
-                                                activeTab === 'recebidas-evolution' ? 'Recebidas Evolution' :
-                                                    activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
-                            </h1>
-                            {activeTab === 'disparos' && activeDispatch?.status === 'running' && <div className="badge-live">Live</div>}
-                        </header>
+                {activeTab !== 'fluxos' && activeTab !== 'automacoes' && (
+                    <header className="content-header">
+                        <h1>
+                            {activeTab === 'disparos' ? 'Automação de Notificações' :
+                                activeTab === 'fluxos' ? 'Fluxos de Conversa' :
+                                    activeTab === 'automacoes' ? 'Automações API Evolution' :
+                                        activeTab === 'historico' ? 'Histórico' :
+                                            activeTab === 'users' ? 'Usuários do Sistema' :
+                                                activeTab === 'recebidas' ? 'Mensagens Recebidas' :
+                                                    activeTab === 'recebidas-evolution' ? 'Recebidas Evolution' :
+                                                        activeTab === 'email' ? 'Campanhas de E-mail' : 'Configurações'}
+                        </h1>
+                        {activeTab === 'disparos' && activeDispatch?.status === 'running' && <div className="badge-live">Live</div>}
+                    </header>
+                )}
 
-                        {activeTab === 'disparos' && (
-                            <AutomationTab
-                                user={user}
-                                config={config}
-                                activeDispatch={activeDispatch}
-                                setActiveDispatch={setActiveDispatch}
-                                fetchDispatches={fetchDispatches}
-                                campaignData={campaignData}
-                                setCampaignData={setCampaignData}
-                                headers={headers}
-                                setHeaders={setHeaders}
-                                mapping={mapping}
-                                setMapping={setMapping}
-                                templateName={templateName}
-                                setTemplateName={setTemplateName}
-                                templatePreview={templatePreview}
-                                setTemplatePreview={setTemplatePreview}
-                                dates={dates}
-                                setDates={setDates}
-                                addToast={addToast}
-                                templateDetails={templateDetails}
-                                setTemplateDetails={setTemplateDetails}
-                                templateVariables={templateVariables}
-                                setTemplateVariables={setTemplateVariables}
-                                isLoadingTemplate={isLoadingTemplate}
-                                setIsLoadingTemplate={setIsLoadingTemplate}
-                                controlDispatch={controlDispatch}
-                                setSelectedLogDispatch={setSelectedLogDispatch}
-                                REQUIRED_COLUMNS={REQUIRED_COLUMNS}
-                                availableFlows={availableFlows}
-                                selectedFlowId={selectedFlowId}
-                                setSelectedFlowId={setSelectedFlowId}
-                                dispatchMode={dispatchMode}
-                                setDispatchMode={setDispatchMode}
-                                dispatchSource={dispatchSource}
-                                setDispatchSource={setDispatchSource}
-                                startDispatch={startDispatch}
-                                fetchMetaTemplate={fetchMetaTemplate}
-                                renderTemplatePreview={renderTemplatePreview}
-                                getDateLogic={getDateLogic}
-                                handleFileUpload={handleFileUpload}
-                            />
-                        )}
+                {activeTab === 'disparos' && (
+                    <AutomationTab
+                        user={user}
+                        config={config}
+                        activeDispatch={activeDispatch}
+                        setActiveDispatch={setActiveDispatch}
+                        fetchDispatches={fetchDispatches}
+                        campaignData={campaignData}
+                        setCampaignData={setCampaignData}
+                        headers={headers}
+                        setHeaders={setHeaders}
+                        mapping={mapping}
+                        setMapping={setMapping}
+                        templateName={templateName}
+                        setTemplateName={setTemplateName}
+                        templatePreview={templatePreview}
+                        setTemplatePreview={setTemplatePreview}
+                        dates={dates}
+                        setDates={setDates}
+                        addToast={addToast}
+                        templateDetails={templateDetails}
+                        setTemplateDetails={setTemplateDetails}
+                        templateVariables={templateVariables}
+                        setTemplateVariables={setTemplateVariables}
+                        isLoadingTemplate={isLoadingTemplate}
+                        setIsLoadingTemplate={setIsLoadingTemplate}
+                        controlDispatch={controlDispatch}
+                        setSelectedLogDispatch={setSelectedLogDispatch}
+                        REQUIRED_COLUMNS={REQUIRED_COLUMNS}
+                        availableFlows={availableFlows}
+                        selectedFlowId={selectedFlowId}
+                        setSelectedFlowId={setSelectedFlowId}
+                        dispatchMode={dispatchMode}
+                        setDispatchMode={setDispatchMode}
+                        dispatchSource={dispatchSource}
+                        setDispatchSource={setDispatchSource}
+                        startDispatch={startDispatch}
+                        fetchMetaTemplate={fetchMetaTemplate}
+                        renderTemplatePreview={renderTemplatePreview}
+                        getDateLogic={getDateLogic}
+                        handleFileUpload={handleFileUpload}
+                    />
+                )}
 
-                        {activeTab === 'recebidas' && (
-                            <ReceivedTab
-                                user={user}
-                                config={config}
-                                receivedMessages={receivedMessages}
-                                setReceivedMessages={setReceivedMessages}
-                                activeContact={activeContact}
-                                setActiveContact={setActiveContact}
-                                fetchMessages={fetchMessages}
-                                isRefreshing={isRefreshing}
-                                addToast={addToast}
-                                selectedContacts={selectedContacts}
-                                setSelectedContacts={setSelectedContacts}
-                                isDeleting={isDeleting}
-                                setIsDeleting={setIsDeleting}
-                                setShowDeleteConfirm={setShowDeleteConfirm}
-                                setShowProfileModal={setShowProfileModal}
-                                fileInputRef={fileInputRef}
-                                handleMediaUpload={handleMediaUpload}
-                                isUploadingMedia={isUploadingMedia}
-                                isRecording={isRecording}
-                                recordingTime={recordingTime}
-                                startRecording={startRecording}
-                                stopRecording={stopRecording}
-                                cancelRecording={cancelRecording}
-                                setActiveTab={setActiveTab}
-                            />
-                        )}
+                {activeTab === 'fluxos' && (
+                    <FlowBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
+                )}
 
-                        {activeTab === 'recebidas-evolution' && (
-                            <ReceivedEvolutionTab
-                                user={user}
-                                config={config}
-                                messages={evolutionMessages}
-                                fetchMessages={fetchEvolutionMessages}
-                                addToast={addToast}
-                                isRefreshing={Boolean(evolutionMessages?.length === 0)}
-                                setActiveTab={setActiveTab}
-                            />
-                        )}
+                {activeTab === 'automacoes' && (
+                    <AutomationBuilder user={user} addToast={addToast} config={config} setConfig={setConfig} />
+                )}
 
-                        {activeTab === 'email' && <EmailTab user={user} addToast={addToast} />}
+                {activeTab === 'recebidas' && (
+                    <ReceivedTab
+                        user={user}
+                        config={config}
+                        receivedMessages={receivedMessages}
+                        setReceivedMessages={setReceivedMessages}
+                        activeContact={activeContact}
+                        setActiveContact={setActiveContact}
+                        fetchMessages={fetchMessages}
+                        isRefreshing={isRefreshing}
+                        addToast={addToast}
+                        selectedContacts={selectedContacts}
+                        setSelectedContacts={setSelectedContacts}
+                        isDeleting={isDeleting}
+                        setIsDeleting={setIsDeleting}
+                        setShowDeleteConfirm={setShowDeleteConfirm}
+                        setShowProfileModal={setShowProfileModal}
+                        fileInputRef={fileInputRef}
+                        handleMediaUpload={handleMediaUpload}
+                        isUploadingMedia={isUploadingMedia}
+                        isRecording={isRecording}
+                        recordingTime={recordingTime}
+                        startRecording={startRecording}
+                        stopRecording={stopRecording}
+                        cancelRecording={cancelRecording}
+                        setActiveTab={setActiveTab}
+                    />
+                )}
 
-                        {activeTab === 'ajustes' && (
-                            <SettingsTab
-                                user={user}
-                                config={config}
-                                tempConfig={tempConfig}
-                                setTempConfig={setTempConfig}
-                                isEditing={isEditing}
-                                setIsEditing={setIsEditing}
-                                saveConfig={saveConfig}
-                                generateWebhook={generateWebhook}
-                                showToken={showToken}
-                                setShowToken={setShowToken}
-                                addToast={addToast}
-                                onLogout={onLogout}
-                                fetchUserData={fetchUserData}
-                            />
-                        )}
+                {activeTab === 'recebidas-evolution' && (
+                    <ReceivedEvolutionTab
+                        user={user}
+                        config={config}
+                        messages={evolutionMessages}
+                        fetchMessages={fetchEvolutionMessages}
+                        addToast={addToast}
+                        isRefreshing={Boolean(evolutionMessages?.length === 0)}
+                        setActiveTab={setActiveTab}
+                    />
+                )}
 
-                        {activeTab === 'users' && isMaster && <SystemUsersTab user={user} addToast={addToast} />}
+                {activeTab === 'email' && <EmailTab user={user} addToast={addToast} />}
 
-                        {activeTab === 'historico' && (
-                            <HistoryTab
-                                user={user}
-                                dispatches={dispatches}
-                                currentDispatchPage={currentDispatchPage}
-                                setCurrentDispatchPage={setCurrentDispatchPage}
-                                setSelectedLogDispatch={setSelectedLogDispatch}
-                                retryFailed={retryFailed}
-                                addToast={addToast}
-                            />
-                        )}
+                {activeTab === 'ajustes' && (
+                    <SettingsTab
+                        user={user}
+                        config={config}
+                        tempConfig={tempConfig}
+                        setTempConfig={setTempConfig}
+                        isEditing={isEditing}
+                        setIsEditing={setIsEditing}
+                        saveConfig={saveConfig}
+                        generateWebhook={generateWebhook}
+                        showToken={showToken}
+                        setShowToken={setShowToken}
+                        addToast={addToast}
+                        onLogout={onLogout}
+                        fetchUserData={fetchUserData}
+                    />
+                )}
 
-                    </>
+                {activeTab === 'users' && isMaster && <SystemUsersTab user={user} addToast={addToast} />}
+
+                {activeTab === 'historico' && (
+                    <HistoryTab
+                        user={user}
+                        dispatches={dispatches}
+                        currentDispatchPage={currentDispatchPage}
+                        setCurrentDispatchPage={setCurrentDispatchPage}
+                        setSelectedLogDispatch={setSelectedLogDispatch}
+                        retryFailed={retryFailed}
+                        addToast={addToast}
+                    />
                 )}
             </main>
 
-            <div className="mobile-nav">
-                <button className={`mobile-nav-item ${activeTab === 'disparos' ? 'active' : ''}`} onClick={() => setActiveTab('disparos')}>
-                    <Send size={24} /> <span>Início</span>
-                </button>
-                <button className={`mobile-nav-item ${activeTab === 'recebidas' ? 'active' : ''}`} onClick={() => setActiveTab('recebidas')}>
-                    <AlertCircle size={24} /> <span>Recebidas</span>
-                </button>
-                <button className={`mobile-nav-item ${activeTab === 'historico' ? 'active' : ''}`} onClick={() => setActiveTab('historico')}>
-                    <History size={24} /> <span>Histórico</span>
-                </button>
-                <button className={`mobile-nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => setActiveTab('email')}>
-                    <Mail size={24} /> <span>E-mail</span>
-                </button>
-                <button className={`mobile-nav-item ${activeTab === 'ajustes' ? 'active' : ''}`} onClick={() => setActiveTab('ajustes')}>
-                    <Settings size={24} /> <span>Ajustes</span>
-                </button>
-            </div>
+
 
             {
                 selectedLogDispatch && (

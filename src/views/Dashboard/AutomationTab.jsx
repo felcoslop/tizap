@@ -43,7 +43,7 @@ export function AutomationTab({
     handleFileUpload
 }) {
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
+        <div className="card fade-in">
             <section className="dashboard-grid">
                 {activeDispatch && (['running', 'paused', 'stopped', 'completed', 'error'].includes(activeDispatch.status)) ? (
                     <div className="card ambev-flag progress-container" style={{ gridColumn: 'span 2' }}>
@@ -105,20 +105,22 @@ export function AutomationTab({
                                     <h3>Base carregada: {campaignData.length} leads</h3>
                                     <button className="btn-link" onClick={() => setCampaignData(null)}>Trocar base</button>
                                 </div>
-                                <div className="card ambev-flag" style={{ gridColumn: 'span 2', maxHeight: '400px', overflow: 'auto', padding: '1rem' }}>
+                                <div className="card ambev-flag" style={{ gridColumn: 'span 2', maxHeight: '400px', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
                                     <h3>Preview dos Dados</h3>
-                                    <table className="preview-table">
-                                        <thead>
-                                            <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
-                                        </thead>
-                                        <tbody>
-                                            {campaignData.slice(0, 10).map((row, i) => (
-                                                <tr key={i}>
-                                                    {headers.map(h => <td key={h}>{row[h]}</td>)}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                    <div style={{ overflowX: 'auto', width: '100%', flex: 1 }}>
+                                        <table className="preview-table">
+                                            <thead>
+                                                <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
+                                            </thead>
+                                            <tbody>
+                                                {campaignData.slice(0, 10).map((row, i) => (
+                                                    <tr key={i}>
+                                                        {headers.map(h => <td key={h}>{row[h]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                     {campaignData.length > 10 && <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '10px' }}>Exibindo os primeiros 10 leads de {campaignData.length}.</p>}
                                 </div>
                             </>

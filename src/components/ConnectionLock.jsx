@@ -3,7 +3,7 @@ import { Lock, Settings } from 'lucide-react';
 
 const ConnectionLock = ({ onGoToSettings, title = "Conexão Necessária" }) => {
     return (
-        <div style={{
+        <div className="connection-lock-overlay" style={{
             position: 'absolute',
             top: 0,
             left: 0,
@@ -17,7 +17,7 @@ const ConnectionLock = ({ onGoToSettings, title = "Conexão Necessária" }) => {
             zIndex: 100,
             borderRadius: 'var(--radius-lg)'
         }}>
-            <div style={{
+            <div className="connection-lock-card" style={{
                 backgroundColor: 'white',
                 padding: '3rem',
                 borderRadius: '24px',

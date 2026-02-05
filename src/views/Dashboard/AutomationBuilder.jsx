@@ -5,6 +5,7 @@ import {
     Plus, Trash2, Edit3, Save, ArrowLeft, Image as ImageIcon,
     MessageSquare, ListOrdered, RefreshCw, Zap, Clock, Bell, XCircle, Mail, Settings, X, Upload, AlertCircle, Download
 } from 'lucide-react';
+import Pagination from '../../components/Pagination';
 
 // Import Custom Nodes
 import MessageNode from '../../components/nodes/MessageNode';
@@ -176,19 +177,19 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     };
 
     return (
-        <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', background: '#fcfcfc' }}>
-            <div style={{ padding: '12px 24px', background: 'white', borderBottom: '1px solid #eef0f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <div style={{ height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column', background: '#fcfcfc' }}>
+            <div style={{ padding: '8px 24px', background: 'white', borderBottom: '1px solid #eef0f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button onClick={onBack} style={{ background: '#f8f9fa', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><ArrowLeft size={18} /></button>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            style={{ fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#1a1a1a', width: '600px' }}
+                            style={{ fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#1a1a1a', width: '400px' }}
                             placeholder="Nome da Automação"
                         />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '11px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Disparado por:</span>
                             <select
                                 value={triggerType}
@@ -340,6 +341,7 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
     const [automationToDelete, setAutomationToDelete] = useState(null); // State for delete modal
     const [automationToToggle, setAutomationToToggle] = useState(null); // State for deactivate confirmation
     const [showKillModal, setShowKillModal] = useState(false); // State for kill sessions modal
+    const [currentPage, setCurrentPage] = useState(1); // Pagination state
 
     const userId = user?.id;
     const token = user?.token;
@@ -508,10 +510,13 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
     }
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>Automações Evolution</h1>
-
+        <div className="card fade-in" style={{
+            minHeight: 'calc(100vh - 180px)',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            <div style={{ display: 'flex', marginTop: 24, justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '2rem', fontWeight: 800, paddingLeft: 24, color: 'var(--ambev-black)', margin: 0 }}>Automações API-EVO</h2>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <input
                         type="file"
@@ -536,155 +541,177 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                 </div>
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '24px',
-                marginTop: '24px',
-                flex: 1
-            }}>
-                {automations.map(auto => (
-                    <div key={auto.id} className="flow-card">
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                            <div className="flow-card-icon" style={{ background: auto.isActive ? '#e8f5e9' : '#f1f5f9', color: auto.isActive ? '#00a276' : '#94a3b8' }}>
-                                <Zap size={24} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={auto.name}>
-                                        {auto.name}
-                                    </h3>
-                                    <label className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'} style={{ cursor: 'pointer', flexShrink: 0 }}>
-                                        <input type="checkbox" checked={auto.isActive} onChange={() => handleToggleAutomation(auto.id)} />
-                                        <span className="slider"></span>
-                                    </label>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                                    <span style={{ fontSize: '10px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', color: '#475569', fontWeight: 'bold' }}>
-                                        {auto.triggerType === 'keyword' ? 'PALAVRA-CHAVE' : 'MENSAGEM'}
-                                    </span>
-                                    {auto.triggerKeywords && auto.triggerType === 'keyword' && (
-                                        <span style={{ fontSize: '10px', background: '#e0f2fe', padding: '2px 8px', borderRadius: '10px', color: '#0369a1', fontWeight: 'bold' }}>
-                                            {auto.triggerKeywords.length > 20 ? auto.triggerKeywords.substring(0, 20) + '...' : auto.triggerKeywords}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+            {
+                (() => {
+                    const rowsPerPage = 16;
+                    const totalPages = Math.ceil(automations.length / rowsPerPage);
+                    const paginatedAutomations = automations.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-                            <button className="btn-edit-flow" onClick={() => setEditingAutomation(auto)} style={{ flex: 1, background: '#00a276' }}>
-                                <Edit3 size={16} /> Editar
-                            </button>
-                            <button className="btn-delete-flow" onClick={() => setAutomationToDelete(auto)}>
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    return (
+                        <>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: '24px',
+                                marginTop: '24px'
+                            }}>
+                                {paginatedAutomations.map(auto => (
+                                    <div key={auto.id} className="flow-card">
+                                        <div style={{ display: 'flex', gap: '16px' }}>
+                                            <div className="flow-card-icon" style={{ background: auto.isActive ? '#e8f5e9' : '#f1f5f9', color: auto.isActive ? '#00a276' : '#94a3b8' }}>
+                                                <Zap size={24} />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={auto.name}>
+                                                        {auto.name}
+                                                    </h3>
+                                                    <label className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                                                        <input type="checkbox" checked={auto.isActive} onChange={() => handleToggleAutomation(auto.id)} />
+                                                        <span className="slider"></span>
+                                                    </label>
+                                                </div>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                                    <span style={{ fontSize: '10px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', color: '#475569', fontWeight: 'bold' }}>
+                                                        {auto.triggerType === 'keyword' ? 'PALAVRA-CHAVE' : 'MENSAGEM'}
+                                                    </span>
+                                                    {auto.triggerKeywords && auto.triggerType === 'keyword' && (
+                                                        <span style={{ fontSize: '10px', background: '#e0f2fe', padding: '2px 8px', borderRadius: '10px', color: '#0369a1', fontWeight: 'bold' }}>
+                                                            {auto.triggerKeywords.length > 20 ? auto.triggerKeywords.substring(0, 20) + '...' : auto.triggerKeywords}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                {automations.length === 0 && (
-                    <div style={{
-                        gridColumn: '1 / -1',
-                        padding: '60px',
-                        textAlign: 'center',
-                        background: '#f8fafc',
-                        border: '2px dashed #e2e8f0',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        margin: '20px 0',
-                        flex: 1
-                    }}>
-                        <Zap size={48} color="#94a3b8" strokeWidth={1} />
-                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma automação criada ainda.</p>
-                    </div>
-                )}
-            </div>
+                                        <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                                            <button className="btn-edit-flow" onClick={() => setEditingAutomation(auto)} style={{ flex: 1, background: '#00a276' }}>
+                                                <Edit3 size={16} /> Editar
+                                            </button>
+                                            <button className="btn-delete-flow" onClick={() => setAutomationToDelete(auto)}>
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {automations.length === 0 && (
+                                    <div style={{
+                                        gridColumn: '1 / -1',
+                                        minHeight: '300px',
+                                        padding: '2rem',
+                                        textAlign: 'center',
+                                        background: '#f8fafc',
+                                        border: '2px dashed #e2e8f0',
+                                        borderRadius: '16px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px'
+                                    }}>
+                                        <Zap size={48} color="#94a3b8" strokeWidth={1} />
+                                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma automação criada ainda.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                className="mt-4"
+                            />
+                        </>
+                    );
+                })()
+            }
 
             {/* Delete Confirmation Modal */}
-            {automationToDelete && (
-                <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                        <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                            <AlertCircle size={32} color="#dc2626" />
-                        </div>
-                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Excluir Automação?</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-                            Tem certeza que deseja excluir a automação <strong>{automationToDelete.name}</strong>? Esta ação não pode ser desfeita.
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                            <button className="btn-secondary" onClick={() => setAutomationToDelete(null)}>
-                                Cancelar
-                            </button>
-                            <button
-                                className="btn-primary"
-                                style={{ background: '#dc2626', borderColor: '#dc2626' }}
-                                onClick={confirmDeleteAutomation}
-                            >
-                                Sim, Excluir
-                            </button>
+            {
+                automationToDelete && (
+                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                            <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <AlertCircle size={32} color="#dc2626" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Excluir Automação?</h3>
+                            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                                Tem certeza que deseja excluir a automação <strong>{automationToDelete.name}</strong>? Esta ação não pode ser desfeita.
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <button className="btn-secondary" onClick={() => setAutomationToDelete(null)}>
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                    onClick={confirmDeleteAutomation}
+                                >
+                                    Sim, Excluir
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Deactivate Confirmation Modal */}
-            {automationToToggle && (
-                <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                        <div style={{ background: '#fff7ed', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                            <AlertCircle size={32} color="#ea580c" />
-                        </div>
-                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Desativar Automação?</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-                            Tem certeza que deseja desativar a automação <strong>{automationToToggle.name}</strong>? Ela parará de responder às mensagens.
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                            <button className="btn-secondary" onClick={() => setAutomationToToggle(null)}>
-                                Manter Ativa
-                            </button>
-                            <button
-                                className="btn-primary"
-                                style={{ background: '#ea580c', borderColor: '#ea580c' }}
-                                onClick={() => executeToggle(automationToToggle.id)}
-                            >
-                                Sim, Desativar
-                            </button>
+            {
+                automationToToggle && (
+                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                            <div style={{ background: '#fff7ed', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <AlertCircle size={32} color="#ea580c" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Desativar Automação?</h3>
+                            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                                Tem certeza que deseja desativar a automação <strong>{automationToToggle.name}</strong>? Ela parará de responder às mensagens.
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <button className="btn-secondary" onClick={() => setAutomationToToggle(null)}>
+                                    Manter Ativa
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#ea580c', borderColor: '#ea580c' }}
+                                    onClick={() => executeToggle(automationToToggle.id)}
+                                >
+                                    Sim, Desativar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Kill Sessions Confirmation Modal */}
-            {showKillModal && (
-                <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                        <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                            <XCircle size={32} color="#dc2626" />
-                        </div>
-                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Finalizar Todas as Sessões?</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-                            Isso interromperá imediatamente todos os fluxos ativos de todos os usuários. Deseja continuar?
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                            <button className="btn-secondary" onClick={() => setShowKillModal(false)}>
-                                Cancelar
-                            </button>
-                            <button
-                                className="btn-primary"
-                                style={{ background: '#dc2626', borderColor: '#dc2626' }}
-                                onClick={confirmKillSessions}
-                            >
-                                Sim, Finalizar
-                            </button>
+            {
+                showKillModal && (
+                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                            <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <XCircle size={32} color="#dc2626" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Finalizar Todas as Sessões?</h3>
+                            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                                Isso interromperá imediatamente todos os fluxos ativos de todos os usuários. Deseja continuar?
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <button className="btn-secondary" onClick={() => setShowKillModal(false)}>
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                    onClick={confirmKillSessions}
+                                >
+                                    Sim, Finalizar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

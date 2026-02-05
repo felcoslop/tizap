@@ -5,6 +5,7 @@ import {
     Plus, Trash2, Edit3, Save, ArrowLeft, Image as ImageIcon,
     MessageSquare, MessageCircle, ListOrdered, Mail, Upload, X, AlertCircle, Settings, Download
 } from 'lucide-react';
+import Pagination from '../../components/Pagination';
 
 // Import Custom Nodes
 import MessageNode from '../../components/nodes/MessageNode';
@@ -148,15 +149,15 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token, config, set
     };
 
     return (
-        <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', background: '#fcfcfc' }}>
-            <div style={{ padding: '12px 24px', background: 'white', borderBottom: '1px solid #eef0f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <div style={{ height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column', background: '#fcfcfc' }}>
+            <div style={{ padding: '8px 24px', background: 'white', borderBottom: '1px solid #eef0f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button onClick={onBack} title="Voltar" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><ArrowLeft size={20} /></button>
                     <input
                         type="text"
                         value={flowName}
                         onChange={(e) => setFlowName(e.target.value)}
-                        style={{ fontSize: '18px', fontWeight: 'bold', border: 'none', borderBottom: '2px solid transparent', padding: '4px', width: '600px' }}
+                        style={{ fontSize: '18px', fontWeight: 'bold', border: 'none', borderBottom: '2px solid transparent', padding: '4px', width: '600px', background: 'transparent', outline: 'none' }}
                         onFocus={(e) => e.target.style.borderBottom = '2px solid #280091'}
                         onBlur={(e) => e.target.style.borderBottom = '2px solid transparent'}
                     />
@@ -275,6 +276,7 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
     const [editingFlow, setEditingFlow] = useState(null);
     const [loading, setLoading] = useState(false);
     const [flowToDelete, setFlowToDelete] = useState(null); // State for delete modal
+    const [currentPage, setCurrentPage] = useState(1); // Pagination state
 
     const userId = user?.id;
     const token = user?.token;
@@ -390,15 +392,12 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
 
     return (
         <div className="card fade-in" style={{
-            backgroundColor: 'white',
-            padding: '2.5rem',
             minHeight: 'calc(100vh - 180px)',
             display: 'flex',
             flexDirection: 'column'
         }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>Fluxos de Conversa</h1>
-
+            <div style={{ display: 'flex', marginTop: 24, justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '2rem', paddingLeft: 24, fontWeight: 800, color: 'var(--ambev-black)', margin: 0 }}>Fluxos de Disparo de Mensagens</h2>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <input
                         type="file"
@@ -416,84 +415,102 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
                 </div>
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '24px',
-                marginTop: '24px',
-                flex: 1
-            }}>
-                {flows.map(flow => (
-                    <div key={flow.id} className="flow-card" style={{ height: 'fit-content' }}>
-                        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                            <div className="flow-card-icon">
-                                <MessageSquare size={24} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{flow.name}</h3>
-                                <p style={{ fontSize: '13px', color: '#666' }}>ID: #{flow.id}</p>
-                            </div>
-                        </div>
+            {
+                (() => {
+                    const rowsPerPage = 16;
+                    const totalPages = Math.ceil(flows.length / rowsPerPage);
+                    const paginatedFlows = flows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="btn-edit-flow" onClick={() => setEditingFlow(flow)} style={{ flex: 1 }}>
-                                <Edit3 size={16} /> Editar
-                            </button>
-                            <button className="btn-delete-flow" onClick={() => setFlowToDelete(flow)}>
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    return (
+                        <>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: '24px',
+                                marginTop: '24px'
+                            }}>
+                                {paginatedFlows.map(flow => (
+                                    <div key={flow.id} className="flow-card" style={{ height: 'fit-content' }}>
+                                        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                                            <div className="flow-card-icon">
+                                                <MessageSquare size={24} />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{flow.name}</h3>
+                                                <p style={{ fontSize: '13px', color: '#666' }}>ID: #{flow.id}</p>
+                                            </div>
+                                        </div>
 
-                {flows.length === 0 && (
-                    <div style={{
-                        gridColumn: '1 / -1',
-                        padding: '60px',
-                        textAlign: 'center',
-                        background: '#f8fafc',
-                        border: '2px dashed #e2e8f0',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        margin: '20px 0',
-                        flex: 1
-                    }}>
-                        <MessageSquare size={48} color="#94a3b8" strokeWidth={1} />
-                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhum fluxo criado ainda.</p>
-                    </div>
-                )}
-            </div>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <button className="btn-edit-flow" onClick={() => setEditingFlow(flow)} style={{ flex: 1 }}>
+                                                <Edit3 size={16} /> Editar
+                                            </button>
+                                            <button className="btn-delete-flow" onClick={() => setFlowToDelete(flow)}>
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {flows.length === 0 && (
+                                    <div style={{
+                                        gridColumn: '1 / -1',
+                                        minHeight: '300px',
+                                        padding: '2rem',
+                                        textAlign: 'center',
+                                        background: '#f8fafc',
+                                        border: '2px dashed #e2e8f0',
+                                        borderRadius: '16px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px'
+                                    }}>
+                                        <MessageSquare size={48} color="#94a3b8" strokeWidth={1} />
+                                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhum fluxo criado ainda.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                className="mt-4"
+                            />
+                        </>
+                    );
+                })()
+            }
 
             {/* Delete Confirmation Modal */}
-            {flowToDelete && (
-                <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                        <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                            <AlertCircle size={32} color="#dc2626" />
-                        </div>
-                        <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Excluir Fluxo?</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-                            Tem certeza que deseja excluir o fluxo <strong>{flowToDelete.name}</strong>? Esta ação não pode ser desfeita.
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                            <button className="btn-secondary" onClick={() => setFlowToDelete(null)}>
-                                Cancelar
-                            </button>
-                            <button
-                                className="btn-primary"
-                                style={{ background: '#dc2626', borderColor: '#dc2626' }}
-                                onClick={confirmDeleteFlow}
-                            >
-                                Sim, Excluir
-                            </button>
+            {
+                flowToDelete && (
+                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+                        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                            <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <AlertCircle size={32} color="#dc2626" />
+                            </div>
+                            <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Excluir Fluxo?</h3>
+                            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                                Tem certeza que deseja excluir o fluxo <strong>{flowToDelete.name}</strong>? Esta ação não pode ser desfeita.
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <button className="btn-secondary" onClick={() => setFlowToDelete(null)}>
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                    onClick={confirmDeleteFlow}
+                                >
+                                    Sim, Excluir
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

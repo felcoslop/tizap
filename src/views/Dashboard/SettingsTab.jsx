@@ -175,7 +175,7 @@ export function SettingsTab({
     };
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
+        <div className="card fade-in" style={{ position: 'relative' }}>
             {/* Evolution QR Code Modal */}
             {showEvolutionQR && (
                 <div className="modal-overlay" style={{ zIndex: 10000 }}>
@@ -228,15 +228,9 @@ export function SettingsTab({
                 </div>
             )}
 
-            {/* Split layout for Meta and Evolution */}
-            <div className="settings-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                gap: '1.5rem',
-                alignItems: 'start'
-            }}>
+            <div className="settings-grid">
                 {/* Meta WhatsApp Credentials Section */}
-                <div className="card ambev-flag" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', height: '100%' }}>
+                <div className="card ambev-flag" style={{ backgroundColor: 'white', padding: '1.5rem', borderTop: '6px solid var(--ambev-yellow)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <h3 style={{ margin: 0 }}>Credenciais WhatsApp Meta</h3>
                         <button className="btn-secondary" onClick={() => setIsEditing(!isEditing)}>{isEditing ? 'Cancelar' : 'Editar'}</button>
@@ -336,7 +330,7 @@ export function SettingsTab({
                 </div>
 
                 {/* Evolution API Section */}
-                <div className="card" style={{ width: '100%', backgroundColor: 'white', padding: '1.5rem', boxSizing: 'border-box', border: '2px solid #00a276', borderRadius: '16px', height: '100%' }}>
+                <div className="card" style={{ backgroundColor: 'white', padding: '1.5rem', border: '2px solid #00a276', borderRadius: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <Radio size={24} color="#00a276" />
@@ -390,7 +384,7 @@ export function SettingsTab({
                             </div>
                         )}
 
-                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '1rem' }}>
+                        <div className="evolution-controls" style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '1rem' }}>
                             {evolutionStatus === 'connected' ? (
                                 <>
                                     <button
@@ -452,7 +446,7 @@ export function SettingsTab({
             </div>
 
             {/* Logout Section */}
-            <div className="mobile-only-logout" style={{ marginTop: '2rem' }}>
+            <div className="mobile-only" style={{ marginTop: '2rem' }}>
                 <hr style={{ border: 'none', borderTop: '1px solid #eee', marginBottom: '2rem' }} />
                 <button
                     className="btn-secondary w-full"
@@ -475,4 +469,3 @@ export function SettingsTab({
 }
 
 export default SettingsTab;
-

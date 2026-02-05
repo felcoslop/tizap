@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, RefreshCw, Clock, Download, Paperclip, Mic, Send, AlertCircle, X } from 'lucide-react';
+import { Trash2, RefreshCw, Clock, Download, Paperclip, Mic, Send, AlertCircle, X, ChevronLeft } from 'lucide-react';
 import ConnectionLock from '../../components/ConnectionLock';
 
 export function ReceivedTab({
@@ -49,14 +49,19 @@ export function ReceivedTab({
     const contactKeys = Object.keys(groups);
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+        <div className="card fade-in">
             {!isMetaConnected && (
                 <ConnectionLock
                     title="API Oficial Desconectada"
                     onGoToSettings={() => setActiveTab('ajustes')}
                 />
             )}
-            <div className="received-container" style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 320px)' }}>
+            <div className={`received-container ${activeContact ? 'chat-active' : ''}`} style={{
+                display: 'flex',
+                gap: '24px',
+                height: window.innerWidth <= 768 ? '100%' : 'calc(100vh - 320px)',
+                flex: 1
+            }}>
                 <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid var(--ambev-blue)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3>Contatos</h3>
@@ -175,6 +180,13 @@ export function ReceivedTab({
                     {activeContact ? (
                         <>
                             <header style={{ padding: '1rem', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center' }}>
+                                <button
+                                    className="back-button-mobile"
+                                    onClick={() => setActiveContact(null)}
+                                    title="Voltar para lista"
+                                >
+                                    <ChevronLeft size={24} />
+                                </button>
                                 <div
                                     className="profile-avatar"
                                     onClick={() => {
