@@ -85,7 +85,7 @@ const workerHandler = async (job) => {
                 const edges = JSON.parse(flow.edges);
                 const startNodeId = FlowEngine.findStartNode(nodes, edges);
                 const initialVars = { ...lead };
-                const mappingVars = JSON.parse(variables || '{}');
+                const mappingVars = typeof variables === 'string' ? JSON.parse(variables || '{}') : (variables || {});
 
                 let normalizedPhone = String(phone).replace(/\D/g, '');
                 if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;

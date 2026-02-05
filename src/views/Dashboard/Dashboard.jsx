@@ -619,7 +619,14 @@ export function Dashboard({
                 body: JSON.stringify({ action })
             });
             if (res.ok) {
+                const data = await res.json();
                 addToast(`Ação ${action} realizada.`, 'info');
+
+                // Update activeDispatch immediately
+                if (activeDispatch && activeDispatch.id === id) {
+                    setActiveDispatch(prev => ({ ...prev, status: data.status }));
+                }
+
                 fetchDispatches();
             } else {
                 const data = await res.json();

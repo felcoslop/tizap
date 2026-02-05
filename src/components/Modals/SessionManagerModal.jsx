@@ -30,8 +30,20 @@ export function SessionManagerModal({ onClose, token, addToast }) {
         fetchSessions();
     }, []);
 
-    const handleCloseSession = async (id) => {
-        if (!confirm('Tem certeza que deseja finalizar esta sessão?')) return;
+
+    // Confirmation State
+    const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
+
+    const handleCloseSession = (id) => {
+        setConfirmModal({
+            open: true,
+            title: 'Finalizar Sessão',
+            message: 'Tem certeza que deseja finalizar esta sessão? O cliente não receberá mais mensagens automáticas.',
+            onConfirm: () => performCloseSession(id)
+        });
+    };
+
+    const performCloseSession = async (id) => {
         setProcessing(true);
         try {
             const res = await fetch(`/api/evolution/sessions/${id}/close`, {
@@ -48,11 +60,20 @@ export function SessionManagerModal({ onClose, token, addToast }) {
             addToast('Erro de conexão.', 'error');
         } finally {
             setProcessing(false);
+            setConfirmModal({ open: false, title: '', message: '', onConfirm: null });
         }
     };
 
-    const handleCloseAll = async () => {
-        if (!confirm(`Tem certeza que deseja finalizar TODAS as ${sessions.length} sessões ativas?`)) return;
+    const handleCloseAll = () => {
+        setConfirmModal({
+            open: true,
+            title: 'Finalizar Todas as Sessões',
+            message: `Tem certeza que deseja finalizar TODAS as ${sessions.length} sessões ativas? Isso interromperá todos os atendimentos automáticos.`,
+            onConfirm: performCloseAll
+        });
+    };
+
+    const performCloseAll = async () => {
         setProcessing(true);
         try {
             const res = await fetch('/api/evolution/sessions/close-all', {
@@ -70,6 +91,7 @@ export function SessionManagerModal({ onClose, token, addToast }) {
             addToast('Erro de conexão.', 'error');
         } finally {
             setProcessing(false);
+            setConfirmModal({ open: false, title: '', message: '', onConfirm: null });
         }
     };
 
@@ -207,6 +229,35 @@ export function SessionManagerModal({ onClose, token, addToast }) {
                     )}
                 </div>
 
+                {/* Internal Confirmation Modal */}
+                {confirmModal.open && (
+                    <div className="modal-overlay" style={{ zIndex: 10010 }}>
+                        <div className="modal-content card" style={{ maxWidth: '400px', width: '90%', padding: '24px', textAlign: 'center' }}>
+                            <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <Trash2 size={32} color="#dc2626" />
+                            </div>
+                            <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: '#1f2937' }}>{confirmModal.title}</h3>
+                            <p style={{ color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
+                                {confirmModal.message}
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => setConfirmModal({ ...confirmModal, open: false })}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                                    onClick={confirmModal.onConfirm}
+                                >
+                                    Sim, Finalizar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
