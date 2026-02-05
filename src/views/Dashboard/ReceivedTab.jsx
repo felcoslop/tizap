@@ -59,7 +59,7 @@ export function ReceivedTab({
             <div className={`received-container ${activeContact ? 'chat-active' : ''}`} style={{
                 display: 'flex',
                 gap: '24px',
-                height: window.innerWidth <= 768 ? '100%' : 'calc(100vh - 320px)',
+                height: window.innerWidth <= 768 ? 'calc(100dvh - 140px)' : 'calc(100vh - 320px)',
                 flex: 1
             }}>
                 <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid var(--ambev-blue)' }}>

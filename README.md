@@ -21,7 +21,13 @@ O tiZAP! permite que empresas gerenciem sua comunicação de forma escalável. S
 - **Integração Omnichannel:** Suporte via API Oficial da Meta e Evolution API.
 - **Gestão Financeira:** Integração nativa com **Mercado Pago** para controle de assinaturas e planos.
 - **Segurança e Identidade:** Autenticação via **Google OAuth 2.0** e Login Local protegido por `bcrypt` e `JWT`.
-- **Relatórios de Execução:** Histórico detalhado de sessões (`FlowSession`), status de mensagens e logs de entrega.
+- **Relatórios e Estatísticas:** 
+  - Histórico detalhado de sessões (`FlowSession`).
+  - Painel de estatísticas de envio por usuário (`SendStatsModal`).
+  - Logs de entrega e erros.
+- **Concorrência e Sessões:**
+  - Bloqueio de edição simultânea em fluxos (`FlowConcurrencyModal`).
+  - Gerenciador de sessões ativas com finalização em massa (`SessionManagerModal`).
 
 ---
 
@@ -64,14 +70,15 @@ O sistema opera com uma abordagem híbrida de integração:
 ### Flow Builder (Canvas)
 Implementado primordialmente em `src/views/Dashboard/FlowBuilder.jsx` e `AutomationBuilder.jsx`:
 - **Estruturação:** O fluxo é salvo como dois objetos JSON (`nodes` e `edges`) que seguem o padrão da biblioteca `React Flow`.
-- **Nós:** Cada nó possui atributos como `typingTime` (atraso de resposta), `label` e dados específicos do tipo (ex: URLs de imagem para nó de Imagem, horários para nó de Business Hours).
+- **Nós:** Cada nó possui atributos como `typingTime` (atraso de resposta), `label` e dados específicos do tipo.
 - **Execução:** O `FlowEngine.js` reside no servidor e interpreta esses objetos JSON em tempo real conforme as mensagens chegam, gerenciando a transição de estados (`FlowSession`).
+- **Ordenação:** Fluxos e automações são listados por ordem de criação (ID decrescente) para fácil acesso aos mais recentes.
 
 ### Gestão de Filas (High Performance)
 O sistema utiliza uma arquitetura baseada em eventos para disparos em massa:
 - **Queueing:** Implementado com `BullMQ` e `Redis`.
-- **Worker:** Um worker dedicado processa os trabalhos de disparo, permitindo retentativas, controle de taxa (Rate Limiting) e processamento em segundo plano sem bloquear o servidor principal.
-- **Logs:** Todo o progresso é transmitido via WebSocket em tempo real.
+- **Worker (`server/queues/dispatchQueue.js`):** Um worker dedicado processa os trabalhos de disparo, permitindo retentativas, controle de taxa (Rate Limiting) e processamento em segundo plano.
+- **Logs:** Todo o progresso é transmitido via WebSocket em tempo real, com feedback visual imediato no Dashboard (Pausar/Continuar/Parar).
 
 ---
 
@@ -126,12 +133,19 @@ O sistema utiliza `nginx.conf` para roteamento de tráfego e servir os arquivos 
 - `/server`:
     - `/config`: Constantes globais e configs de Redis/DB.
     - `/middleware`: Lógica de autenticação e logs.
-    - `/queues`: Definição de filas e logic de Workers (BullMQ).
-    - `/routes`: Endpoints REST.
-    - `/services`: Engine de Fluxo, WhatsApp e E-mail.
+    - `/queues`: Definição de filas e worker (`dispatchQueue.js`) processador de jobs.
+    - `/routes`: Endpoints REST organizados por domínio (admin, auth, flows, messages, etc).
+    - `/services`: Engines de regra de negócio (FlowEngine, DispatchEngine, WhatsappService).
 - `/src`:
     - `/components`: Componentes React reutilizáveis.
-    - `/views`: Páginas principais da aplicação, com destaque para o `/Dashboard`.
+        - `/Modals`: Modais críticos como `SessionManagerModal`, `FlowConcurrencyModal`, `MediaPreviewModal`.
+        - `/nodes`: Componentes visuais dos nós do React Flow.
+    - `/views`: Páginas principais da aplicação:
+        - `Dashboard.jsx`: Container principal.
+        - `FlowBuilder.jsx`: Editor visual de fluxos.
+        - `AutomationBuilder.jsx`: Editor de automações Evolution.
+        - `ReceivedEvolutionTab.jsx`: Inbox de mensagens Evolution.
+        - `SystemUsersTab.jsx`: Gestão de usuários e estatísticas de envio.
 - `/uploads`: Armazenamento local de mídias enviadas/recebidas.
 
 ---
@@ -183,9 +197,9 @@ Conforme as práticas recomendadas para bancos SQLite:
 |   |   db.js
 |   |   index.js
 |   +---config
-|   |       constants.js
 |   +---middleware
-|   |       index.js
+|   +---queues
+|   |       dispatchQueue.js
 |   +---routes
 |   |       admin.js
 |   |       auth.js
@@ -211,16 +225,16 @@ Conforme as práticas recomendadas para bancos SQLite:
 |   |   main.jsx
 |   +---assets
 |   +---components
-|   |       BroadcastList.jsx
-|   |       BulkSender.jsx
-|   |       ContactFilter.jsx
-|   |       ContactList.jsx
-|   |       LeadTable.jsx
-|   |       MessageInput.jsx
-|   |       MessageList.jsx
-|   |       Navbar.jsx
-|   |       Sidebar.jsx
-|   |       TemplateModal.jsx
+|   |   |   BroadcastList.jsx
+|   |   |   BulkSender.jsx
+|   |   |   ContactList.jsx
+|   |   |   LeadTable.jsx
+|   |   |   Navbar.jsx
+|   |   |   Sidebar.jsx
+|   |   +---Modals
+|   |   |       FlowConcurrencyModal.jsx
+|   |   |       SessionManagerModal.jsx
+|   |   |       MediaPreviewModal.jsx
 |   \---views
 |       +---Auth
 |       |       Login.jsx
@@ -232,6 +246,7 @@ Conforme as práticas recomendadas para bancos SQLite:
 |       |       EmailTab.jsx
 |       |       FlowBuilder.jsx
 |       |       FlowSessionsHistory.jsx
+|       |       ReceivedEvolutionTab.jsx
 |       |       SettingsTab.jsx
 |       |       SystemUsersTab.jsx
 |       \---Landing

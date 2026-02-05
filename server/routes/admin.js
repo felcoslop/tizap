@@ -57,22 +57,35 @@ router.get('/admin/users/:id/stats', authenticateToken, checkSubscription, isMas
         const startDate = new Date(`${targetYear}-01-01T00:00:00.000Z`);
         const endDate = new Date(`${targetYear}-12-31T23:59:59.999Z`);
 
-        // 1. Official API (Dispatches via WABA)
-        // We sum successCount from Dispatch where dispatchType='template' (usually WABA)
-        // Note: dispatchType might technically be used for Evo too if we change logic, 
-        // but currently 'template' defaults to WABA in dispatchQueue unless configured otherwise.
-        // A safer check might be to see if the user has WABA configured, but for now we aggregate Dispatches.
+        // 1. Official API Stats
+        // A. Dispatches (Bulk)
         const officialDispatches = await prisma.dispatch.aggregate({
             where: {
                 userId,
                 createdAt: { gte: startDate, lte: endDate },
-                dispatchType: 'template' // Assuming template = Official WABA
+                dispatchType: { in: ['template', 'waba'] } // broader check
             },
             _sum: { successCount: true }
         });
 
+        // B. Manual Messages (ReceivedMessage where isFromMe=true)
+        // We need the phoneId from userConfig
+        const userConfig = await prisma.userConfig.findUnique({ where: { userId } });
+        let manualOfficialCount = 0;
+
+        if (userConfig?.phoneId) {
+            manualOfficialCount = await prisma.receivedMessage.count({
+                where: {
+                    whatsappPhoneId: String(userConfig.phoneId),
+                    isFromMe: true,
+                    createdAt: { gte: startDate, lte: endDate }
+                }
+            });
+        }
+
+        const totalOfficial = (officialDispatches._sum.successCount || 0) + manualOfficialCount;
+
         // 2. Evolution API (EvolutionMessage)
-        // Messages sent BY the user (isFromMe = true)
         const evolutionMessages = await prisma.evolutionMessage.count({
             where: {
                 userId,
@@ -91,7 +104,7 @@ router.get('/admin/users/:id/stats', authenticateToken, checkSubscription, isMas
         });
 
         const stats = [
-            { id: 'official', name: 'WhatsApp Oficial (Meta)', count: officialDispatches._sum.successCount || 0, color: '#25D366' },
+            { id: 'official', name: 'WhatsApp Oficial (Meta)', count: totalOfficial, color: '#25D366' },
             { id: 'evolution', name: 'WhatsApp Evolution', count: evolutionMessages || 0, color: '#00a884' },
             { id: 'email', name: 'E-mail Marketing', count: emailCampaigns._sum.successCount || 0, color: '#EA4335' }
         ];

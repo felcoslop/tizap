@@ -226,7 +226,7 @@ export function ReceivedEvolutionTab({
             <div className={`received-container ${activeContact ? 'chat-active' : ''}`} style={{
                 display: 'flex',
                 gap: '24px',
-                height: window.innerWidth <= 768 ? '100%' : 'calc(100vh - 320px)',
+                height: window.innerWidth <= 768 ? 'calc(100dvh - 140px)' : 'calc(100vh - 320px)',
                 flex: 1
             }}>
                 {/* Contact List Sidebar - Matched with ReceivedTab */}
