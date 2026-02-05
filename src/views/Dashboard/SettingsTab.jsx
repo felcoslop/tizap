@@ -187,12 +187,12 @@ export function SettingsTab({
                             <X size={24} color="#666" />
                         </button>
 
-                        <div style={{ marginBottom: '20px' }}>
+                        <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <Radio size={48} color="#00a276" style={{ marginBottom: '10px' }} />
-                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)', marginBottom: '10px' }}>
+                            <h3 style={{ fontSize: '1.5rem', color: 'var(--ambev-blue)', marginBottom: '10px', textAlign: 'center' }}>
                                 Conectar Evolution
                             </h3>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                            <p style={{ color: '#666', fontSize: '0.9rem', textAlign: 'center' }}>
                                 Escaneie o QR Code com seu WhatsApp
                             </p>
                         </div>

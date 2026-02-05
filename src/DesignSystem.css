@@ -624,6 +624,14 @@ button:focus {
   object-fit: cover;
 }
 
+.sidebar .logo-small img.extended-logo {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  max-height: 40px;
+  object-fit: contain;
+}
+
 /* Multiline Nav Label Styles */
 .nav-label-multiline {
   line-height: 1.2;

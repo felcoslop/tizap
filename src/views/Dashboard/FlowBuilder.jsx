@@ -122,7 +122,6 @@ function FlowEditor({ flow, onSave, onBack, userId, addToast, token, config, set
 
     const handleSave = () => {
         const flowData = {
-            id: flow?.id,
             name: flowName,
             nodes,
             edges
@@ -390,7 +389,13 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
     }
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem' }}>
+        <div className="card fade-in" style={{
+            backgroundColor: 'white',
+            padding: '2.5rem',
+            minHeight: 'calc(100vh - 180px)',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>Fluxos de Conversa</h1>
 
@@ -411,9 +416,15 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px', marginTop: '24px' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '24px',
+                marginTop: '24px',
+                flex: 1
+            }}>
                 {flows.map(flow => (
-                    <div key={flow.id} className="flow-card">
+                    <div key={flow.id} className="flow-card" style={{ height: 'fit-content' }}>
                         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                             <div className="flow-card-icon">
                                 <MessageSquare size={24} />
@@ -446,8 +457,10 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '12px',
-                        margin: '20px 0'
+                        margin: '20px 0',
+                        flex: 1
                     }}>
                         <MessageSquare size={48} color="#94a3b8" strokeWidth={1} />
                         <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhum fluxo criado ainda.</p>

@@ -6,7 +6,7 @@ import prisma from '../db.js';
 import { sendMail } from '../config/email.js';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { JWT_SECRET, FRONTEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } from '../config/constants.js';
+import { JWT_SECRET, FRONTEND_URL, BACKEND_URL, EMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } from '../config/constants.js';
 
 // Google Passport Strategy
 passport.use(new GoogleStrategy({
@@ -355,16 +355,16 @@ router.get('/auth/google/callback', (req, res, next) => {
     passport.authenticate('google', { session: false }, (err, user, info) => {
         if (err) {
             console.error('[OAUTH] Passport authentication error:', err);
-            return res.redirect(`/login?error=auth_error`);
+            return res.redirect(`${FRONTEND_URL}/login?error=auth_error`);
         }
         if (!user) {
             console.error('[OAUTH] No user found/created. Info:', info);
-            return res.redirect(`/login?error=google_failed`);
+            return res.redirect(`${FRONTEND_URL}/login?error=google_failed`);
         }
 
         console.log('[OAUTH] Authentication success for:', user.email);
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-        const target = `/auth/success?token=${token}`;
+        const target = `${FRONTEND_URL}/auth/success?token=${token}`;
         console.log('[OAUTH] Redirecting to:', target);
         res.redirect(target);
     })(req, res, next);

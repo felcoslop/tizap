@@ -36,8 +36,12 @@ export default function Sidebar({
                 {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
             </div>
             <div className="logo-small">
-                <img src="/android-chrome-512x512.png" alt="tiZAP!" className="rounded-logo" />
-                <span>tizap!</span>
+                <img
+                    src={isSidebarCollapsed ? "/logo.png" : "/logo-estendida.png"}
+                    alt="tiZAP!"
+                    className={isSidebarCollapsed ? "rounded-logo" : "extended-logo"}
+                />
+                {isSidebarCollapsed && <span>tizap!</span>}
             </div>
             <nav>
                 {navItems.map(item => (

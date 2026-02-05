@@ -772,6 +772,7 @@ export function Dashboard({
                                 startRecording={startRecording}
                                 stopRecording={stopRecording}
                                 cancelRecording={cancelRecording}
+                                setActiveTab={setActiveTab}
                             />
                         )}
 
@@ -783,6 +784,7 @@ export function Dashboard({
                                 fetchMessages={fetchEvolutionMessages}
                                 addToast={addToast}
                                 isRefreshing={Boolean(evolutionMessages?.length === 0)}
+                                setActiveTab={setActiveTab}
                             />
                         )}
 

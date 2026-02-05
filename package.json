@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "npx prisma generate && vite build",
     "preview": "vite preview",
-    "start": "npx prisma db push && node server/index.js",
+    "start": "node server/index.js",
     "server": "node server/index.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma db push",

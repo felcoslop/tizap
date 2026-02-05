@@ -5,7 +5,7 @@ services:
     image: redis:alpine
     container_name: tizap_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: tizap_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always

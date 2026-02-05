@@ -536,7 +536,13 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', marginTop: '24px' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gap: '24px',
+                marginTop: '24px',
+                flex: 1
+            }}>
                 {automations.map(auto => (
                     <div key={auto.id} className="flow-card">
                         <div style={{ display: 'flex', gap: '16px' }}>
@@ -588,8 +594,10 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '12px',
-                        margin: '20px 0'
+                        margin: '20px 0',
+                        flex: 1
                     }}>
                         <Zap size={48} color="#94a3b8" strokeWidth={1} />
                         <p style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', margin: 0 }}>Nenhuma automação criada ainda.</p>

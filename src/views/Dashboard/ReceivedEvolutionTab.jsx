@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trash2, RefreshCw, Clock, Download, Paperclip, Mic, Send, AlertCircle, X, Wifi } from 'lucide-react';
+import ConnectionLock from '../../components/ConnectionLock';
 
 export function ReceivedEvolutionTab({
     user,
@@ -7,8 +8,10 @@ export function ReceivedEvolutionTab({
     messages = [],
     isRefreshing,
     fetchMessages,
-    addToast
+    addToast,
+    setActiveTab // Added this
 }) {
+    const isEvolutionConnected = config?.evolutionConnected;
     const [activeContact, setActiveContact] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedContacts, setSelectedContacts] = useState([]);
@@ -213,7 +216,13 @@ export function ReceivedEvolutionTab({
     };
 
     return (
-        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="card fade-in" style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+            {!isEvolutionConnected && (
+                <ConnectionLock
+                    title="API Evolution Desconectada"
+                    onGoToSettings={() => setActiveTab('ajustes')}
+                />
+            )}
             <div className="received-container" style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 320px)' }}>
                 {/* Contact List Sidebar - Matched with ReceivedTab */}
                 <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #00a276' }}>

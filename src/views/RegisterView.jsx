@@ -31,6 +31,9 @@ export function RegisterView({ onRegister, onSwitch }) {
         const rect = e.currentTarget.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
         // Increased multiplier for "closer to mouse" feel
         const targetX = centerX + (mouseX - centerX) * 0.85;
         const targetY = centerY + (mouseY - centerY) * 0.85;

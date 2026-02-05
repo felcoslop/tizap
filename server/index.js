@@ -169,7 +169,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   ------------------------
   Port: ${PORT}
   Env:  ${process.env.NODE_ENV || 'development'}
-  DB:   SQLite via Prisma
+  DB:   Configured via Prisma
   ------------------------
   `);
 });
