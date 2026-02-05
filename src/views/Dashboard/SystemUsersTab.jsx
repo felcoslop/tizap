@@ -6,6 +6,8 @@ export default function SystemUsersTab({ user, addToast }) {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState(null);
+    const [statsModalOpen, setStatsModalOpen] = useState(false);
+    const [selectedStatsUser, setSelectedStatsUser] = useState(null);
 
     // Initial Fetch
     useEffect(() => {
@@ -86,6 +88,7 @@ export default function SystemUsersTab({ user, addToast }) {
                                 <th style={{ padding: '15px' }}>Status</th>
                                 <th style={{ padding: '15px' }}>Trial / Validade</th>
                                 <th style={{ padding: '15px' }}>Métricas</th>
+                                <th style={{ padding: '15px' }}>Envios</th>
                                 <th style={{ padding: '15px', textAlign: 'right' }}>Ações</th>
                             </tr>
                         </thead>
@@ -140,6 +143,15 @@ export default function SystemUsersTab({ user, addToast }) {
                                             <span title="Disparos" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Send size={12} /> {u.metrics?.dispatches || 0}</span>
                                         </div>
                                     </td>
+                                    <td style={{ padding: '15px' }}>
+                                        <button
+                                            className="btn-secondary"
+                                            onClick={() => { setSelectedStatsUser(u); setStatsModalOpen(true); }}
+                                            style={{ padding: '6px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                        >
+                                            <Send size={14} /> Ver Envios
+                                        </button>
+                                    </td>
                                     <td style={{ padding: '15px', textAlign: 'right' }}>
                                         <button
                                             className="btn-secondary"
@@ -156,8 +168,6 @@ export default function SystemUsersTab({ user, addToast }) {
                 </div>
             )
             }
-
-            {/* Edit User Modal */}
             {
                 editingUser && (
                     <div className="modal-overlay" style={{ zIndex: 10000 }}>
@@ -211,6 +221,110 @@ export default function SystemUsersTab({ user, addToast }) {
                     </div>
                 )
             }
+            <SendStatsModal
+                isOpen={statsModalOpen}
+                onClose={() => setStatsModalOpen(false)}
+                user={selectedStatsUser}
+                token={user.token}
+                addToast={addToast}
+            />
         </div >
+    );
+}
+
+function SendStatsModal({ isOpen, onClose, user, token, addToast }) {
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [stats, setStats] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && user) {
+            fetchStats();
+        }
+    }, [isOpen, user, year]);
+
+    const fetchStats = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}/stats?year=${year}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setStats(data.stats);
+            } else {
+                addToast('Erro ao carregar estatísticas', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            addToast('Erro de conexão', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+    return (
+        <div className="modal-overlay" style={{ zIndex: 10001 }}>
+            <div className="modal-content" style={{ width: '500px', maxWidth: '90%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3>Estatísticas de Envio: {user?.name}</h3>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                </div>
+
+                <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <label style={{ fontWeight: 600 }}>Filtrar por Ano:</label>
+                    <select
+                        value={year}
+                        onChange={(e) => setYear(parseInt(e.target.value))}
+                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        {years.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}><RefreshCw className="spinning" /> Carregando dados...</div>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                        <thead>
+                            <tr style={{ background: '#f9fafb', borderBottom: '2px solid #eee' }}>
+                                <th style={{ padding: '12px', textAlign: 'left', color: '#6b7280' }}>Canal de Envio</th>
+                                <th style={{ padding: '12px', textAlign: 'right', color: '#6b7280' }}>Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {stats.map(stat => (
+                                <tr key={stat.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                    <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: stat.color }}></span>
+                                        {stat.name}
+                                    </td>
+                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontSize: '1.1rem' }}>
+                                        {stat.count.toLocaleString()}
+                                    </td>
+                                </tr>
+                            ))}
+                            <tr style={{ background: '#f0fdf4', fontWeight: 700 }}>
+                                <td style={{ padding: '12px', color: '#166534' }}>TOTAL</td>
+                                <td style={{ padding: '12px', textAlign: 'right', color: '#166534' }}>
+                                    {stats.reduce((acc, curr) => acc + curr.count, 0).toLocaleString()}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                )}
+
+                <div style={{ marginTop: '20px', textAlign: 'right' }}>
+                    <button className="btn-primary" onClick={onClose}>Fechar</button>
+                </div>
+            </div>
+        </div>
     );
 }

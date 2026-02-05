@@ -672,29 +672,11 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
             {/* Kill Sessions Confirmation Modal */}
             {
                 showKillModal && (
-                    <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                            <div style={{ background: '#fee2e2', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                                <XCircle size={32} color="#dc2626" />
-                            </div>
-                            <h3 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#1f2937', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>Finalizar Todas as Sessões?</h3>
-                            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-                                Isso interromperá imediatamente todos os fluxos ativos de todos os usuários. Deseja continuar?
-                            </p>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                                <button className="btn-secondary" onClick={() => setShowKillModal(false)}>
-                                    Cancelar
-                                </button>
-                                <button
-                                    className="btn-primary"
-                                    style={{ background: '#dc2626', borderColor: '#dc2626' }}
-                                    onClick={confirmKillSessions}
-                                >
-                                    Sim, Finalizar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <SessionManagerModal
+                        onClose={() => setShowKillModal(false)}
+                        addToast={addToast}
+                        token={user?.token}
+                    />
                 )
             }
         </div >

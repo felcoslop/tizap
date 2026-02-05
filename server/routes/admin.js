@@ -47,6 +47,63 @@ router.get('/admin/users', authenticateToken, checkSubscription, isMaster, async
     }
 });
 
+// Get User Stats (Sends by Year)
+router.get('/admin/users/:id/stats', authenticateToken, checkSubscription, isMaster, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { year } = req.query;
+        const targetYear = year ? parseInt(year) : new Date().getFullYear();
+
+        const startDate = new Date(`${targetYear}-01-01T00:00:00.000Z`);
+        const endDate = new Date(`${targetYear}-12-31T23:59:59.999Z`);
+
+        // 1. Official API (Dispatches via WABA)
+        // We sum successCount from Dispatch where dispatchType='template' (usually WABA)
+        // Note: dispatchType might technically be used for Evo too if we change logic, 
+        // but currently 'template' defaults to WABA in dispatchQueue unless configured otherwise.
+        // A safer check might be to see if the user has WABA configured, but for now we aggregate Dispatches.
+        const officialDispatches = await prisma.dispatch.aggregate({
+            where: {
+                userId,
+                createdAt: { gte: startDate, lte: endDate },
+                dispatchType: 'template' // Assuming template = Official WABA
+            },
+            _sum: { successCount: true }
+        });
+
+        // 2. Evolution API (EvolutionMessage)
+        // Messages sent BY the user (isFromMe = true)
+        const evolutionMessages = await prisma.evolutionMessage.count({
+            where: {
+                userId,
+                isFromMe: true,
+                createdAt: { gte: startDate, lte: endDate }
+            }
+        });
+
+        // 3. Email Campaigns (EmailCampaign)
+        const emailCampaigns = await prisma.emailCampaign.aggregate({
+            where: {
+                userId,
+                createdAt: { gte: startDate, lte: endDate }
+            },
+            _sum: { successCount: true }
+        });
+
+        const stats = [
+            { id: 'official', name: 'WhatsApp Oficial (Meta)', count: officialDispatches._sum.successCount || 0, color: '#25D366' },
+            { id: 'evolution', name: 'WhatsApp Evolution', count: evolutionMessages || 0, color: '#00a884' },
+            { id: 'email', name: 'E-mail Marketing', count: emailCampaigns._sum.successCount || 0, color: '#EA4335' }
+        ];
+
+        res.json({ year: targetYear, stats });
+
+    } catch (err) {
+        console.error('Admin Get Stats Error:', err);
+        res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+    }
+});
+
 // Update User Plan
 router.post('/admin/users/:id/plan', authenticateToken, checkSubscription, isMaster, async (req, res) => {
     try {
