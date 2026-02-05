@@ -291,7 +291,8 @@ export default function FlowBuilder({ user, addToast, config, setConfig }) {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            setFlows(data || []);
+            const sortedFlows = (data || []).sort((a, b) => b.id - a.id);
+            setFlows(sortedFlows);
         } catch (err) {
             console.error('Error fetching flows:', err);
             addToast('Erro ao carregar fluxos', 'error');

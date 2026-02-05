@@ -356,7 +356,8 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            setAutomations(data || []);
+            const sortedAutomations = (data || []).sort((a, b) => b.id - a.id);
+            setAutomations(sortedAutomations);
         } catch (err) {
             console.error('Error fetching automations:', err);
             addToast('Erro ao carregar automações', 'error');
@@ -548,7 +549,7 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={auto.name}>
+                                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }} title={auto.name}>
                                                         {auto.name}
                                                     </h3>
                                                     <label className="switch" title={auto.isActive ? 'Ativado' : 'Desativado'} style={{ cursor: 'pointer', flexShrink: 0 }}>
@@ -556,6 +557,7 @@ export default function AutomationBuilder({ user, addToast, config, setConfig })
                                                         <span className="slider"></span>
                                                     </label>
                                                 </div>
+                                                <p style={{ fontSize: '12px', color: '#666', margin: '2px 0 8px' }}>ID: #{auto.id}</p>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                                                     <span style={{ fontSize: '10px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', color: '#475569', fontWeight: 'bold' }}>
                                                         {auto.triggerType === 'keyword' ? 'PALAVRA-CHAVE' : 'MENSAGEM'}
