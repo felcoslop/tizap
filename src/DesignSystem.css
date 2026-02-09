@@ -1669,7 +1669,6 @@ button:focus {
     display: block !important;
   }
 
-  /* WhatsApp Style: List vs Chat Toggling */
   .received-container>div:first-child {
     width: 100% !important;
     height: 100% !important;

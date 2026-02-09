@@ -162,9 +162,16 @@ const FlowEngine = {
             console.log(`[FLOW ENGINE] Finding Next Edge. Outbound count: ${outboundEdges.length}. NextEdge found: ${!!nextEdge}`);
 
             if (nextEdge) {
+                const variables = JSON.parse(session.variables || '{}');
+                if (variables.validation_attempts) delete variables.validation_attempts;
+
                 const nextSession = await prisma.flowSession.update({
                     where: { id: session.id },
-                    data: { currentStep: nextEdge.target, status: 'active' }
+                    data: {
+                        currentStep: nextEdge.target,
+                        status: 'active',
+                        variables: JSON.stringify(variables)
+                    }
                 });
                 setTimeout(() => this.executeStep(nextSession, flow, userConfig, platform), 1000);
             } else {
@@ -251,11 +258,16 @@ const FlowEngine = {
             if (edge) nextNodeId = edge.target;
         }
 
+        const variables = JSON.parse(session.variables || '{}');
+
         if (!isValid) {
             let redEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
             if (redEdge && !nodes.find(n => String(n.id) === String(redEdge.target))) redEdge = null;
 
-            if (currentNode.type === 'optionsNode' && !redEdge) {
+            const validateSelection = currentNode.data?.validateSelection;
+            const validationAttempts = variables.validation_attempts || 0;
+
+            if (currentNode.type === 'optionsNode' && validateSelection && validationAttempts === 0) {
                 const definedOptions = currentNode.data?.options || [];
                 const optionsCount = definedOptions.length;
 
@@ -271,29 +283,45 @@ const FlowEngine = {
                         await sendWhatsAppText(normalizedPhone, errorMsg, userConfig);
                     }
 
+                    variables.validation_attempts = 1;
+                    await prisma.flowSession.update({
+                        where: { id: session.id },
+                        data: { variables: JSON.stringify(variables) }
+                    });
+
                     await logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Validação enviada: ${errorMsg}`);
                     return true;
                 }
             }
 
+            // If we reach here, it's either not an options node, validation is off, or we've already validated once.
+            if (variables.validation_attempts) delete variables.validation_attempts;
+
             if (redEdge) {
-                const nextSession = await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: redEdge.target, status: 'active' } });
+                const nextSession = await prisma.flowSession.update({
+                    where: { id: session.id },
+                    data: { currentStep: redEdge.target, status: 'active', variables: JSON.stringify(variables) }
+                });
                 await logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Resposta inválida: ${messageBody}`);
                 await this.executeStep(nextSession, flow, userConfig, platform);
             } else {
-                const errorMsg = "Opção inválida. Por favor tente novamente.";
-                if (platform === 'evolution') {
-                    await sendEvolutionMessage(normalizedPhone, errorMsg, null, null, userConfig);
-                } else {
-                    await sendWhatsAppText(normalizedPhone, errorMsg, userConfig);
-                }
+                await logAction(session.id, currentNode.id, nodeName, 'invalid_reply', `Resposta inválida e sem caminho de erro: ${messageBody}`);
+                await endSession(session.id, 'Fluxo concluído - resposta inválida');
             }
             return true;
         }
 
         if (nextNodeId) {
+            if (variables.validation_attempts) delete variables.validation_attempts;
             await logAction(session.id, currentNode.id, nodeName, 'received_reply', `Resposta recebida: "${messageBody}"`);
-            const nextSession = await prisma.flowSession.update({ where: { id: session.id }, data: { currentStep: String(nextNodeId), status: 'active' } });
+            const nextSession = await prisma.flowSession.update({
+                where: { id: session.id },
+                data: {
+                    currentStep: String(nextNodeId),
+                    status: 'active',
+                    variables: JSON.stringify(variables)
+                }
+            });
             await this.executeStep(nextSession, flow, userConfig, platform);
         } else {
             await endSession(session.id, 'Fluxo concluído');
@@ -345,9 +373,17 @@ const FlowEngine = {
                 }
 
                 if (nextEdge) {
+                    const variables = JSON.parse(session.variables || '{}');
+                    if (variables.validation_attempts) delete variables.validation_attempts;
+
                     const nextSession = await prisma.flowSession.update({
                         where: { id: session.id },
-                        data: { currentStep: nextEdge.target, status: 'active', scheduledAt: null }
+                        data: {
+                            currentStep: nextEdge.target,
+                            status: 'active',
+                            scheduledAt: null,
+                            variables: JSON.stringify(variables)
+                        }
                     });
                     await this.executeStep(nextSession, flow, userConfig, session.platform);
                 } else {
