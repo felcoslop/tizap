@@ -34,7 +34,7 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
         const existingSession = await prisma.flowSession.findFirst({
             where: {
                 contactPhone: { in: possibleNumbers },
-                status: { in: ['active', 'waiting_reply'] },
+                status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] },
                 OR: [{ flow: { userId } }, { automation: { userId } }]
             },
             include: { automation: true, flow: true },

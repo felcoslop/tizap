@@ -60,7 +60,7 @@ const FlowEngine = {
             await prisma.flowSession.updateMany({
                 where: {
                     contactPhone,
-                    status: { in: ['active', 'waiting_reply'] },
+                    status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] },
                     OR: [{ flow: { userId } }, { automation: { userId } }]
                 },
                 data: { status: 'expired' }
@@ -198,7 +198,10 @@ const FlowEngine = {
             possibleNumbers.push(withNine, withNine.replace('55', ''));
         }
 
-        const sessionWhere = { contactPhone: { in: possibleNumbers }, status: 'waiting_reply' };
+        const sessionWhere = {
+            contactPhone: { in: possibleNumbers },
+            status: { in: ['waiting_reply', 'waiting_business_hours'] }
+        };
         if (targetUserId) {
             sessionWhere.OR = [{ flow: { userId: targetUserId } }, { automation: { userId: targetUserId } }];
         }
@@ -209,6 +212,14 @@ const FlowEngine = {
         });
 
         if (!session) return false;
+
+        // If session is just waiting for business hours, we don't process replies yet,
+        // but we return TRUE to signal that an active session context EXISTS,
+        // preventing automationService from starting a duplicate trigger.
+        if (session.status === 'waiting_business_hours') {
+            console.log(`[FLOW ENGINE] [REPLY] Session ${session.id} is waiting for business hours. Ignoring reply for now.`);
+            return true;
+        }
 
         const flow = session.flow || session.automation;
         if (!flow) return false;
