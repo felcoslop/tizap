@@ -80,7 +80,7 @@ export const handleIncomingWebhook = async (req, res, targetUserId = null, broad
                         }
 
                         // Proccess in FlowEngine
-                        await FlowEngine.processMessage(from, messageBody, false, userId);
+                        await FlowEngine.processMessage(from, messageBody, false, userId, 'meta', false);
                     }
                 }
             }

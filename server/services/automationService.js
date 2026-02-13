@@ -27,6 +27,27 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
 
         console.log(`[AUTOMATION DEBUG] [RESOURCES] Automations: ${automations.length} | Config found: ${!!userConfig}`);
 
+        // 36h AGENT LOCKOUT: If agent sent a message recently, block new triggers
+        if (!isFromMe) {
+            const lockoutHours = 36;
+            const lockoutLimit = new Date(Date.now() - lockoutHours * 60 * 60 * 1000);
+
+            const lastAgentMessage = await prisma.evolutionMessage.findFirst({
+                where: {
+                    userId,
+                    contactPhone: { in: possibleNumbers },
+                    isFromMe: true,
+                    createdAt: { gte: lockoutLimit }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            if (lastAgentMessage) {
+                console.log(`[AUTOMATION] Agent lockout active for ${contactPhone}. Last message at ${lastAgentMessage.createdAt}. Blocking trigger.`);
+                return;
+            }
+        }
+
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
         const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
 
@@ -58,7 +79,7 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
                 // After expiring, we let the logic continue to check new triggers
             } else {
                 if (existingSession.status === 'waiting_reply') {
-                    const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution');
+                    const sessionProcessed = await FlowEngine.processMessage(contactPhone, messageBody, null, userId, 'evolution', isFromMe);
                     if (sessionProcessed) return;
                 }
 

@@ -184,7 +184,7 @@ const FlowEngine = {
         }
     },
 
-    async processMessage(contactPhone, messageBody, contextStart, targetUserId, platform = 'meta') {
+    async processMessage(contactPhone, messageBody, contextStart, targetUserId, platform = 'meta', isFromMe = false) {
         let normalizedPhone = String(contactPhone).replace(/\D/g, '');
         if (!normalizedPhone.startsWith('55')) normalizedPhone = '55' + normalizedPhone;
 
@@ -212,6 +212,13 @@ const FlowEngine = {
         });
 
         if (!session) return false;
+
+        // If message is from agent/system, we don't process it as a reply,
+        // but we return TRUE to signal that an active session context EXISTS.
+        if (isFromMe) {
+            console.log(`[FLOW ENGINE] [REPLY] Message from agent for session ${session.id}. Ignoring as client reply.`);
+            return true;
+        }
 
         // If session is just waiting for business hours, we don't process replies yet,
         // but we return TRUE to signal that an active session context EXISTS,
@@ -373,8 +380,9 @@ const FlowEngine = {
                 if (session.status === 'waiting_business_hours') {
                     nextEdge = outboundEdges.find(e => ['source-gray', 'source-green'].includes(e.sourceHandle)) || outboundEdges.find(e => !e.sourceHandle);
                 } else if (session.status === 'waiting_reply') {
-                    // TIMEOUT: Look for the negative path (red or invalid)
-                    nextEdge = outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
+                    // TIMEOUT: Prioritize source-timeout, fallback to red or invalid for backward compatibility
+                    nextEdge = outboundEdges.find(e => e.sourceHandle === 'source-timeout') ||
+                        outboundEdges.find(e => ['source-red', 'source-invalid'].includes(e.sourceHandle));
 
                     if (nextEdge) {
                         await logAction(session.id, session.currentStep, currentNode?.data?.label, 'timeout_path', 'Tempo limite atingido, seguindo caminho negativo');
