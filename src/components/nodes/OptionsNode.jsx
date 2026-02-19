@@ -92,7 +92,10 @@ const OptionsNode = ({ data, id, selected }) => {
                                 onChange={(e) => data.onChange(id, { waitTimeout: Number(e.target.value) })}
                                 style={{ width: '100%', padding: '4px', fontSize: '12px' }}
                             />
-                            <p style={{ fontSize: '10px', color: '#888', marginTop: '4px', lineHeight: '1.2' }}>Segue pelo caminho <strong>Inválido</strong> se não responder.</p>
+                            <p style={{ fontSize: '10px', color: '#888', marginTop: '4px', lineHeight: '1.2' }}>
+                                Segue pelo caminho <strong>Não respondeu</strong> se o tempo acabar.<br />
+                                Segue pelo caminho <strong>Inválido</strong> se responder errado.
+                            </p>
                         </div>
                     </div>
 
@@ -118,15 +121,27 @@ const OptionsNode = ({ data, id, selected }) => {
                 </div>
             )}
 
-            <div className="invalid-handle-wrapper">
-                <span className="invalid-label">Inválido →</span>
-                <Handle
-                    type="source"
-                    position={Position.Right}
-                    id="source-invalid"
-                    style={{ background: '#dc3545', width: 14, height: 14, border: '2px solid #333', position: 'relative', right: '-8px', top: 'auto', zIndex: 10 }}
-                    title="Resposta inválida"
-                />
+            <div className="handles-row-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+                <div className="handle-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', color: '#666' }}>Inválido</span>
+                    <Handle
+                        type="source"
+                        position={Position.Right}
+                        id="source-invalid"
+                        style={{ background: '#dc3545', width: 12, height: 12, border: '2px solid #333', position: 'relative', right: '-8px', top: 'auto' }}
+                        title="Resposta inválida"
+                    />
+                </div>
+                <div className="handle-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', color: '#666' }}>Não respondeu</span>
+                    <Handle
+                        type="source"
+                        position={Position.Right}
+                        id="source-timeout"
+                        style={{ background: '#6c757d', width: 12, height: 12, border: '2px solid #333', position: 'relative', right: '-8px', top: 'auto' }}
+                        title="Tempo esgotado"
+                    />
+                </div>
             </div>
         </BaseNode>
     );

@@ -404,8 +404,10 @@ router.post('/evolution/webhook/:webhookToken', async (req, res) => {
                 const broadcastMessage = req.app.get('broadcastMessage');
                 if (broadcastMessage) broadcastMessage('evolution:message', saved, userId);
 
-                if (!isFromMe || (isFromMe && !key.id?.startsWith('BAE5'))) {
-                    await processAutomations(userId, contactPhone, bodyText, isFromMe);
+                const isAutomated = !!(key.id?.startsWith('BAE5') || key.id?.startsWith('3EB0')); // BAE5 is Baileys, 3EB0 often used for self-sent
+
+                if (!isFromMe || (isFromMe && !isAutomated)) {
+                    await processAutomations(userId, contactPhone, bodyText, isFromMe, isAutomated);
                     if (!isFromMe) await processEventAutomations(userId, 'messages_upsert', bodyText, contactPhone);
                 }
             }

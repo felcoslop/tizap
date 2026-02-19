@@ -250,28 +250,35 @@ const FlowEngine = {
 
         if (currentNode.type === 'optionsNode') {
             const body = messageBody.trim().toLowerCase();
+            console.log(`[FLOW ENGINE] [DEBUG] Options match start. Body: "${body}" | Outbound edges: ${outboundEdges.length}`);
+
             if (body.startsWith('source-')) {
                 const choice = body.split('-')[1];
                 const edge = outboundEdges.find(e => e.sourceHandle === `source-${choice}`);
+                console.log(`[FLOW ENGINE] [DEBUG] Interactive match attempt for choice: ${choice}. Edge found: ${!!edge}`);
                 if (edge) nextNodeId = edge.target;
             }
 
             if (!nextNodeId) {
                 const simpleMatch = body.match(/^\d+/) || body.match(/\d+/);
                 let choice = simpleMatch ? simpleMatch[0] : null;
+                console.log(`[FLOW ENGINE] [DEBUG] Numeric match attempt. Regex choice: ${choice}`);
 
                 if (!choice) {
                     const optIdx = (currentNode.data?.options || []).findIndex(opt => opt.toLowerCase() === body);
                     if (optIdx !== -1) choice = String(optIdx + 1);
+                    console.log(`[FLOW ENGINE] [DEBUG] Text-based match attempt. choice: ${choice}`);
                 }
                 const edge = outboundEdges.find(e => e.sourceHandle === `source-${choice}`);
+                console.log(`[FLOW ENGINE] [DEBUG] Final choice: ${choice}. Edge handle search: "source-${choice}". Edge found: ${!!edge}`);
                 if (edge) {
                     nextNodeId = edge.target;
                 } else {
                     isValid = false;
                 }
             }
-        } else {
+        }
+        else {
             const edge = outboundEdges.find(e => ['source-green', 'source-gray'].includes(e.sourceHandle)) || outboundEdges.find(e => !['source-red', 'source-invalid'].includes(e.sourceHandle));
             if (edge) nextNodeId = edge.target;
         }

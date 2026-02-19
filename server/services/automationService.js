@@ -1,8 +1,25 @@
 import prisma from '../db.js';
 
-export const processAutomations = async (userId, contactPhone, messageBody, isFromMe = false) => {
+export const processAutomations = async (userId, contactPhone, messageBody, isFromMe = false, isAutomated = false) => {
     try {
         const FlowEngine = (await import('./flowEngine.js')).default;
+
+        if (isFromMe && !isAutomated) {
+            // If human agent interacts, stop any active session for this contact
+            const activeSession = await prisma.flowSession.findFirst({
+                where: {
+                    contactPhone: { in: [String(contactPhone).replace(/\D/g, '')] }, // Simplified for quick lookup
+                    status: { in: ['active', 'waiting_reply', 'waiting_business_hours'] }
+                }
+            });
+            if (activeSession) {
+                console.log(`[AUTOMATION] Stopping session ${activeSession.id} due to human agent interaction.`);
+                await prisma.flowSession.update({
+                    where: { id: activeSession.id },
+                    data: { status: 'stopped' }
+                });
+            }
+        }
 
         console.log(`[AUTOMATION DEBUG] [START] Phone: ${contactPhone} | User: ${userId} | isFromMe: ${isFromMe} | Body: "${messageBody}"`);
         let normalizedPhone = String(contactPhone).replace(/\D/g, '');
@@ -26,27 +43,6 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
         ]);
 
         console.log(`[AUTOMATION DEBUG] [RESOURCES] Automations: ${automations.length} | Config found: ${!!userConfig}`);
-
-        // 36h AGENT LOCKOUT: If agent sent a message recently, block new triggers
-        if (!isFromMe) {
-            const lockoutHours = 36;
-            const lockoutLimit = new Date(Date.now() - lockoutHours * 60 * 60 * 1000);
-
-            const lastAgentMessage = await prisma.evolutionMessage.findFirst({
-                where: {
-                    userId,
-                    contactPhone: { in: possibleNumbers },
-                    isFromMe: true,
-                    createdAt: { gte: lockoutLimit }
-                },
-                orderBy: { createdAt: 'desc' }
-            });
-
-            if (lastAgentMessage) {
-                console.log(`[AUTOMATION] Agent lockout active for ${contactPhone}. Last message at ${lastAgentMessage.createdAt}. Blocking trigger.`);
-                return;
-            }
-        }
 
         const keywordAutomations = automations.filter(a => a.triggerType === 'keyword');
         const messageAutomations = automations.filter(a => a.triggerType === 'message' || a.triggerType === 'new_message');
@@ -84,6 +80,28 @@ export const processAutomations = async (userId, contactPhone, messageBody, isFr
                 }
 
                 console.log(`[AUTOMATION] Contact has an existing ${existingSession.status} session. Blocking other triggers.`);
+                return;
+            }
+        }
+
+        // AGENT LOCKOUT: Check before starting a NEW automation
+        if (!isFromMe) {
+            const lockoutMinutes = userConfig?.agentLockoutTime || 2160; // Default 36h
+            const lockoutLimit = new Date(Date.now() - lockoutMinutes * 60 * 1000);
+
+            const lastAgentMessage = await prisma.evolutionMessage.findFirst({
+                where: {
+                    userId,
+                    contactPhone: { in: possibleNumbers },
+                    isFromMe: true,
+                    instanceName: { not: 'automated' }, // Exclude bot's own messages from lockout logic
+                    createdAt: { gte: lockoutLimit }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            if (lastAgentMessage) {
+                console.log(`[AUTOMATION] Agent lockout active for ${contactPhone}. Last message at ${lastAgentMessage.createdAt}. Blocking trigger.`);
                 return;
             }
         }
