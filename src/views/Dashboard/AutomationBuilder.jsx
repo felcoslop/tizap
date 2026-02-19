@@ -41,7 +41,6 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     const [showDelayModal, setShowDelayModal] = useState(false);
     const [automationDelay, setAutomationDelay] = useState(1440); // Default 24h
     const [sessionWaitTime, setSessionWaitTime] = useState(1440); // Default 24h expiration
-    const [agentLockoutTime, setAgentLockoutTime] = useState(2160); // Default 36h
 
     const {
         nodes, setNodes, edges, setEdges,
@@ -54,9 +53,6 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
     useEffect(() => {
         if (config?.automationDelay !== undefined) {
             setAutomationDelay(config.automationDelay);
-        }
-        if (config?.agentLockoutTime !== undefined) {
-            setAgentLockoutTime(config.agentLockoutTime);
         }
         // sessionWaitTime is loaded from automation in the other useEffect
     }, [config]);
@@ -71,12 +67,11 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                 body: JSON.stringify({
                     ...config,
                     mapping: config?.mapping || {},
-                    automationDelay: parseInt(automationDelay),
-                    agentLockoutTime: parseInt(agentLockoutTime)
+                    automationDelay: parseInt(automationDelay)
                 })
             });
             setShowDelayModal(false);
-            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay), agentLockoutTime: parseInt(agentLockoutTime) });
+            if (setConfig) setConfig({ ...config, automationDelay: parseInt(automationDelay) });
             addToast('Configuração salva!', 'success');
         } catch (err) {
             console.error(err);
@@ -320,21 +315,6 @@ function AutomationEditor({ automation, onSave, onBack, userId, addToast, token,
                                     <option value="360">6 horas</option>
                                     <option value="720">12 horas</option>
                                     <option value="1440">24 horas</option>
-                                </select>
-                            </div>
-                            <div style={{ gridColumn: 'span 2' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Trava após Humano (Lockout):</label>
-                                <select
-                                    value={agentLockoutTime}
-                                    onChange={(e) => setAgentLockoutTime(e.target.value)}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
-                                >
-                                    <option value="60">1 hora</option>
-                                    <option value="360">6 horas</option>
-                                    <option value="720">12 horas</option>
-                                    <option value="1440">24 horas</option>
-                                    <option value="2160">36 horas (Padrão)</option>
-                                    <option value="2880">48 horas</option>
                                 </select>
                             </div>
                         </div>
