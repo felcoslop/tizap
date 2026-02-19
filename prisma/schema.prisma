@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL_PG")
+  provider = "sqlite"
+  url      = "file:./database.sqlite"
 }
 
 model User {
@@ -53,6 +53,7 @@ model UserConfig {
   businessHours         String  @default("{}")
   automationDelay       Int     @default(1440) // Delay in minutes for re-entry protection
   sessionWaitTime       Int     @default(1440) // Time in minutes to wait for user reply before expiration
+  agentLockoutTime      Int     @default(2160) // Lockout in minutes after agent message (default 36h)
   user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
